@@ -8,8 +8,6 @@
 
 namespace oct{
 
-constexpr int LEAF_DEPTH = 5;
-
 struct leafData_t{
     CSGIndices items;
     glm::vec3 center;
@@ -17,7 +15,7 @@ struct leafData_t{
 };
 
 struct leafData{
-    static constexpr u16 capacity = 40000;
+    static constexpr u16 capacity = 60000;
 
     leafData_t data[capacity];
     VertexBuffer buffers[capacity];
@@ -75,6 +73,7 @@ struct leafData{
 extern leafData g_leafData;
 
 struct OctNode{
+    static constexpr u16 leaf_depth = 5;
     glm::vec3 center;
     float radius;
     u16 children[8];
@@ -85,7 +84,6 @@ struct OctNode{
         // ratio of cube's side to diagonal: sqrt(len^2 + len^2 + len^2) => sqrt(len^2 * 3) => x * sqrt(3)
         return 1.732051f * radius;
     }
-    void deInit();
     OctNode(const glm::vec3& c=glm::vec3(0.0f), float _radius=8.0f, u16 d=0)
         : center(c),
         radius(_radius),
@@ -95,13 +93,13 @@ struct OctNode{
     {
 
     }
-    inline bool isLeaf(){return depth == LEAF_DEPTH;}
+    inline bool isLeaf(){return depth == leaf_depth;}
     inline bool isRoot(){return !depth;}
     inline void makeChildren();
     inline void insert(const CSG& item, u16 csg_id = 0);
 };
 
-constexpr u16 max_octnodes = 30000;
+constexpr u16 max_octnodes = 60000;
 static u16 octnodes_tail = 0;
 extern OctNode g_octNode[max_octnodes];
 extern std::mutex g_octNode_mut;

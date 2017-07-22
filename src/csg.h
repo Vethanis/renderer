@@ -1,5 +1,7 @@
 #pragma once
 
+#define GLM_SWIZZLE
+
 #include "glm/glm.hpp"
 #include <cfloat>
 #include <vector>
@@ -114,12 +116,12 @@ struct CSG {
     }
 };
 
-constexpr u16 max_csgs = 20000;
+constexpr u16 max_csgs = 60000;
 static u16 csg_tail = 0;
 extern CSG g_CSG[max_csgs];
 
 struct CSGIndices {
-    static constexpr u16 capacity = 512;
+    static constexpr u16 capacity = 256;
     u16 indices[capacity];
     u16 tail;
     CSGIndices() : tail(0){};
@@ -129,13 +131,6 @@ struct CSGIndices {
     }
     CSG& operator[](u16 index) const {
         return get(index);
-    }
-    void push_back(u16 id){
-        if(tail >= capacity){
-            puts("Ran out of room in CSGIndices::push_back()");
-            return;
-        }
-        indices[tail++] = id;
     }
     maphit map(const glm::vec3& p) const {
         maphit a = {u16(-1), FLT_MAX};
@@ -157,41 +152,71 @@ struct CSGIndices {
             map(p + glm::vec3(0.0f, 0.0f, 0.001f)) - map(p - glm::vec3(0.0f, 0.0f, 0.001f))
         ));
     }
+    void push_back(u16 id){
+        if(tail >= capacity){
+            puts("Ran out of room in CSGIndices::push_back()");
+            return;
+        }
+        indices[tail++] = id;
+    }
 };
 
-
 inline void fillInd(VertexBuffer& vb, const CSGIndices& list, const glm::vec3& center, float radius, int depth){
-    constexpr int fill_depth = 5;
+    constexpr int fill_depth = 6;
 
     maphit mh = list.map(center);
     if(fabsf(mh.distance) > radius * 1.732051f)
         return;
 
-    if(depth == fill_depth){
-        glm::vec3 N = list.map_normal(center);
-        vb.push_back({ 
-            center - N * mh.distance, 
-            N, 
-            g_CSG[mh.id].param.color 
-        });
-        return;
+#define prunebit() \
+    CSGIndices prune; \
+    for(u16 i = 0; i < list.tail; i++){ \
+        CSG& item = list[i]; \
+        if(item.func(center) < radius * 1.732051f + item.param.smoothness){ \
+            prune.push_back(list.indices[i]); \
+        } \
     }
 
-    CSGIndices pruned;
-    if(list.size() > 3 && depth){
-        for(u16 i = 0; i < list.tail; i++){
-            if(list[i].func(center) < radius * 1.732051f + list[i].param.smoothness)
-                pruned.push_back(i);
+#define recbit(alist) \
+    const float hr = radius * 0.5f; \
+    for(int i = 0; i < 8; i++){ \
+        glm::vec3 c(center); \
+        c.x += (i & 4) ? hr : -hr; \
+        c.y += (i & 2) ? hr : -hr; \
+        c.z += (i & 1) ? hr : -hr; \
+        fillInd(vb, alist, c, hr, depth + 1); \
+    }
+
+    switch(depth){
+        case 0:
+        {
+            recbit(list);
         }
-    }
+        break;
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        {
+            prunebit();
+            recbit(prune);
+        }
+        break;
+        case fill_depth:
+        {
+            glm::vec3 N = list.map_normal(center);
+            vb.push_back({ 
+                center - N * mh.distance, 
+                N, 
+                g_CSG[mh.id].param.color 
+            });
+        }
+        break;
+        default:
+        {
 
-    const float hr = radius * 0.5f;
-    for(int i = 0; i < 8; i++){
-        glm::vec3 c(center);
-        c.x += (i & 4) ? hr : -hr;
-        c.y += (i & 2) ? hr : -hr;
-        c.z += (i & 1) ? hr : -hr;
-        fillInd(vb, pruned.size() ? pruned : list, c, hr, depth + 1);
+        }
     }
 }
 
