@@ -162,7 +162,7 @@ struct CSGIndices {
 };
 
 inline void fillInd(VertexBuffer& vb, const CSGIndices& list, const glm::vec3& center, float radius, int depth){
-    constexpr int fill_depth = 6;
+    constexpr int fill_depth = 5;
 
     maphit mh = list.map(center);
     if(fabsf(mh.distance) > radius * 1.732051f)
@@ -189,15 +189,14 @@ inline void fillInd(VertexBuffer& vb, const CSGIndices& list, const glm::vec3& c
 
     switch(depth){
         case 0:
+        case 1:
         {
             recbit(list);
         }
         break;
-        case 1:
         case 2:
         case 3:
         case 4:
-        case 5:
         {
             prunebit();
             recbit(prune);

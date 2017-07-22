@@ -73,7 +73,7 @@ struct leafData{
 extern leafData g_leafData;
 
 struct OctNode{
-    static constexpr u16 leaf_depth = 5;
+    static constexpr u16 leaf_depth = 6;
     glm::vec3 center;
     float radius;
     u16 children[8];
