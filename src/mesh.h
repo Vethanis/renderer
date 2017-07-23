@@ -1,19 +1,37 @@
-#ifndef MESH_H
-#define MESH_H
+#pragma once
 
-#include "glm/glm.hpp"
+#include "store.h"
 #include "vertexbuffer.h"
 
-class Mesh {
+struct Mesh {
     unsigned vao, vbo, num_vertices;
-    bool is_init;
-public:
-    Mesh() : num_vertices(0), is_init(false){};
-    ~Mesh(){ destroy(); }
     void draw();
-    void update(VertexBuffer& vb);
+    void upload(const VertexBuffer& vb);
     void init();
-    void destroy();
+    void deinit();
 };
 
-#endif
+struct MeshStore{
+    Store<Mesh, 128> m_store;
+    VertexBuffer vb;
+    
+    void load_mesh(Mesh& mesh, unsigned name);
+    Mesh* get(unsigned name){
+        Mesh* m = m_store.get(name);
+        if(m){ return m; }
+
+        if(m_store.full()){
+            m_store.remove_near(name)->deinit();
+        }
+
+        Mesh new_mesh;
+        new_mesh.init();
+        load_mesh(new_mesh, name);
+        m_store.insert(name, new_mesh);
+        return m_store.get(name);
+    }
+    Mesh* operator[](unsigned name){ return get(name); }
+    Mesh* operator[](const char* name){ return get(hash(name)); }
+};
+
+extern MeshStore g_MeshStore;

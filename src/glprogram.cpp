@@ -8,13 +8,12 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "stdio.h"
 
-using namespace std;
-
-GLProgram::GLProgram(){
+void GLProgram::init(){
+    shader_tail = 0;
     id = glCreateProgram();
 }
 
-GLProgram::~GLProgram(){
+void GLProgram::deinit(){
     glDeleteProgram(id);
     MYGLERRORMACRO
 }
@@ -23,7 +22,14 @@ void GLProgram::addShader(const char* path, int type){
     char* src = load_file(path);
     unsigned handle = createShader(src, type);
     glAttachShader(id, handle);
-    delete[] src;
+    release_file(src);
+    shader_handles[shader_tail++] = handle;
+    assert(shader_tail < max_shaders);
+}
+
+void GLProgram::addShader(unsigned handle){
+    glAttachShader(id, handle);
+    // don't put in shader_handles as we don't own this shader.
 }
 
 void GLProgram::link(){
@@ -40,6 +46,11 @@ void GLProgram::link(){
         puts(log);
         delete[] log;
     }
+
+    for(int i = 0; i < shader_tail; i++){
+        deleteShader(shader_handles[i]);
+    }
+    shader_tail = 0;
 }
 
 void GLProgram::bind(){
@@ -47,55 +58,40 @@ void GLProgram::bind(){
     MYGLERRORMACRO
 }
 
-int GLProgram::getUniformLocation(const std::string& name){
-    auto iter = uniforms.find(name);
-    if(iter == end(uniforms)){
-        const int v = glGetUniformLocation(id, name.c_str());
-        uniforms[name] = v;
-        return v;
+int GLProgram::getUniformLocation(const char* name){
+    int* loc = m_locations[name];
+    if(!loc){
+        m_locations.insert(name, glGetUniformLocation(id, name));
+        loc = m_locations[name];
     }
-    return iter->second;
+    return *loc;
 }
 
-void GLProgram::setUniform(const std::string& name, const glm::vec2& v){
+void GLProgram::setUniform(const char* name, const glm::vec2& v){
     const int location = getUniformLocation(name);
-    if (location == -1)
-        return;
     glUniform2fv(location, 1, glm::value_ptr(v));
 }
-void GLProgram::setUniform(const std::string& name, const glm::vec3& v){
+void GLProgram::setUniform(const char* name, const glm::vec3& v){
     const int location = getUniformLocation(name);
-    if (location == -1)
-        return;
     glUniform3fv(location, 1, glm::value_ptr(v));
 }
-void GLProgram::setUniform(const std::string& name, const glm::vec4& v){
+void GLProgram::setUniform(const char* name, const glm::vec4& v){
     const int location = getUniformLocation(name);
-    if (location == -1)
-        return;
     glUniform4fv(location, 1, glm::value_ptr(v));
 }
-void GLProgram::setUniform(const std::string& name, const glm::mat3& v){
+void GLProgram::setUniform(const char* name, const glm::mat3& v){
     const int location = getUniformLocation(name);
-    if (location == -1)
-        return;
     glUniformMatrix3fv(location, 1, false, glm::value_ptr(v));
 }
-void GLProgram::setUniform(const std::string& name, const glm::mat4& v){
+void GLProgram::setUniform(const char* name, const glm::mat4& v){
     const int location = getUniformLocation(name);
-    if (location == -1)
-        return;
     glUniformMatrix4fv(location, 1, false, glm::value_ptr(v));
 }
-void GLProgram::setUniformInt(const std::string& name, const int v){
+void GLProgram::setUniformInt(const char* name, const int v){
     const int location = getUniformLocation(name);
-    if (location == -1)
-        return;
     glUniform1i(location, v);
 }
-void GLProgram::setUniformFloat(const std::string& name, const float v){
+void GLProgram::setUniformFloat(const char* name, const float v){
     const int location = getUniformLocation(name);
-    if (location == -1)
-        return;
     glUniform1f(location, v);
 }

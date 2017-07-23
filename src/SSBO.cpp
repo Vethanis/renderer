@@ -1,23 +1,18 @@
 #include "myglheaders.h"
 #include "SSBO.h"
-#include <string.h>
 #include "debugmacro.h"
 
-SSBO::SSBO(void* ptr, size_t bytes, unsigned binding){
+void SSBO::init(unsigned binding){
     glGenBuffers(1, &id);
-    MYGLERRORMACRO
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
-    MYGLERRORMACRO
-    glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, ptr, GL_DYNAMIC_COPY);
     MYGLERRORMACRO
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, id);
     MYGLERRORMACRO
 }
-SSBO::~SSBO(){
+void SSBO::deinit(){
     glDeleteBuffers(1, &id);
     MYGLERRORMACRO
 }
-void SSBO::upload(void* ptr, size_t bytes){
+void SSBO::upload(const void* ptr, unsigned bytes){
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
     MYGLERRORMACRO
     glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, ptr, GL_DYNAMIC_COPY);

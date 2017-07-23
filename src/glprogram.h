@@ -1,25 +1,26 @@
-#ifndef GLPROGRAM_H
-#define GLPROGRAM_H
+#pragma once
 
-#include <string>
-#include <unordered_map>
 #include "glm/glm.hpp"
+#include "store.h"
 
 struct GLProgram{
-    std::unordered_map<std::string, unsigned> uniforms;
+    Store<int, 16> m_locations;
+    static constexpr int max_shaders = 4;
+    unsigned shader_handles[max_shaders];
+    unsigned shader_tail;
     unsigned id;
-    int getUniformLocation(const std::string& name);
-    GLProgram();
-    ~GLProgram();
+    int getUniformLocation(const char* name);
+    void init();
+    void deinit();
     void addShader(const char* path, int type);
+    void addShader(unsigned handle);
     void link();
     void bind();
-    void setUniform(const std::string& name, const glm::vec2& v);
-    void setUniform(const std::string& name, const glm::vec3& v);
-    void setUniform(const std::string& name, const glm::vec4& v);
-    void setUniform(const std::string& name, const glm::mat3& v);
-    void setUniform(const std::string& name, const glm::mat4& v);
-    void setUniformInt(const std::string& name, const int v);
-    void setUniformFloat(const std::string& name, const float v);
+    void setUniform(const char* name, const glm::vec2& v);
+    void setUniform(const char* name, const glm::vec3& v);
+    void setUniform(const char* name, const glm::vec4& v);
+    void setUniform(const char* name, const glm::mat3& v);
+    void setUniform(const char* name, const glm::mat4& v);
+    void setUniformInt(const char* name, const int v);
+    void setUniformFloat(const char* name, const float v);
 };
-#endif

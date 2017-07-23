@@ -42,7 +42,6 @@ bool Window::open(){
 }
 void Window::swap(){
     glfwSwapBuffers(window);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void Window::error_callback(int error, const char* description){

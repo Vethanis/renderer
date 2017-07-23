@@ -8,7 +8,10 @@
 
 char* load_file(const char* path){
     FILE* f = fopen(path, "rb");
-    assert(f);
+    if(!f){
+        printf("Could not open file: %s\n", path);
+        assert(false);
+    }
     fseek(f, 0, SEEK_END);
     const size_t sz = size_t(ftell(f));
     char* out = new char[sz + 1];
@@ -22,4 +25,8 @@ char* load_file(const char* path){
     fclose(f);
     out[sz] = 0;
     return out;
+}
+
+void release_file(const char* p){
+    delete[] p;
 }

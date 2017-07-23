@@ -1,11 +1,11 @@
 #ifndef GLSCREEN_H
 #define GLSCREEN_H
 
-class GLScreen{
+struct GLScreen{
     unsigned vao, vbo;
-public:
-    GLScreen();
-    ~GLScreen();
+    unsigned vertexShader;
+    void init();
+    void deinit();
     void draw();
 };
 

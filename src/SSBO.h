@@ -1,12 +1,10 @@
-#ifndef SSBO_H
-#define SSBO_H
+#pragma once
 
 class SSBO{
     unsigned id;
 public:
-    SSBO(void* ptr, size_t bytes, unsigned binding=0);
-    ~SSBO();
-    void upload(void* src, size_t bytes);
+    void init(unsigned binding);
+    void deinit();
+    void upload(const void* src, unsigned bytes);
 };
 
-#endif
