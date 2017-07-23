@@ -1,4 +1,4 @@
-
+#pragma once
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -44,8 +44,8 @@ public:
         m_fov = glm::radians(fov);
         P = glm::perspective(m_fov, m_whratio, m_near, m_far);
     }
-    inline const glm::vec3& getEye(){return m_eye;}
-    inline const glm::vec3& getAt(){return m_at;}
+    inline const glm::vec3& getEye()const {return m_eye;}
+    inline const glm::vec3& getAt()const {return m_at;}
     inline float getNear()const{return m_near;}
     inline float getFar()const{return m_far;}
     inline float getFov()const{return m_fov;}

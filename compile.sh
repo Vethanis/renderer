@@ -28,6 +28,7 @@ fi
 
 GLSL="src/*.glsl"
 DLL="lib/*.dll"
+ASSETS="assets/*"
 
 mkdir -p bin/Release
 mkdir -p bin/Debug
@@ -36,6 +37,8 @@ cp $GLSL bin/Release
 cp $GLSL bin/Debug
 cp $DLL bin/Release
 cp $DLL bin/Debug
+cp $ASSETS bin/Release
+cp $ASSETS bin/Debug
 
 cd bin/Release
 ./main.exe

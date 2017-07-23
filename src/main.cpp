@@ -4,7 +4,6 @@
 #include "debugmacro.h"
 #include "window.h"
 #include "input.h"
-#include "timer.h"
 #include "renderobject.h"
 #include "filestore.h"
 
@@ -46,24 +45,24 @@ int main(int argc, char* argv[]){
     Window window(WIDTH, HEIGHT, 3, 3, "Renderer");
     Input input(window.getWindow());
 
-    g_gBuffer.init(WIDTH, HEIGHT);
-    g_Renderables.init();
-
-    g_Renderables.add({ glm::mat4(), albedo, spec, mesh });
-
-    Timer timer;
-
     glEnable(GL_DEPTH_TEST);
+
+    g_Renderables.init();
+    g_Renderables.add({ glm::mat4(), albedo, spec, mesh });
+    g_gBuffer.init(WIDTH, HEIGHT);
 
     input.poll();
     unsigned i = 0;
     float t = (float)glfwGetTime();
     
+    LightSet lights;
+    lights[0].color = vec4(1.0f);
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
+        lights[0].position = vec4(camera.getEye(), 0.0f);
+        g_gBuffer.updateLights(lights);
 
-        g_Renderables.draw(camera.getVP());
-        g_gBuffer.draw(camera.getEye());
+        g_gBuffer.draw(camera);
         window.swap();
     }
 

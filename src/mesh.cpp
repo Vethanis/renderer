@@ -23,64 +23,61 @@ void begin_mesh_layout(){
 
 template<>
 inline void mesh_layout<float>(int location){
-    glEnableVertexAttribArray(location);
-    glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc);
+    glEnableVertexAttribArray(location); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(float);
 }
 template<>
 inline void mesh_layout<glm::vec2>(int location){
-    glEnableVertexAttribArray(location);
-    glVertexAttribPointer(location, 2, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc);
+    glEnableVertexAttribArray(location); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 2, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec2);
 }
 template<>
 inline void mesh_layout<glm::vec3>(int location){
-    glEnableVertexAttribArray(location);
-    glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc);
+    glEnableVertexAttribArray(location); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec3);
 }
 template<>
 inline void mesh_layout<glm::vec4>(int location){
-    glEnableVertexAttribArray(location);
-    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc);
+    glEnableVertexAttribArray(location); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec4);
 }
 
 void Mesh::init(){
     num_vertices = 0;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
+    glGenVertexArrays(1, &vao); MYGLERRORMACRO;
+    glGenBuffers(1, &vbo); MYGLERRORMACRO;
 
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindVertexArray(vao); MYGLERRORMACRO;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo); MYGLERRORMACRO;
 
     begin_mesh_layout<Vertex>();
     mesh_layout<glm::vec3>(0);
     mesh_layout<glm::vec3>(1);
     mesh_layout<glm::vec2>(2);
 
-    MYGLERRORMACRO
 }
 
 void Mesh::deinit(){
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo); MYGLERRORMACRO;
+    glDeleteVertexArrays(1, &vao); MYGLERRORMACRO;
     MYGLERRORMACRO
 }
 
 void Mesh::upload(const VertexBuffer& vb){
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vb.size(), vb.data(), GL_STATIC_DRAW);
-    MYGLERRORMACRO
+    glBindVertexArray(vao); MYGLERRORMACRO;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo); MYGLERRORMACRO;
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vb.size(), vb.data(), GL_STATIC_DRAW); MYGLERRORMACRO;
     num_vertices = unsigned(vb.size());
 }
 
 void Mesh::draw(){
     if(!num_vertices){return;}
-    glBindVertexArray(vao);
-    glDrawArrays(GL_POINTS, 0, num_vertices);
-    MYGLERRORMACRO
+    glBindVertexArray(vao); MYGLERRORMACRO;
+    glDrawArrays(GL_POINTS, 0, num_vertices); MYGLERRORMACRO;
 }
 
 void parse_mesh_file(VertexBuffer& out, const char* text){
@@ -110,7 +107,6 @@ void parse_mesh_file(VertexBuffer& out, const char* text){
         glm::ivec3 c;
         sscanf(p, "%f %f %f %f %f %f %f %f\n", &v.position.x, &v.position.y, &v.position.z, &v.normal.x, &v.normal.y, &v.normal.z, &v.uv.x, &v.uv.y);
         v.normal = glm::normalize(v.normal);
-        v.uv = glm::fmod(v.uv, glm::vec2(1.0f));
         verts.push_back(v);
         p = nextline(p);
     }

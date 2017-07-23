@@ -11,57 +11,38 @@ struct Texture{
     int width, height;
     unsigned handle;
     int FullType, Channels, ComponentType;
-    void init(int _FullType, int _Channels, int _ComponentType, int w, int h, bool mip){
+    void init(int _FullType, int _Channels, int _ComponentType, int w, int h){
         FullType = _FullType;
         Channels = _Channels;
         ComponentType = _ComponentType;
         width = w;
         height = h;
-        glGenTextures(1, &handle);
-        glBindTexture(GL_TEXTURE_2D, handle);
-        if(mip){
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);    MYGLERRORMACRO
-        }
-        else{
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);    MYGLERRORMACRO
-        }
+        glGenTextures(1, &handle);  MYGLERRORMACRO;
+        glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    MYGLERRORMACRO
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    MYGLERRORMACRO
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);    MYGLERRORMACRO
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);    MYGLERRORMACRO
         glTexImage2D(GL_TEXTURE_2D, 0, FullType, width, height, 0, Channels, ComponentType, NULL);    MYGLERRORMACRO
-        if(mip)
-            glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-        MYGLERRORMACRO
+        glBindTexture(GL_TEXTURE_2D, 0);  MYGLERRORMACRO;
     }
     void deinit(){
         glDeleteTextures(1, &handle);    MYGLERRORMACRO
     }
     void upload(const void* ptr){
-        glTexImage2D(GL_TEXTURE_2D, 0, FullType, width, height, 0, Channels, ComponentType, ptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, FullType, width, height, 0, Channels, ComponentType, ptr);  MYGLERRORMACRO;
     }
     void bind(int channel, const char* uname, GLProgram& prog){
-        glActiveTexture(GL_TEXTURE0 + channel);
-        MYGLERRORMACRO
-        glBindTexture(GL_TEXTURE_2D, handle);
-        MYGLERRORMACRO
+        glActiveTexture(GL_TEXTURE0 + channel);  MYGLERRORMACRO;
+        glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
         prog.setUniformInt(uname, channel);
     }
     void setCSBinding(int binding){
-        glBindImageTexture(0, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);
-        MYGLERRORMACRO
-    }
-    void setPixel(glm::ivec2 cr, const void* p){
-        glTextureSubImage2D(handle, 0, cr.x, cr.y, 1, 1, Channels, ComponentType, p);
-        MYGLERRORMACRO
+        glBindImageTexture(0, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);  MYGLERRORMACRO;
     }
 #define TEX_INIT_MACRO(name, a, b, c) \
-    void init##name(int w, int h, bool mip=false){ \
-        init(a, b, c, w, h, mip); \
+    void init##name(int w, int h){ \
+        init(a, b, c, w, h); \
     }
 
     TEX_INIT_MACRO(1f, GL_R32F, GL_RED, GL_FLOAT);

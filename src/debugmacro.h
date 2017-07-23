@@ -1,11 +1,11 @@
 #ifndef DEBUGMACRO_H
 #define DEBUGMACRO_H
 
+#define DEBUG
+
 #ifdef DEBUG
 
-#include "myglheaders.h"
-#include "stdio.h"
-#include <iostream>
+#include <cstdio>
 
 #define MYGLERRORMACRO {    \
     GLenum err = GL_NO_ERROR; \

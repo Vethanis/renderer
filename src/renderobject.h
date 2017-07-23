@@ -7,6 +7,7 @@
 #include "glscreen.h"
 #include "SSBO.h"
 #include "light.h"
+#include "camera.h"
 
 struct RenderObject{
     glm::mat4 transform;
@@ -34,6 +35,7 @@ struct Renderables{
     void init();
     void deinit(){ prog.deinit(); }
     void draw(const glm::mat4& VP){
+        prog.bind();
         for(unsigned i = 0; i < tail; i++){
             objects[i].draw(VP, prog);
         }
@@ -52,14 +54,16 @@ extern Renderables g_Renderables;
 
 struct GBuffer{
     unsigned buff;
+    unsigned rboDepth;
     unsigned posbuff, normbuff, matbuff;
+    unsigned width, height;
     GLScreen screen;
     GLProgram prog;
     SSBO lightbuff;
     void init(int w, int h);
     void deinit();
     void updateLights(const LightSet& lights);
-    void draw(const glm::vec3& eye);
+    void draw(const Camera& cam);
 };
 
 extern GBuffer g_gBuffer;

@@ -3,5 +3,6 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include "debugmacro.h"
 
 #endif
