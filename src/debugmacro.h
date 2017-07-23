@@ -14,38 +14,47 @@
             case 0x0500:    \
                 printf("invalid enumeration at ");  \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x501: \
                 printf("invalid value at ");    \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x502: \
                 printf("invalid operation at ");    \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x503: \
                 printf("stack overflow at ");   \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x504: \
                 printf("stack underflow at ");  \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x505: \
                 printf("out of memory at ");    \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x506: \
                 printf("invalid framebuffer operation at ");    \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x507: \
                 printf("context lost at "); \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
             case 0x508: \
                 printf("table too large at ");  \
                 PRINTLINEMACRO  \
+                __debugbreak(); \
                 break;  \
         }   \
     }   \

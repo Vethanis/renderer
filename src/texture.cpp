@@ -16,7 +16,7 @@ void TextureStore::load_texture(Texture& tex, unsigned name){
         assert(false);
     }
 
-    tex.init4uc(width, height);
+    tex.init4uc(width, height, true);
     tex.upload(image);
 
     free(image);

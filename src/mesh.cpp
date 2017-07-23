@@ -77,7 +77,7 @@ void Mesh::upload(const VertexBuffer& vb){
 void Mesh::draw(){
     if(!num_vertices){return;}
     glBindVertexArray(vao); MYGLERRORMACRO;
-    glDrawArrays(GL_POINTS, 0, num_vertices); MYGLERRORMACRO;
+    glDrawArrays(GL_TRIANGLES, 0, num_vertices); MYGLERRORMACRO;
 }
 
 void parse_mesh_file(VertexBuffer& out, const char* text){

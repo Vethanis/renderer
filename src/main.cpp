@@ -29,8 +29,8 @@ int main(int argc, char* argv[]){
     unsigned spec = g_nameStore.add("specular.png");
     unsigned mesh = g_nameStore.add("suzanne.ply");
 
-    int WIDTH = 1280;
-    int HEIGHT = 720;
+    int WIDTH = 1920;
+    int HEIGHT = 1080;
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -46,6 +46,7 @@ int main(int argc, char* argv[]){
     Input input(window.getWindow());
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 
     g_Renderables.init();
     g_Renderables.add({ glm::mat4(), albedo, spec, mesh });
