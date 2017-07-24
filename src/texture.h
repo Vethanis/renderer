@@ -70,7 +70,7 @@ struct Texture{
         prog.setUniformInt(names[channel], 2 * channel + 1);
     }
     void setCSBinding(int FullType, int binding){
-        glBindImageTexture(0, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);  MYGLERRORMACRO;
+        glBindImageTexture(binding, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);  MYGLERRORMACRO;
     }
 
 #define TEX_TYPE_MACRO(name, a, b, c) \
