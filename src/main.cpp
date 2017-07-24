@@ -7,7 +7,21 @@
 #include "renderobject.h"
 #include "filestore.h"
 
+#include <random>
+#include <ctime>
+
 using namespace glm;
+
+
+
+float randf(void){
+    constexpr float inv = 1.0f / float(RAND_MAX);
+    return rand() * inv;
+}
+
+float randf(float range){
+    return randf() * range - (range * 0.5f);
+}
 
 float frameBegin(unsigned& i, float& t){
     float dt = (float)glfwGetTime() - t;
@@ -24,10 +38,11 @@ float frameBegin(unsigned& i, float& t){
 }
 
 int main(int argc, char* argv[]){
-
-    unsigned albedo = g_nameStore.add("albedo.png");
-    unsigned spec = g_nameStore.add("specular.png");
-    unsigned mesh = g_nameStore.add("suzanne.obj");
+    srand((unsigned)time(0));
+    unsigned albedo = g_nameStore.add("brick_diffuse.png");
+    unsigned normal = g_nameStore.add("brick_normal.png");
+    unsigned spec = g_nameStore.add("brick_specular.png");
+    unsigned mesh = g_nameStore.add("building.obj");
 
     int WIDTH = 1920;
     int HEIGHT = 1080;
@@ -49,22 +64,40 @@ int main(int argc, char* argv[]){
     glEnable(GL_CULL_FACE);
 
     g_Renderables.init();
-    g_Renderables.add({ glm::mat4(), albedo, spec, mesh });
+    g_Renderables.add({ glm::mat4(), albedo, normal, spec, mesh });
     g_gBuffer.init(WIDTH, HEIGHT);
+
+    LightSet lights;
+
+    const auto randomizeLights = [&](){
+        for(int i = 0; i < 32; i++){
+            lights[i].position.x = randf(25.0f);
+            lights[i].position.y = randf() * 25.0f;
+            lights[i].position.z = randf(25.0f);
+            lights[i].color.x = randf();
+            lights[i].color.y = randf();
+            lights[i].color.z = randf();
+        }
+        g_gBuffer.updateLights(lights);
+    };
+
+    randomizeLights();
 
     input.poll();
     unsigned i = 0;
     float t = (float)glfwGetTime();
-    
-    LightSet lights;
-    lights[0].color = vec4(1.0f);
+    int wait_counter = 0;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
-        lights[0].position = vec4(camera.getEye(), 0.0f);
-        g_gBuffer.updateLights(lights);
+
+        if(glfwGetKey(window.getWindow(), GLFW_KEY_E) && wait_counter > 10){
+            randomizeLights();
+            wait_counter = 0;
+        }
 
         g_gBuffer.draw(camera);
         window.swap();
+        wait_counter++;
     }
 
     g_Renderables.deinit();

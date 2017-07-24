@@ -39,7 +39,8 @@ void main(){
 	    vec3 H = normalize(V + L);
 	    float D = max(0.0f, dot(L, N));
 	    float S = (D > 0.0) ? pow(max(0.0, dot(H, N)), spec) : 0.0;
-        lighting += (D + S) * albedo * lights[i].color.rgb;
+        float luminance = (S + D) / dot(lights[i].position.xyz - pos, lights[i].position.xyz - pos);
+        lighting += luminance * albedo * lights[i].color.rgb;
     }
 
     outColor = vec4(lighting.rgb, 1.0);

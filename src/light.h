@@ -11,4 +11,6 @@ struct LightSet{
     light lights[num_lights];
     int tail = 0;
     light& operator[](unsigned i){ return lights[i]; }
+    light* begin(){ return lights; }
+    light* end(){ return lights + num_lights; }
 };

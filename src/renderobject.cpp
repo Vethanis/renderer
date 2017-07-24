@@ -12,7 +12,7 @@ out vec2 fragUv;\n\
 uniform mat4 MVP;\n\
 void main() {\n\
 	gl_Position = MVP * vec4(position, 1.0);\n\
-	fragPos = gl_Position.xyz;\n\
+	fragPos = position;\n\
 	fragNorm = normal;\n\
 	fragUv = uv;\n\
 }\n\
@@ -118,10 +118,9 @@ void GBuffer::draw(const Camera& cam){
     screen.draw();
 
     // copy geom's zbuff to default zbuff
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, buff); MYGLERRORMACRO;
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);  MYGLERRORMACRO; // write to default framebuffer
-    glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST); MYGLERRORMACRO;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); MYGLERRORMACRO;
+    // glBindFramebuffer(GL_READ_FRAMEBUFFER, buff); MYGLERRORMACRO;
+    // glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);  MYGLERRORMACRO; // write to default framebuffer
+    // glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST); MYGLERRORMACRO;
+    // glBindFramebuffer(GL_FRAMEBUFFER, 0); MYGLERRORMACRO;
 
-    
 }

@@ -61,8 +61,8 @@ public:
         m_yaw -= amt;
         m_yaw = fmod(m_yaw, 360.0f);
     }
-    inline const glm::mat4& getV(){return V;}
-    inline const glm::mat4& getP(){return P;}
+    inline const glm::mat4& getV()const{return V;}
+    inline const glm::mat4& getP()const{return P;}
     inline glm::mat4 getVP()const{return P * V;}
     inline const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
     inline void setPlanes(float near, float far){

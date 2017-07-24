@@ -6,7 +6,6 @@
 #include "debugmacro.h"
 #include "vertexbuffer.h"
 #include "glm/glm.hpp"
-#include <glm/gtx/common.hpp>
 #include "filestore.h"
 
 template<typename T>
@@ -124,7 +123,7 @@ void parse_obj(VertexBuffer& out, const char* text){
     const char* p = text;
 
     struct Face{
-        int pa, na, ua, pb, nb, ub, pc, nc, uc;
+        int v1, vt1, vn1, v2, vt2, vn2, v3, vt3, vn3;
     };
 
     std::vector<glm::vec3> positions;
@@ -166,9 +165,9 @@ void parse_obj(VertexBuffer& out, const char* text){
             {
                 faces.push_back({});
                 Face& f = faces.back();
-                sscanf(p, "f %i/%i/%i %i/%i/%i %i/%i/%i", &f.pa, &f.na, &f.ua,
-                    &f.pb, &f.nb, &f.ub,
-                    &f.pc, &f.nc, &f.uc);
+                sscanf(p, "f %i/%i/%i %i/%i/%i %i/%i/%i", &f.v1, &f.vt1, &f.vn1,
+                    &f.v2, &f.vt2, &f.vn2,
+                    &f.v3, &f.vt3, &f.vn3);
                 
             }
         }
@@ -177,17 +176,17 @@ void parse_obj(VertexBuffer& out, const char* text){
 
     out.clear();
     for(Face& face : faces){
-        glm::vec3& pa = positions[face.pa - 1];
-        glm::vec3& pb = positions[face.na - 1];
-        glm::vec3& pc = positions[face.ua - 1];
+        glm::vec3& pa = positions[face.v1 - 1];
+        glm::vec3& pb = positions[face.v2 - 1];
+        glm::vec3& pc = positions[face.v3 - 1];
 
-        glm::vec3& na = normals[face.pb - 1];
-        glm::vec3& nb = normals[face.nb - 1];
-        glm::vec3& nc = normals[face.ub - 1];
+        glm::vec3& na = normals[face.vn1 - 1];
+        glm::vec3& nb = normals[face.vn2 - 1];
+        glm::vec3& nc = normals[face.vn3 - 1];
 
-        glm::vec2& ua = uvs[face.pc - 1];
-        glm::vec2& ub = uvs[face.nc - 1];
-        glm::vec2& uc = uvs[face.uc - 1];
+        glm::vec2& ua = uvs[face.vt1 - 1];
+        glm::vec2& ub = uvs[face.vt2 - 1];
+        glm::vec2& uc = uvs[face.vt3 - 1];
 
         out.push_back({pa, na, ua});
         out.push_back({pb, nb, ub});

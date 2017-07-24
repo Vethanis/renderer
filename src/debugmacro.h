@@ -1,11 +1,11 @@
 #ifndef DEBUGMACRO_H
 #define DEBUGMACRO_H
 
-#define DEBUG
+#include <cstdio>
+
+//#define DEBUG
 
 #ifdef DEBUG
-
-#include <cstdio>
 
 #define MYGLERRORMACRO {    \
     GLenum err = GL_NO_ERROR; \
@@ -72,38 +72,28 @@
 #include "glm/glm.hpp"
 
 inline void print(const glm::vec2& v){
-    #ifdef DEBUG
     printf("(%.3f, %.3f)\n", v.x, v.y);
-    #endif
 }
 
 inline void print(const glm::vec3& v){
-    #ifdef DEBUG
     printf("(%.3f, %.3f, %.3f)\n", v.x, v.y, v.z);
-    #endif
 }
 
 inline void print(const glm::vec4& v){
-    #ifdef DEBUG
     printf("(%.3f, %.3f, %.3f, %.3f)\n", v.x, v.y, v.z, v.w);
-    #endif
 }
 
 inline void print(const glm::mat3& m){
-    #ifdef DEBUG
     print(m[0]);
     print(m[1]);
     print(m[2]);
-    #endif
 }
 
 inline void print(const glm::mat4& m){
-    #ifdef DEBUG
     print(m[0]);
     print(m[1]);
     print(m[2]);
     print(m[3]);
-    #endif
 }
 
 #endif //debugmacro_h
