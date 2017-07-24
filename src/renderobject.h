@@ -13,18 +13,16 @@ struct RenderObject{
     glm::mat4 transform;
     unsigned albedo;
     unsigned normal;
-    unsigned specular;
     unsigned mesh;
     bool valid(){
         return g_TextureStore.get(albedo) &&
-            g_TextureStore.get(specular) &&
+            g_TextureStore.get(normal) && 
             g_MeshStore.get(mesh);
     }
     void draw(const glm::mat4& VP, GLProgram& prog){
         prog.setUniform("MVP", VP * transform);
         g_TextureStore[albedo]->bind(0, "albedoSampler", prog);
         g_TextureStore[normal]->bind(1, "normalSampler", prog);
-        g_TextureStore[specular]->bind(2, "specularSampler", prog);
         g_MeshStore[mesh]->draw();
     }
 };

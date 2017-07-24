@@ -10,7 +10,6 @@ in vec2 fragUv;
 
 uniform sampler2D albedoSampler;
 uniform sampler2D normalSampler;
-uniform sampler2D specularSampler;
 
 void main(){
     gPosition = fragPos;
@@ -21,6 +20,5 @@ void main(){
     N.z *= nsamp.z;
     gNormal = normalize(N);
 
-    gMaterial.rgb = texture(albedoSampler, fragUv).rgb;
-    gMaterial.a = texture(specularSampler, fragUv).r;
+    gMaterial.rgba = texture(albedoSampler, fragUv).rgba;
 }

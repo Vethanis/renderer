@@ -34,6 +34,10 @@ void Renderables::init(){
 void GBuffer::init(int w, int h){
     width = w;
     height = h;
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    
     screen.init();
     lightbuff.init(9);
 

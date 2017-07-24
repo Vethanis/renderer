@@ -41,11 +41,10 @@ int main(int argc, char* argv[]){
     srand((unsigned)time(0));
     unsigned albedo = g_nameStore.add("brick_diffuse.png");
     unsigned normal = g_nameStore.add("brick_normal.png");
-    unsigned spec = g_nameStore.add("brick_specular.png");
     unsigned mesh = g_nameStore.add("building.obj");
 
-    int WIDTH = 1920;
-    int HEIGHT = 1080;
+    int WIDTH = int(1920.0f * 1.5f);
+    int HEIGHT = int(1080.0f * 1.5f);
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -60,11 +59,8 @@ int main(int argc, char* argv[]){
     Window window(WIDTH, HEIGHT, 3, 3, "Renderer");
     Input input(window.getWindow());
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-
     g_Renderables.init();
-    g_Renderables.add({ glm::mat4(), albedo, normal, spec, mesh });
+    g_Renderables.add({ glm::scale({}, glm::vec3(0.5f)), albedo, normal, mesh });
     g_gBuffer.init(WIDTH, HEIGHT);
 
     LightSet lights;
