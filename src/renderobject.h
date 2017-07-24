@@ -44,7 +44,7 @@ struct RenderObject{
     RenderResource resource;
     bool valid(){ return resource.valid(); }
     void draw(const glm::mat4& VP, GLProgram& prog){
-        static const unsigned mvp_name = hash("MVP");
+        static const int mvp_name = prog.getUniformLocation("MVP");
         prog.setUniform(mvp_name, VP * transform);
         resource.bind(prog);
         g_MeshStore[resource.mesh]->draw();

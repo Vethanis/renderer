@@ -48,22 +48,22 @@ struct Texture{
             glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
     }
     void bindAlbedo(int channel, GLProgram& prog){
-        static const unsigned names[] = {
-            hash("albedoSampler0"),
-            hash("albedoSampler1"),
-            hash("albedoSampler2"),
-            hash("albedoSampler3"),
+        static const int names[] = { // only works for first prog used
+            prog.getUniformLocation("albedoSampler0"),
+            prog.getUniformLocation("albedoSampler1"),
+            prog.getUniformLocation("albedoSampler2"),
+            prog.getUniformLocation("albedoSampler3"),
         };
         glActiveTexture(GL_TEXTURE0 + 2 * channel);  MYGLERRORMACRO;
         glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
         prog.setUniformInt(names[channel], 2 * channel);
     }
     void bindNormal(int channel, GLProgram& prog){
-        static const unsigned names[] = {
-            hash("normalSampler0"),
-            hash("normalSampler1"),
-            hash("normalSampler2"),
-            hash("normalSampler3"),
+        static const int names[] = { // only works for first prog used
+            prog.getUniformLocation("normalSampler0"),
+            prog.getUniformLocation("normalSampler1"),
+            prog.getUniformLocation("normalSampler2"),
+            prog.getUniformLocation("normalSampler3"),
         };
         glActiveTexture(GL_TEXTURE0 + 2 * channel + 1);  MYGLERRORMACRO;
         glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;

@@ -29,8 +29,9 @@ void Renderables::init(){
     }
     prog.init();
     prog.addShader(mesh_vert_handle);
-    prog.addShader("write_to_gbuff.glsl", GL_FRAGMENT_SHADER);
+    int shader = prog.addShader("write_to_gbuff.glsl", GL_FRAGMENT_SHADER);
     prog.link();
+    prog.freeShader(shader);
 }
 
 void GBuffer::init(int w, int h){
@@ -82,8 +83,9 @@ void GBuffer::init(int w, int h){
 
     prog.init();
     prog.addShader(screen.vertexShader);
-    prog.addShader("light_g_buff.glsl", GL_FRAGMENT_SHADER);
+    int shader = prog.addShader("light_g_buff.glsl", GL_FRAGMENT_SHADER);
     prog.link();
+    prog.freeShader(shader);
 }
 void GBuffer::deinit(){
     screen.deinit();
@@ -99,10 +101,10 @@ Renderables g_Renderables;
 GBuffer g_gBuffer;
 
 void GBuffer::draw(const Camera& cam){
-    static const unsigned eye_name = hash("eye");
-    static const unsigned pos_name = hash("positionSampler");
-    static const unsigned norm_name = hash("normalSampler");
-    static const unsigned mat_name = hash("materialSampler");
+    static const int eye_name = prog.getUniformLocation("eye");
+    static const int pos_name = prog.getUniformLocation("positionSampler");
+    static const int norm_name = prog.getUniformLocation("normalSampler");
+    static const int mat_name = prog.getUniformLocation("materialSampler");
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); MYGLERRORMACRO;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); MYGLERRORMACRO;
