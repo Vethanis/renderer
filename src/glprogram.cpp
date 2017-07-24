@@ -46,7 +46,7 @@ void GLProgram::link(){
         delete[] log;
     }
 
-    for(int i = 0; i < shader_tail; i++){
+    for(unsigned i = 0; i < shader_tail; i++){
         deleteShader(shader_handles[i]);  MYGLERRORMACRO;
     }
     shader_tail = 0;

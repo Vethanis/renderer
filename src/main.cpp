@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
 
     unsigned albedo = g_nameStore.add("albedo.png");
     unsigned spec = g_nameStore.add("specular.png");
-    unsigned mesh = g_nameStore.add("suzanne.ply");
+    unsigned mesh = g_nameStore.add("suzanne.obj");
 
     int WIDTH = 1920;
     int HEIGHT = 1080;

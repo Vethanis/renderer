@@ -12,8 +12,8 @@
 template<typename T>
 void mesh_layout(int location);
 
-static int offset_loc = 0;
-static int stride = 0;
+static size_t offset_loc = 0;
+static size_t stride = 0;
 
 template<typename T>
 void begin_mesh_layout(){
@@ -24,25 +24,25 @@ void begin_mesh_layout(){
 template<>
 inline void mesh_layout<float>(int location){
     glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(float);
 }
 template<>
 inline void mesh_layout<glm::vec2>(int location){
     glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 2, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 2, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec2);
 }
 template<>
 inline void mesh_layout<glm::vec3>(int location){
     glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec3);
 }
 template<>
 inline void mesh_layout<glm::vec4>(int location){
     glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)offset_loc); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec4);
 }
 
@@ -80,7 +80,7 @@ void Mesh::draw(){
     glDrawArrays(GL_TRIANGLES, 0, num_vertices); MYGLERRORMACRO;
 }
 
-void parse_mesh_file(VertexBuffer& out, const char* text){
+void parse_ply(VertexBuffer& out, const char* text){
     const char* p = text;
     int num_verts = 0, num_faces = 0;
     bool in_header = true;
@@ -120,14 +120,88 @@ void parse_mesh_file(VertexBuffer& out, const char* text){
         p = nextline(p);
     }
 }
+void parse_obj(VertexBuffer& out, const char* text){
+    const char* p = text;
+
+    struct Face{
+        int pa, na, ua, pb, nb, ub, pc, nc, uc;
+    };
+
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
+    std::vector<Face> faces;
+
+    while(*p && p[1]){
+        switch(*p){
+            case 'v':
+            {
+                switch(p[1]){
+                    case ' ':
+                    {
+                        positions.push_back({});
+                        glm::vec3& pos = positions.back();
+                        sscanf(p, "v %f %f %f", &pos.x, &pos.y, &pos.z);
+                    }
+                    break;
+                    case 't':
+                    {
+                        uvs.push_back({});
+                        glm::vec2& uv = uvs.back();
+                        sscanf(p, "vt %f %f", &uv.x, &uv.y);
+                    }
+                    break;
+                    case 'n':
+                    {
+                        normals.push_back({});
+                        glm::vec3& norm = normals.back();
+                        sscanf(p, "vn %f %f %f", &norm.x, &norm.y, &norm.z);
+                        norm = glm::normalize(norm);
+                    }
+                    break;
+                }
+            }
+            break;
+            case 'f':
+            {
+                faces.push_back({});
+                Face& f = faces.back();
+                sscanf(p, "f %i/%i/%i %i/%i/%i %i/%i/%i", &f.pa, &f.na, &f.ua,
+                    &f.pb, &f.nb, &f.ub,
+                    &f.pc, &f.nc, &f.uc);
+                
+            }
+        }
+        p = nextline(p);
+    }
+
+    out.clear();
+    for(Face& face : faces){
+        glm::vec3& pa = positions[face.pa - 1];
+        glm::vec3& pb = positions[face.na - 1];
+        glm::vec3& pc = positions[face.ua - 1];
+
+        glm::vec3& na = normals[face.pb - 1];
+        glm::vec3& nb = normals[face.nb - 1];
+        glm::vec3& nc = normals[face.ub - 1];
+
+        glm::vec2& ua = uvs[face.pc - 1];
+        glm::vec2& ub = uvs[face.nc - 1];
+        glm::vec2& uc = uvs[face.uc - 1];
+
+        out.push_back({pa, na, ua});
+        out.push_back({pb, nb, ub});
+        out.push_back({pc, nc, uc});
+    }
+}
 
 void MeshStore::load_mesh(Mesh& mesh, unsigned name){
     const char* filename = g_nameStore.get(name);
     assert(filename);
     const char* contents = load_file(filename);
-    parse_mesh_file(vb, contents); 
-    mesh.upload(vb);
+    parse_obj(vb, contents); 
     release_file(contents);
+    mesh.upload(vb);
 }
 
 MeshStore g_MeshStore;
