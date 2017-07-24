@@ -6,9 +6,11 @@ const char* mesh_vert_shader_text = "\n\
 layout(location = 0) in vec3 position;\n\
 layout(location = 1) in vec3 normal;\n\
 layout(location = 2) in vec2 uv;\n\
+layout(location = 3) in int matChannel;\n\
 out vec3 fragPos;\n\
 out vec3 fragNorm;\n\
 out vec2 fragUv;\n\
+out int fragChannel;\n\
 uniform mat4 MVP;\n\
 void main() {\n\
 	gl_Position = MVP * vec4(position, 1.0);\n\
@@ -97,6 +99,11 @@ Renderables g_Renderables;
 GBuffer g_gBuffer;
 
 void GBuffer::draw(const Camera& cam){
+    static const unsigned eye_name = hash("eye");
+    static const unsigned pos_name = hash("positionSampler");
+    static const unsigned norm_name = hash("normalSampler");
+    static const unsigned mat_name = hash("materialSampler");
+
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); MYGLERRORMACRO;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); MYGLERRORMACRO;
 
@@ -111,14 +118,14 @@ void GBuffer::draw(const Camera& cam){
     prog.bind();
     glActiveTexture(GL_TEXTURE0); MYGLERRORMACRO;
     glBindTexture(GL_TEXTURE_2D, posbuff); MYGLERRORMACRO;
-    prog.setUniformInt("positionSampler", 0);
+    prog.setUniformInt(pos_name, 0);
     glActiveTexture(GL_TEXTURE1); MYGLERRORMACRO;
     glBindTexture(GL_TEXTURE_2D, normbuff); MYGLERRORMACRO;
-    prog.setUniformInt("normalSampler", 1);
+    prog.setUniformInt(norm_name, 1);
     glActiveTexture(GL_TEXTURE2); MYGLERRORMACRO;
     glBindTexture(GL_TEXTURE_2D, matbuff); MYGLERRORMACRO;
-    prog.setUniformInt("materialSampler", 2);
-    prog.setUniform("eye", cam.getEye());
+    prog.setUniformInt(mat_name, 2);
+    prog.setUniform(eye_name, cam.getEye());
     screen.draw();
 
     // copy geom's zbuff to default zbuff

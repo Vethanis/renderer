@@ -60,7 +60,9 @@ int main(int argc, char* argv[]){
     Input input(window.getWindow());
 
     g_Renderables.init();
-    g_Renderables.add({ glm::scale({}, glm::vec3(0.5f)), albedo, normal, mesh });
+    unsigned building = g_Renderables.add({});
+    g_Renderables[building].resource.mesh = mesh;
+    g_Renderables[building].resource.add({albedo, normal});
     g_gBuffer.init(WIDTH, HEIGHT);
 
     LightSet lights;

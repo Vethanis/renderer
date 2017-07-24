@@ -9,21 +9,46 @@
 #include "light.h"
 #include "camera.h"
 
-struct RenderObject{
-    glm::mat4 transform;
+struct Material{
+    static constexpr unsigned num_textures = 2;
     unsigned albedo;
     unsigned normal;
+};
+
+struct RenderResource{
+    static constexpr unsigned max_channels = 4;
+    Material channels[max_channels];
+    unsigned num_channels = 0;
     unsigned mesh;
-    bool valid(){
-        return g_TextureStore.get(albedo) &&
-            g_TextureStore.get(normal) && 
-            g_MeshStore.get(mesh);
+    void bind(GLProgram& prog){
+        for(unsigned i = 0; i < num_channels; i++){
+            g_TextureStore[channels[i].albedo]->bindAlbedo(i, prog);
+            g_TextureStore[channels[i].normal]->bindNormal(i, prog);
+        }
     }
+    bool valid(){
+        bool is_valid = true;
+        for(unsigned i = 0; i < num_channels; i++){
+            is_valid = is_valid && g_TextureStore[channels[i].albedo];
+            is_valid = is_valid && g_TextureStore[channels[i].normal];
+        }
+        return is_valid;
+    }
+    void add(const Material& mat){ 
+        assert(num_channels < max_channels); 
+        channels[num_channels++] = mat;
+    }
+};
+
+struct RenderObject{
+    glm::mat4 transform;
+    RenderResource resource;
+    bool valid(){ return resource.valid(); }
     void draw(const glm::mat4& VP, GLProgram& prog){
-        prog.setUniform("MVP", VP * transform);
-        g_TextureStore[albedo]->bind(0, "albedoSampler", prog);
-        g_TextureStore[normal]->bind(1, "normalSampler", prog);
-        g_MeshStore[mesh]->draw();
+        static const unsigned mvp_name = hash("MVP");
+        prog.setUniform(mvp_name, VP * transform);
+        resource.bind(prog);
+        g_MeshStore[resource.mesh]->draw();
     }
 };
 
@@ -48,6 +73,7 @@ struct Renderables{
         }
         return unsigned(-1);
     }
+    RenderObject& operator[](unsigned i){ return objects[i]; }
 };
 
 extern Renderables g_Renderables;

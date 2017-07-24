@@ -36,17 +36,11 @@ public:
     }
     void insert(unsigned key, const T& _val){
         assert(count < cap);
-        unsigned pos = mask(key);       
-        if(names[pos] == 0){
-            names[pos] = key;
-            data[pos] = _val;
-            count++;
-            return;
-        }
-        T val = _val;
+        unsigned pos = mask(key);
         unsigned dist = 0;
+        T val = _val;
         for(;;){
-            if(names[pos] == 0){
+            if(names[pos] == 0 || names[pos] == key){
                 names[pos] = key;
                 data[pos] = val;
                 count++;

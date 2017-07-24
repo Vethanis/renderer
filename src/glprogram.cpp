@@ -7,6 +7,7 @@
 #include "debugmacro.h"
 #include "glm/gtc/type_ptr.hpp"
 #include "stdio.h"
+#include "filestore.h"
 
 void GLProgram::init(){
     shader_tail = 0;
@@ -56,40 +57,41 @@ void GLProgram::bind(){
     glUseProgram(id);  MYGLERRORMACRO;
 }
 
-int GLProgram::getUniformLocation(const char* name){
+int GLProgram::getUniformLocation(unsigned name){
     int* loc = m_locations[name];
     if(!loc){
-        m_locations.insert(name, glGetUniformLocation(id, name));  MYGLERRORMACRO;
+        const char* strName = g_nameStore[name];
+        m_locations.insert(name, glGetUniformLocation(id, strName));  MYGLERRORMACRO;
         loc = m_locations[name];
     }
     return *loc;
 }
 
-void GLProgram::setUniform(const char* name, const glm::vec2& v){
+void GLProgram::setUniform(unsigned name, const glm::vec2& v){
     const int location = getUniformLocation(name); 
     glUniform2fv(location, 1, glm::value_ptr(v));  MYGLERRORMACRO;
 }
-void GLProgram::setUniform(const char* name, const glm::vec3& v){
+void GLProgram::setUniform(unsigned name, const glm::vec3& v){
     const int location = getUniformLocation(name);
     glUniform3fv(location, 1, glm::value_ptr(v));  MYGLERRORMACRO;
 }
-void GLProgram::setUniform(const char* name, const glm::vec4& v){
+void GLProgram::setUniform(unsigned name, const glm::vec4& v){
     const int location = getUniformLocation(name);
     glUniform4fv(location, 1, glm::value_ptr(v));  MYGLERRORMACRO;
 }
-void GLProgram::setUniform(const char* name, const glm::mat3& v){
+void GLProgram::setUniform(unsigned name, const glm::mat3& v){
     const int location = getUniformLocation(name);
     glUniformMatrix3fv(location, 1, false, glm::value_ptr(v));  MYGLERRORMACRO;
 }
-void GLProgram::setUniform(const char* name, const glm::mat4& v){
+void GLProgram::setUniform(unsigned name, const glm::mat4& v){
     const int location = getUniformLocation(name);
     glUniformMatrix4fv(location, 1, false, glm::value_ptr(v));  MYGLERRORMACRO;
 }
-void GLProgram::setUniformInt(const char* name, const int v){
+void GLProgram::setUniformInt(unsigned name, const int v){
     const int location = getUniformLocation(name);
     glUniform1i(location, v);  MYGLERRORMACRO;
 }
-void GLProgram::setUniformFloat(const char* name, const float v){
+void GLProgram::setUniformFloat(unsigned name, const float v){
     const int location = getUniformLocation(name);
     glUniform1f(location, v);  MYGLERRORMACRO;
 }

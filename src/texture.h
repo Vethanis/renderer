@@ -45,10 +45,27 @@ struct Texture{
         if(mip)
             glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
     }
-    void bind(int channel, const char* uname, GLProgram& prog){
-        glActiveTexture(GL_TEXTURE0 + channel);  MYGLERRORMACRO;
+    void bindAlbedo(int channel, GLProgram& prog){
+        static const unsigned names[] = {
+            hash("albedoSampler0"),
+            hash("albedoSampler1"),
+            hash("albedoSampler2"),
+            hash("albedoSampler3"),
+        };
+        glActiveTexture(GL_TEXTURE0 + 2 * channel);  MYGLERRORMACRO;
         glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
-        prog.setUniformInt(uname, channel);
+        prog.setUniformInt(names[channel], 2 * channel);
+    }
+    void bindNormal(int channel, GLProgram& prog){
+        static const unsigned names[] = {
+            hash("normalSampler0"),
+            hash("normalSampler1"),
+            hash("normalSampler2"),
+            hash("normalSampler3"),
+        };
+        glActiveTexture(GL_TEXTURE0 + 2 * channel + 1);  MYGLERRORMACRO;
+        glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
+        prog.setUniformInt(names[channel], 2 * channel + 1);
     }
     void setCSBinding(int binding){
         glBindImageTexture(0, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);  MYGLERRORMACRO;

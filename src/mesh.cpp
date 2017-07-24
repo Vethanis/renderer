@@ -57,6 +57,7 @@ void Mesh::init(){
     mesh_layout<glm::vec3>(0);
     mesh_layout<glm::vec3>(1);
     mesh_layout<glm::vec2>(2);
+    mesh_layout<int>(3);
 
 }
 

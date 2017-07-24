@@ -7,6 +7,7 @@
 struct Vertex{
     glm::vec3 position, normal;
     glm::vec2 uv;
+    int matChannel;
 };
 
 typedef std::vector<Vertex> VertexBuffer;
