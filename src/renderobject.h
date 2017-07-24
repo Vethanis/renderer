@@ -10,7 +10,6 @@
 #include "camera.h"
 
 struct Material{
-    static constexpr unsigned num_textures = 2;
     unsigned albedo;
     unsigned normal;
 };

@@ -8,20 +8,22 @@
 #include "store.h"
 
 struct Texture{
-    int width, height;
     unsigned handle;
-    int FullType, Channels, ComponentType;
-    bool mip;
-    void init(int _FullType, int _Channels, int _ComponentType, int w, int h, bool _mip){
-        FullType = _FullType;
-        Channels = _Channels;
-        ComponentType = _ComponentType;
-        width = w;
-        height = h;
-        mip = _mip;
+
+    struct parameter{
+        const void* ptr;
+        int FullType; 
+        int Channels; 
+        int ComponentType; 
+        unsigned width;
+        unsigned height;
+        bool mip;
+    };
+
+    void init(const parameter& p){
         glGenTextures(1, &handle);  MYGLERRORMACRO;
         glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
-        if(mip){
+        if(p.mip){
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);    MYGLERRORMACRO
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);    MYGLERRORMACRO
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);    MYGLERRORMACRO
@@ -33,16 +35,16 @@ struct Texture{
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);    MYGLERRORMACRO
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);    MYGLERRORMACRO
         }
-        glTexImage2D(GL_TEXTURE_2D, 0, FullType, width, height, 0, Channels, ComponentType, NULL);    MYGLERRORMACRO        
-        if(mip)
+        glTexImage2D(GL_TEXTURE_2D, 0, p.FullType, p.width, p.height, 0, p.Channels, p.ComponentType, p.ptr);    MYGLERRORMACRO        
+        if(p.mip)
             glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
     }
     void deinit(){
         glDeleteTextures(1, &handle);    MYGLERRORMACRO
     }
-    void upload(const void* ptr){
-        glTexImage2D(GL_TEXTURE_2D, 0, FullType, width, height, 0, Channels, ComponentType, ptr);  MYGLERRORMACRO;        
-        if(mip)
+    void upload(const parameter& p){
+        glTexImage2D(GL_TEXTURE_2D, 0, p.FullType, p.width, p.height, 0, p.Channels, p.ComponentType, p.ptr);  MYGLERRORMACRO;        
+        if(p.mip)
             glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
     }
     void bindAlbedo(int channel, GLProgram& prog){
@@ -67,52 +69,59 @@ struct Texture{
         glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
         prog.setUniformInt(names[channel], 2 * channel + 1);
     }
-    void setCSBinding(int binding){
+    void setCSBinding(int FullType, int binding){
         glBindImageTexture(0, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);  MYGLERRORMACRO;
     }
-#define TEX_INIT_MACRO(name, a, b, c) \
-    void init##name(int w, int h, bool _mip = false){ \
-        init(a, b, c, w, h, _mip); \
+
+#define TEX_TYPE_MACRO(name, a, b, c) \
+    void init##name(unsigned w, unsigned h, bool mip = false, const void* ptr = nullptr){ \
+        parameter p = { ptr, a, b, c, w, h, mip }; \
+        init(p); \
+    }\
+    void upload##name(unsigned w, unsigned h, bool mip = false, const void* ptr = nullptr){ \
+        parameter p = { ptr, a, b, c, w, h, mip }; \
+        upload(p); \
     }
 
-    TEX_INIT_MACRO(1f, GL_R32F, GL_RED, GL_FLOAT);
-    TEX_INIT_MACRO(2f, GL_RG32F, GL_RG, GL_FLOAT);
-    TEX_INIT_MACRO(4f, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+    TEX_TYPE_MACRO(1f, GL_R32F, GL_RED, GL_FLOAT);
+    TEX_TYPE_MACRO(2f, GL_RG32F, GL_RG, GL_FLOAT);
+    TEX_TYPE_MACRO(4f, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 
-    TEX_INIT_MACRO(1i, GL_R32I, GL_RED, GL_INT);
-    TEX_INIT_MACRO(2i, GL_RG32I, GL_RG, GL_INT);
-    TEX_INIT_MACRO(4i, GL_RGBA32I, GL_RGBA, GL_INT);
+    TEX_TYPE_MACRO(1i, GL_R32I, GL_RED, GL_INT);
+    TEX_TYPE_MACRO(2i, GL_RG32I, GL_RG, GL_INT);
+    TEX_TYPE_MACRO(4i, GL_RGBA32I, GL_RGBA, GL_INT);
 
-    TEX_INIT_MACRO(1u, GL_R32UI, GL_RED, GL_UNSIGNED_INT);
-    TEX_INIT_MACRO(2u, GL_RG32UI, GL_RG, GL_UNSIGNED_INT);
-    TEX_INIT_MACRO(4u, GL_RGBA32UI, GL_RGBA, GL_UNSIGNED_INT);
+    TEX_TYPE_MACRO(1uc, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
+    TEX_TYPE_MACRO(2uc, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
+    TEX_TYPE_MACRO(4uc, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+};
 
-    TEX_INIT_MACRO(1c, GL_R8, GL_RED, GL_BYTE);
-    TEX_INIT_MACRO(2c, GL_RG8, GL_RG, GL_BYTE);
-    TEX_INIT_MACRO(4c, GL_RGBA8, GL_RGBA, GL_BYTE);
-
-    TEX_INIT_MACRO(1uc, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
-    TEX_INIT_MACRO(2uc, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
-    TEX_INIT_MACRO(4uc, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+struct Image{
+    unsigned char* image;
+    unsigned width, height;
+    bool mip;
 };
 
 struct TextureStore{
-    Store<Texture, 32> m_store;
+    Store<Texture, 32> m_store; // kept in gpu memory
+    Store<Image, 128> m_images; // kept in cpu memory
     
-    void load_texture(Texture& tex, unsigned name);
+    void load_texture(Texture& tex, unsigned name, bool need_init);
     Texture* get(unsigned name){
         Texture* m = m_store.get(name);
         if(m){ return m; }
 
+        bool need_init = false;
         if(m_store.full()){
-            m_store.remove_near(name)->deinit();
+            m = m_store.reuse_near(name);
+        }
+        else{
+            need_init = true;
+            m_store.insert(name, {});
+            m = m_store[name];
         }
 
-        Texture nm;
-        load_texture(nm, name);
-        m_store.insert(name, nm);
-        m = m_store.get(name);
-        assert(m);
+        load_texture(*m, name, need_init);
         return m;
     }
     Texture* operator[](unsigned name){ return get(name); }

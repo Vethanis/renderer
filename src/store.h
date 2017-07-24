@@ -30,6 +30,18 @@ class Store{
         }
         return pos;
     }
+    unsigned first_evictable(unsigned key){
+        unsigned dist = 0;
+        while(true){
+            unsigned loc = mask(key + dist);
+            unsigned cmp_dist = probe_distance(names[loc]);
+            if(dist >= cmp_dist){
+                return loc;
+            }
+            dist++;
+        }
+        return 0;
+    }
 public:
     Store(){
         memset(names, 0, sizeof(unsigned) * cap);
@@ -39,7 +51,7 @@ public:
         unsigned pos = mask(key);
         unsigned dist = 0;
         T val = _val;
-        for(;;){
+        while(true){
             if(names[pos] == 0 || names[pos] == key){
                 names[pos] = key;
                 data[pos] = val;
@@ -101,12 +113,21 @@ public:
     bool full(){ return cap == count; }
     T* remove_near(unsigned name){
         assert(full());
-        unsigned loc = mask(name);
+        unsigned loc = first_evictable(name);
         names[loc] = 0;
         count--;
         return data + loc;
     }
     T* remove_near(const char* name){
         return remove_near(hash(name));
+    }
+    T* reuse_near(unsigned name){
+        assert(full());
+        unsigned loc = first_evictable(name);
+        names[loc] = name;
+        return data + loc;
+    }
+    T* reuse_near(const char* name){
+        return reuse_near(hash(name));
     }
 };
