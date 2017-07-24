@@ -7,7 +7,7 @@ layout (location = 2) out vec4 gMaterial;
 in vec3 fragPos;
 in vec3 fragNorm;
 in vec2 fragUv;
-in int  fragChannel;
+flat in int  fragChannel;
 
 uniform sampler2D albedoSampler0;
 uniform sampler2D normalSampler0;
@@ -23,8 +23,8 @@ void main(){
 
     vec3 N = normalize(fragNorm);
 
-    vec3 nsamp;
-    vec3 albedo;
+    vec3 nsamp = vec3(0.0, 0.0, 1.0);
+    vec4 albedo = vec4(1.0, 1.0, 1.0, 1.0);
     switch(fragChannel){
         case 0:
         {
@@ -54,6 +54,6 @@ void main(){
 
     N.xy += nsamp.xy;
     N.z *= nsamp.z;
-    gMaterial.rgba = albedo;
+    gMaterial = albedo;
     gNormal = normalize(N);
 }

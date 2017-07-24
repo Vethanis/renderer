@@ -10,7 +10,7 @@ layout(location = 3) in int matChannel;\n\
 out vec3 fragPos;\n\
 out vec3 fragNorm;\n\
 out vec2 fragUv;\n\
-out int fragChannel;\n\
+flat out int fragChannel;\n\
 uniform mat4 MVP;\n\
 void main() {\n\
 	gl_Position = MVP * vec4(position, 1.0);\n\

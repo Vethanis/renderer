@@ -21,6 +21,12 @@ void begin_mesh_layout(){
 }
 
 template<>
+inline void mesh_layout<int>(int location){
+    glEnableVertexAttribArray(location); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 1, GL_INT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
+    offset_loc += sizeof(int);
+}
+template<>
 inline void mesh_layout<float>(int location){
     glEnableVertexAttribArray(location); MYGLERRORMACRO;
     glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
@@ -189,9 +195,9 @@ void parse_obj(VertexBuffer& out, const char* text){
         glm::vec2& ub = uvs[face.vt2 - 1];
         glm::vec2& uc = uvs[face.vt3 - 1];
 
-        out.push_back({pa, na, ua});
-        out.push_back({pb, nb, ub});
-        out.push_back({pc, nc, uc});
+        out.push_back({pa, na, ua, 0});
+        out.push_back({pb, nb, ub, 0});
+        out.push_back({pc, nc, uc, 0});
     }
 }
 
