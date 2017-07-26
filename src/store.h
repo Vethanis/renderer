@@ -7,44 +7,56 @@
 
 template<typename T, const unsigned cap>
 class Store{
+    static constexpr unsigned invalid_val = 0xffffff;
+    static constexpr unsigned MSB = 1 << 31;
     unsigned names[cap];
     T data[cap];
     unsigned count;
 
+    bool is_deleted(unsigned key){
+        return (key >> 31) != 0;
+    }
     unsigned mask(unsigned key){
         return key & (cap - 1);
     }
-    unsigned probe_distance(unsigned key){
-        unsigned dist = 0;
-        unsigned pos = mask(key);
-        while(names[pos] && names[pos] != key){
-            pos = mask(pos + 1);
-            ++dist;
-        }
-        return dist;
+    unsigned probe_distance(unsigned pos, unsigned key){
+        return mask(pos + cap - mask(key));
     }
     unsigned index_of(unsigned key){
         unsigned pos = mask(key);
-        while(names[pos] && names[pos] != key){
+        unsigned dist = 0;
+        while(true){
+            if(names[pos] == 0){
+                return invalid_val;
+            }
+            else if(dist > probe_distance(pos, names[pos])){
+                return invalid_val;
+            }
+            else if(names[pos] == key){
+                return pos;
+            }
             pos = mask(pos + 1);
+            ++dist;
         }
-        return pos;
+        return invalid_val;
     }
     unsigned first_evictable(unsigned key){
         unsigned dist = 0;
         while(true){
-            unsigned loc = mask(key + dist);
-            unsigned cmp_dist = probe_distance(names[loc]);
+            unsigned pos = mask(key + dist);
+            unsigned cmp_dist = probe_distance(pos, names[pos]);
             if(dist >= cmp_dist){
-                return loc;
+                return pos;
             }
             dist++;
         }
-        return 0;
+        return invalid_val;
     }
 public:
     Store(){
-        memset(names, 0, sizeof(unsigned) * cap);
+        count = 0;
+        for(unsigned i = 0; i < cap; i++)
+            names[i] = 0;
     }
     void insert(unsigned key, const T& _val){
         assert(count < cap);
@@ -52,15 +64,22 @@ public:
         unsigned dist = 0;
         T val = _val;
         while(true){
-            if(names[pos] == 0 || names[pos] == key){
+            if(names[pos] == 0){
                 names[pos] = key;
                 data[pos] = val;
                 count++;
                 return;
             }
 
-            unsigned existing_dist = probe_distance(pos);
+            unsigned existing_dist = probe_distance(pos, names[pos]);
             if(existing_dist < dist){
+                if(is_deleted(names[pos])){
+                    names[pos] = key;
+                    data[pos] = val;
+                    count++;
+                    return;
+                }
+
                 std::swap(key, names[pos]);
                 std::swap(val, data[pos]);
                 dist = existing_dist;
@@ -75,10 +94,7 @@ public:
     }
     T* get(unsigned key){
         unsigned loc = index_of(key);
-        if(names[loc] == key){
-            return data + loc;
-        }
-        return nullptr;
+        return loc == invalid_val ? nullptr : data + loc;
     }
     T* get(const char* name){
         return get(hash(name));
@@ -91,18 +107,19 @@ public:
     }
     T* remove(unsigned key){
         unsigned loc = index_of(key);
-        if(names[loc] == key){
-            names[loc] = 0;
+        if(loc != invalid_val){
+            names[loc] = MSB;
             count--;
             return data + loc;
         }
+        return nullptr;
     }
     T* remove(const char* name){
         return remove(hash(name));
     }
     bool exists(unsigned key){
         unsigned loc = index_of(key);
-        return names[loc] == key;
+        return loc != invalid_key;
     }
     bool exists(const char* name){
         return exists(hash(name));
@@ -114,7 +131,7 @@ public:
     T* remove_near(unsigned name){
         assert(full());
         unsigned loc = first_evictable(name);
-        names[loc] = 0;
+        names[loc] = MSB;
         count--;
         return data + loc;
     }
@@ -131,3 +148,22 @@ public:
         return reuse_near(hash(name));
     }
 };
+
+inline void store_test(){
+    constexpr unsigned c = 2048;
+    Store<int, c> store;
+    for(int i = 1; i <= c; i++){
+        store.insert(i * 64, i * 64);
+    }
+    for(int i = 1; i <= c; i++){
+        int* pi = store[i * 64];
+        assert(pi);
+        if(!(*pi == i * 64))__debugbreak();
+    }
+    for(int i = 1; i <= c; i++){
+        int* pi = store.remove(i * 64);
+        assert(pi);
+        assert(*pi == i * 64);
+    }
+    puts("Done with store_test");
+}

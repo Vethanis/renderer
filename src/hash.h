@@ -7,6 +7,8 @@ inline unsigned hash(const char* name){
         val ^= *data++;
         val *= 0x01000193;
     }
+    val &= 0x7fffffff;
+    val |= val==0;
     return val;
 }
 
@@ -17,5 +19,7 @@ inline unsigned hash(const void* p, const unsigned len){
         val ^= data[i];
         val *= 0x01000193;
     }
+    val &= 0x7fffffff;
+    val |= val==0;
     return val;
 }

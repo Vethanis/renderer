@@ -40,6 +40,10 @@ cp $DLL bin/Debug
 cp $ASSETS bin/Release
 cp $ASSETS bin/Debug
 
-cd bin/Release
-./main.exe
-cd ../..
+if [ "$1" == "debug" ] || [ "$2" == "debug" ] ; then
+    echo ""
+else
+    cd bin/Release
+    ./main.exe
+    cd ../..
+fi

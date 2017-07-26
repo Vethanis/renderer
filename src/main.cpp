@@ -38,6 +38,8 @@ float frameBegin(unsigned& i, float& t){
 }
 
 int main(int argc, char* argv[]){
+    store_test();
+    
     srand((unsigned)time(0));
     unsigned albedo = g_nameStore.add("brick_diffuse.png");
     unsigned normal = g_nameStore.add("brick_normal.png");
