@@ -18,42 +18,55 @@ uniform sampler2D normalSampler2;
 uniform sampler2D albedoSampler3;
 uniform sampler2D normalSampler3;
 
+vec3 calcNormal(vec3 pos, vec3 N, float H){
+    vec3 dpdx = dFdx(pos);
+    vec3 dpdy = dFdy(pos);
+
+    float dhdx = dFdx(H);
+    float dhdy = dFdy(H);
+
+    vec3 r1 = cross(dpdy, N);
+    vec3 r2 = cross(N, dpdx);
+
+    vec3 R = (r1 * dhdx + r2 * dhdy) / dot(dpdx, r1);
+
+    return normalize(N - R);
+}
+
 void main(){
     gPosition = fragPos;
 
     vec3 N = normalize(fragNorm);
 
-    vec3 nsamp = vec3(0.0, 0.0, 1.0);
+    float H = 0.0;
     vec4 albedo = vec4(1.0, 1.0, 1.0, 1.0);
     switch(fragChannel){
         case 0:
         {
             albedo = texture(albedoSampler0, fragUv).rgba;
-            nsamp = normalize(texture(normalSampler0, fragUv).rgb) * 2.0f - 1.0f;
+            H = texture(normalSampler0, fragUv).r;
         }
         break;
         case 1:
         {
             albedo = texture(albedoSampler1, fragUv).rgba;
-            nsamp = normalize(texture(normalSampler1, fragUv).rgb) * 2.0f - 1.0f;
+            H = texture(normalSampler1, fragUv).r;
         }
         break;
         case 2:
         {
             albedo = texture(albedoSampler2, fragUv).rgba;
-            nsamp = normalize(texture(normalSampler2, fragUv).rgb) * 2.0f - 1.0f;
+            H = texture(normalSampler2, fragUv).r;
         }
         break;
         case 3:
         {
             albedo = texture(albedoSampler3, fragUv).rgba;
-            nsamp = normalize(texture(normalSampler3, fragUv).rgb) * 2.0f - 1.0f;
+            H = texture(normalSampler3, fragUv).r;
         }
         break;
     }
 
-    N.xy += nsamp.xy;
-    N.z *= nsamp.z;
     gMaterial = albedo;
-    gNormal = normalize(N);
+    gNormal = calcNormal(fragPos, N, H);
 }
