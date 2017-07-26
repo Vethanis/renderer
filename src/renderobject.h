@@ -17,15 +17,19 @@ struct Material{
 struct RenderResource{
     static constexpr unsigned max_channels = 4;
     Material channels[max_channels];
-    unsigned num_channels = 0;
+    unsigned num_channels;
     unsigned mesh;
+    unsigned transform;
+    RenderResource(){
+        memset(this, 0, sizeof(*this));
+    }
     void bind(GLProgram& prog){
         for(unsigned i = 0; i < num_channels; i++){
             g_TextureStore[channels[i].albedo]->bindAlbedo(i, prog);
             g_TextureStore[channels[i].normal]->bindNormal(i, prog);
         }
     }
-    bool valid(){
+    bool valid()const{
         bool is_valid = true;
         for(unsigned i = 0; i < num_channels; i++){
             is_valid = is_valid && g_TextureStore[channels[i].albedo];
@@ -37,42 +41,46 @@ struct RenderResource{
         assert(num_channels < max_channels); 
         channels[num_channels++] = mat;
     }
-};
+    bool operator<(const RenderResource& o)const{
+        unsigned matHash = hash(channels, sizeof(Material) * num_channels);
+        unsigned bucket = matHash << 16 | mesh;
 
-struct RenderObject{
-    glm::mat4 transform;
-    RenderResource resource;
-    bool valid(){ return resource.valid(); }
-    void draw(const glm::mat4& VP, GLProgram& prog){
-        static const int mvp_name = prog.getUniformLocation("MVP");
-        prog.setUniform(mvp_name, VP * transform);
-        resource.bind(prog);
-        g_MeshStore[resource.mesh]->draw();
+        unsigned oHash = hash(o.channels, sizeof(Material) * o.num_channels);
+        unsigned oBucket = oHash << 16 | o.mesh;
+
+        return bucket < oBucket;
     }
 };
 
 struct Renderables{
     static constexpr unsigned capacity = 1024;
-    RenderObject objects[capacity];
+    glm::mat4 transforms[capacity];
+    RenderResource objects[capacity];
     unsigned tail;
     GLProgram prog;
     void init();
     void deinit(){ prog.deinit(); }
     void draw(const glm::mat4& VP){
+        static const int mvp_name = prog.getUniformLocation("MVP");
         prog.bind();
         for(unsigned i = 0; i < tail; i++){
-            objects[i].draw(VP, prog);
+            prog.setUniform(mvp_name, VP * transforms[objects[i].transform]);
+            objects[i].bind(prog);
+            g_MeshStore[objects[i].mesh]->draw();
         }
     }
-    unsigned add(const RenderObject& obj){
+    unsigned add(const RenderResource& obj){
         assert(tail < capacity);
         objects[tail] = obj;
+        objects[tail].transform = tail;
         if(objects[tail].valid()){
-            return tail++;
+            ++tail;
+            std::sort(objects, objects + tail);
+            return tail - 1;
         }
         return unsigned(-1);
     }
-    RenderObject& operator[](unsigned i){ return objects[i]; }
+    RenderResource& operator[](unsigned i){ return objects[i]; }
 };
 
 extern Renderables g_Renderables;

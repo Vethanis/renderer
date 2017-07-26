@@ -39,11 +39,11 @@ float frameBegin(unsigned& i, float& t){
 
 int main(int argc, char* argv[]){
     store_test();
-    
+
     srand((unsigned)time(0));
-    unsigned albedo = g_nameStore.add("brick_diffuse.png");
-    unsigned normal = g_nameStore.add("brick_normal.png");
-    unsigned mesh = g_nameStore.add("building.obj");
+    unsigned albedo = g_nameStore.add("basic_diffuse.png");
+    unsigned normal = g_nameStore.add("basic_height.png");
+    unsigned mesh = g_nameStore.add("torus.obj");
 
     int WIDTH = int(1920.0f * 1.5f);
     int HEIGHT = int(1080.0f * 1.5f);
@@ -63,17 +63,17 @@ int main(int argc, char* argv[]){
 
     g_Renderables.init();
     unsigned building = g_Renderables.add({});
-    g_Renderables[building].resource.mesh = mesh;
-    g_Renderables[building].resource.add({albedo, normal});
+    g_Renderables[building].mesh = mesh;
+    g_Renderables[building].add({albedo, normal});
     g_gBuffer.init(WIDTH, HEIGHT);
 
     LightSet lights;
 
     const auto randomizeLights = [&](){
         for(int i = 0; i < 32; i++){
-            lights[i].position.x = randf(25.0f);
-            lights[i].position.y = randf() * 25.0f;
-            lights[i].position.z = randf(25.0f);
+            lights[i].position.x = randf(10.0f);
+            lights[i].position.y = randf() * 10.0f;
+            lights[i].position.z = randf(10.0f);
             lights[i].color.x = randf();
             lights[i].color.y = randf();
             lights[i].color.z = randf();

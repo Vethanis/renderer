@@ -31,8 +31,11 @@ void main(){
     vec3 N = texture(normalSampler, fragUv).rgb;
     vec3 albedo = texture(materialSampler, fragUv).rgb;
     float spec = texture(materialSampler, fragUv).a;
+    
+    //outColor = vec4(N.rgb, 1.0);
+    //return;
 
-    vec3 lighting = albedo * 0.1;
+    vec3 lighting = albedo * 0.01;
     vec3 V = normalize(eye - pos);
     for(int i = 0; i < num_lights; i++){
         vec3 L = normalize(lights[i].position.xyz - pos);
