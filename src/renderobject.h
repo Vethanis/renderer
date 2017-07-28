@@ -75,10 +75,13 @@ struct Renderables{
             g_MeshStore[objects[i].mesh]->draw();
         }
     }
-    RenderResource& grow(){
+    unsigned grow(){
         assert(tail < capacity);
         objects[tail].transform = tail;
-        return objects[tail++];
+        return tail++;
+    }
+    void sortByBucket(){
+        std::sort(objects, objects + tail);
     }
     RenderResource& operator[](unsigned i){ return objects[i]; }
 };

@@ -44,8 +44,8 @@ void main(){
     vec3 albedo = texture(materialSampler, fragUv).rgb;
     float spec = texture(materialSampler, fragUv).a * 128.0;
 
-    outColor = vec4(N * 0.5 + 0.5, 1.0);
-    return;
+    //outColor = vec4(N * 0.5 + 0.5, 1.0);
+    //return;
 
     vec3 V = normalize(eye - pos);
     vec3 lighting = albedo * 0.01;

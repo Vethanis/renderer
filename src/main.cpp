@@ -64,9 +64,9 @@ int main(int argc, char* argv[]){
     g_Renderables.init();
     g_gBuffer.init(WIDTH, HEIGHT);
 
-    RenderResource& building = g_Renderables.grow();
-    building.mesh = mesh;
-    building.addMaterial({albedo, normal});
+    unsigned building = g_Renderables.grow();
+    g_Renderables[building].mesh = mesh;
+    g_Renderables[building].addMaterial({albedo, normal});
 
     LightSet lights;
 
