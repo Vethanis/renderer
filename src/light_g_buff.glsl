@@ -38,7 +38,7 @@ float rand( inout uint f) {
 }
 
 void main(){
-    uint s = uint(seed) ^ uint(fragUv.x * 255.0) ^ uint(fragUv.y * 65535.0);
+    uint s = uint(seed) ^ uint(fragUv.x * 951489.0) ^ uint(fragUv.y * 7561182.0);
     vec3 pos = texture(positionSampler, fragUv).rgb;
     vec3 N = texture(normalSampler, fragUv).rgb;
     vec3 albedo = texture(materialSampler, fragUv).rgb;
@@ -59,9 +59,9 @@ void main(){
         lighting += luminance * albedo * lights[i].color.rgb;
     }
 
-    lighting.rgb.x += 0.001 * rand(s);
-    lighting.rgb.y += 0.001 * rand(s);
-    lighting.rgb.z += 0.001 * rand(s);
+    lighting.rgb.x += 0.0001 * rand(s);
+    lighting.rgb.y += 0.0001 * rand(s);
+    lighting.rgb.z += 0.0001 * rand(s);
 
     outColor = vec4(pow(lighting.rgb, vec3(0.5)), 1.0);
 }
