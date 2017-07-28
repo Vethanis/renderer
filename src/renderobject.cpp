@@ -2,21 +2,29 @@
 #include "shader.h"
 
 const char* mesh_vert_shader_text = "\n\
-#version 430 core\n\
-layout(location = 0) in vec3 position;\n\
-layout(location = 1) in vec3 normal;\n\
-layout(location = 2) in vec2 uv;\n\
-layout(location = 3) in int matChannel;\n\
+#version 450 core\n\
+layout(location = 0) in vec4 posu;\n\
+layout(location = 1) in vec4 norv;\n\
+layout(location = 2) in vec4 tm;\n\
+layout(location = 3) in vec4 b;\n\
 out vec3 fragPos;\n\
 out vec3 fragNorm;\n\
 out vec2 fragUv;\n\
 flat out int fragChannel;\n\
+out mat3 TBN;\n\
 uniform mat4 MVP;\n\
+uniform mat4 M;\n\
+uniform mat3 IM;\n\
 void main() {\n\
-	gl_Position = MVP * vec4(position, 1.0);\n\
-	fragPos = position;\n\
-	fragNorm = normal;\n\
-	fragUv = uv;\n\
+	gl_Position = MVP * vec4(posu.xyz, 1.0);\n\
+	fragPos = vec3(M * vec4(posu.xyz, 1.0));\n\
+	fragNorm = IM * norv.xyz;\n\
+	fragUv = vec2(posu.w, norv.w);\n\
+    fragChannel = int(tm.w);\n\
+    vec3 T = normalize(vec3(M * vec4(IM * tm.xyz, 0.0)));\n\
+    vec3 B = normalize(vec3(M * vec4(IM * b.xyz, 0.0)));\n\
+    vec3 N = normalize(vec3(M * vec4(IM * norv.xyz, 0.0)));\n\
+    TBN = mat3(T, B, N);\n\
 }\n\
 ";
 
@@ -101,10 +109,12 @@ Renderables g_Renderables;
 GBuffer g_gBuffer;
 
 void GBuffer::draw(const Camera& cam){
+    static const int mat_name = prog.getUniformLocation("materialSampler");
+    static const int seed_name = prog.getUniformLocation("seed");
     static const int eye_name = prog.getUniformLocation("eye");
+    static const int forward_name = prog.getUniformLocation("forward");
     static const int pos_name = prog.getUniformLocation("positionSampler");
     static const int norm_name = prog.getUniformLocation("normalSampler");
-    static const int mat_name = prog.getUniformLocation("materialSampler");
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); MYGLERRORMACRO;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); MYGLERRORMACRO;
@@ -127,7 +137,9 @@ void GBuffer::draw(const Camera& cam){
     glActiveTexture(GL_TEXTURE2); MYGLERRORMACRO;
     glBindTexture(GL_TEXTURE_2D, matbuff); MYGLERRORMACRO;
     prog.setUniformInt(mat_name, 2);
+    prog.setUniformInt(seed_name, rand());
     prog.setUniform(eye_name, cam.getEye());
+    prog.setUniform(forward_name, cam.getAxis());
     screen.draw();
 
     // copy geom's zbuff to default zbuff

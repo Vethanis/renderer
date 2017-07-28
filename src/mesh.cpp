@@ -60,10 +60,10 @@ void Mesh::init(){
     glBindBuffer(GL_ARRAY_BUFFER, vbo); MYGLERRORMACRO;
 
     begin_mesh_layout<Vertex>();
-    mesh_layout<glm::vec3>(0);
-    mesh_layout<glm::vec3>(1);
-    mesh_layout<glm::vec2>(2);
-    mesh_layout<int>(3);
+    mesh_layout<glm::vec4>(0);
+    mesh_layout<glm::vec4>(1);
+    mesh_layout<glm::vec4>(2);
+    mesh_layout<glm::vec4>(3);
 
 }
 
@@ -86,46 +86,6 @@ void Mesh::draw(){
     glDrawArrays(GL_TRIANGLES, 0, num_vertices); MYGLERRORMACRO;
 }
 
-void parse_ply(VertexBuffer& out, const char* text){
-    const char* p = text;
-    int num_verts = 0, num_faces = 0;
-    bool in_header = true;
-
-    while(in_header && p[0]){
-        if(strncmp("end_header", p, 10) == 0){
-            in_header = false;
-        }
-        else if(strncmp("element vertex ", p, 10) == 0){
-            sscanf(p, "%*s %*s %i\n", &num_verts);
-        }
-        else if(strncmp("element face ", p, 10) == 0){
-            sscanf(p, "%*s %*s %i\n", &num_faces);
-        }
-        p = nextline(p);
-    }
-
-    VertexBuffer verts;
-    out.clear();
-    out.resize(num_faces * 3);
-
-    for(int i = 0; i < num_verts && p[0]; i++){
-        Vertex v;
-        glm::ivec3 c;
-        sscanf(p, "%f %f %f %f %f %f %f %f\n", &v.position.x, &v.position.y, &v.position.z, &v.normal.x, &v.normal.y, &v.normal.z, &v.uv.x, &v.uv.y);
-        v.normal = glm::normalize(v.normal);
-        verts.push_back(v);
-        p = nextline(p);
-    }
-
-    for(int i = 0; i < num_faces && p[0]; i++){
-        int a, b, c;
-        sscanf(p, "%*i %i %i %i\n", &a, &b, &c);
-        out.push_back(verts[a]);
-        out.push_back(verts[b]);
-        out.push_back(verts[c]);
-        p = nextline(p);
-    }
-}
 void parse_obj(VertexBuffer& out, const char* text){
     const char* p = text;
 
@@ -195,9 +155,44 @@ void parse_obj(VertexBuffer& out, const char* text){
         glm::vec2& ub = uvs[face.vt2 - 1];
         glm::vec2& uc = uvs[face.vt3 - 1];
 
-        out.push_back({pa, na, ua, 0});
-        out.push_back({pb, nb, ub, 0});
-        out.push_back({pc, nc, uc, 0});
+        glm::vec3 e1 = pb - pa;
+        glm::vec3 e2 = pc - pa;
+        glm::vec2 duv1 = ub - ua;
+        glm::vec2 duv2 = uc - ua;
+
+        glm::vec3 t, b;
+        float f = 1.0f / (duv1.x * duv2.y - duv2.x * duv1.y);
+
+        t.x = f * (duv2.y * e1.x - duv1.y * e2.x);
+        t.y = f * (duv2.y * e1.y - duv1.y * e2.y);
+        t.z = f * (duv2.y * e1.z - duv1.y * e2.z);
+        t = glm::normalize(t);
+
+        b.x = f * (-duv2.x * e1.x + duv1.x * e2.x);
+        b.y = f * (-duv2.x * e1.y + duv1.x * e2.y);
+        b.z = f * (-duv2.x * e1.z + duv1.x * e2.z);
+        b = glm::normalize(b);
+
+        int mat = 0;
+
+        out.push_back({
+            glm::vec4(pa.x, pa.y, pa.z, ua.x), 
+            glm::vec4(na.x, na.y, na.z, ua.y), 
+            glm::vec4(t.x, t.y, t.z, float(mat)), 
+            glm::vec4(b.x, b.y, b.z, 0.0f)
+        });
+        out.push_back({
+            glm::vec4(pb.x, pb.y, pb.z, ub.x), 
+            glm::vec4(nb.x, nb.y, nb.z, ub.y), 
+            glm::vec4(t.x, t.y, t.z, float(mat)), 
+            glm::vec4(b.x, b.y, b.z, 0.0f)
+        });
+        out.push_back({
+            glm::vec4(pc.x, pc.y, pc.z, uc.x), 
+            glm::vec4(nc.x, nc.y, nc.z, uc.y), 
+            glm::vec4(t.x, t.y, t.z, float(mat)), 
+            glm::vec4(b.x, b.y, b.z, 0.0f)
+        });
     }
 }
 

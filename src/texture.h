@@ -15,8 +15,8 @@ struct Texture{
         int FullType; 
         int Channels; 
         int ComponentType; 
-        unsigned width;
-        unsigned height;
+        int width;
+        int height;
         bool mip;
     };
 
@@ -74,11 +74,11 @@ struct Texture{
     }
 
 #define TEX_TYPE_MACRO(name, a, b, c) \
-    void init##name(unsigned w, unsigned h, bool mip = false, const void* ptr = nullptr){ \
+    void init##name(int w, int h, bool mip = false, const void* ptr = nullptr){ \
         parameter p = { ptr, a, b, c, w, h, mip }; \
         init(p); \
     }\
-    void upload##name(unsigned w, unsigned h, bool mip = false, const void* ptr = nullptr){ \
+    void upload##name(int w, int h, bool mip = false, const void* ptr = nullptr){ \
         parameter p = { ptr, a, b, c, w, h, mip }; \
         upload(p); \
     }
@@ -94,11 +94,15 @@ struct Texture{
     TEX_TYPE_MACRO(1uc, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
     TEX_TYPE_MACRO(2uc, GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
     TEX_TYPE_MACRO(4uc, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+
+    TEX_TYPE_MACRO(1us, GL_R16, GL_RED, GL_UNSIGNED_SHORT);
+    TEX_TYPE_MACRO(2us, GL_RG16, GL_RG, GL_UNSIGNED_SHORT);
+    TEX_TYPE_MACRO(4us, GL_RGBA16, GL_RGBA, GL_UNSIGNED_SHORT);
 };
 
 struct Image{
     unsigned char* image;
-    unsigned width, height;
+    int width, height;
     bool mip;
 };
 

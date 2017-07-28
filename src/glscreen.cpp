@@ -4,7 +4,7 @@
 #include "shader.h"
 
 static const char* shader_text = "\n\
-#version 330 core\n\
+#version 450 core\n\
 layout(location = 0) in vec2 uv;\n\
 out vec2 fragUv;\n\
 void main(){\n\

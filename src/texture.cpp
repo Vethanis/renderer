@@ -1,7 +1,10 @@
 #include "texture.h"
 #include "filestore.h"
 #include <cassert>
-#include "lodepng.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+
+#include "stb_image.h"
 
 void TextureStore::load_texture(Texture& tex, unsigned name, bool need_init){
     Image* image = m_images[name];
@@ -21,11 +24,9 @@ void TextureStore::load_texture(Texture& tex, unsigned name, bool need_init){
 
     const char* filename = g_nameStore.get(name);
     assert(filename);
-    unsigned error = lodepng_decode32_file(&image->image, &image->width, &image->height, filename);
-    if(error) {
-        printf("error %u: %s\n", error, lodepng_error_text(error));
-        assert(false);
-    }
+    int channels = 0;
+    image->image = stbi_load(filename, &image->width, &image->height, &channels, 4);
+    assert(image->image);
 
     if(need_init){
         tex.init4uc(image->width, image->height, true, image->image);
@@ -33,7 +34,6 @@ void TextureStore::load_texture(Texture& tex, unsigned name, bool need_init){
     else{
         tex.upload4uc(image->width, image->height, true, image->image);
     }
-
 }
 
 TextureStore g_TextureStore;

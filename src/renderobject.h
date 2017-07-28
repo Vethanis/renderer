@@ -37,7 +37,7 @@ struct RenderResource{
         }
         return is_valid;
     }
-    void add(const Material& mat){ 
+    void addMaterial(const Material& mat){ 
         assert(num_channels < max_channels); 
         channels[num_channels++] = mat;
     }
@@ -62,23 +62,23 @@ struct Renderables{
     void deinit(){ prog.deinit(); }
     void draw(const glm::mat4& VP){
         static const int mvp_name = prog.getUniformLocation("MVP");
+        static const int m_name = prog.getUniformLocation("M");
+        static const int im_name = prog.getUniformLocation("IM");
         prog.bind();
         for(unsigned i = 0; i < tail; i++){
-            prog.setUniform(mvp_name, VP * transforms[objects[i].transform]);
+            glm::mat4& M = transforms[objects[i].transform];
+            glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
+            prog.setUniform(mvp_name, VP * M);
+            prog.setUniform(m_name, M);
+            prog.setUniform(im_name, IM);
             objects[i].bind(prog);
             g_MeshStore[objects[i].mesh]->draw();
         }
     }
-    unsigned add(const RenderResource& obj){
+    RenderResource& grow(){
         assert(tail < capacity);
-        objects[tail] = obj;
         objects[tail].transform = tail;
-        if(objects[tail].valid()){
-            ++tail;
-            std::sort(objects, objects + tail);
-            return tail - 1;
-        }
-        return unsigned(-1);
+        return objects[tail++];
     }
     RenderResource& operator[](unsigned i){ return objects[i]; }
 };

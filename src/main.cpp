@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
 
     srand((unsigned)time(0));
     unsigned albedo = g_nameStore.add("basic_diffuse.png");
-    unsigned normal = g_nameStore.add("basic_height.png");
+    unsigned normal = g_nameStore.add("basic_normal.png");
     unsigned mesh = g_nameStore.add("torus.obj");
 
     int WIDTH = int(1920.0f * 1.5f);
@@ -58,22 +58,23 @@ int main(int argc, char* argv[]){
     camera.setEye(vec3(0.0f, 0.0f, 3.0f));
     camera.update();
 
-    Window window(WIDTH, HEIGHT, 3, 3, "Renderer");
+    Window window(WIDTH, HEIGHT, 4, 5, "Renderer");
     Input input(window.getWindow());
 
     g_Renderables.init();
-    unsigned building = g_Renderables.add({});
-    g_Renderables[building].mesh = mesh;
-    g_Renderables[building].add({albedo, normal});
     g_gBuffer.init(WIDTH, HEIGHT);
+
+    RenderResource& building = g_Renderables.grow();
+    building.mesh = mesh;
+    building.addMaterial({albedo, normal});
 
     LightSet lights;
 
     const auto randomizeLights = [&](){
         for(int i = 0; i < 32; i++){
-            lights[i].position.x = randf(10.0f);
-            lights[i].position.y = randf() * 10.0f;
-            lights[i].position.z = randf(10.0f);
+            lights[i].position.x = randf(25.0f);
+            lights[i].position.y = randf() * 25.0f;
+            lights[i].position.z = randf(25.0f);
             lights[i].color.x = randf();
             lights[i].color.y = randf();
             lights[i].color.z = randf();

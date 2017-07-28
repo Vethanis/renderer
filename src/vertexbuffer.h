@@ -5,9 +5,10 @@
 #include "store.h"
 
 struct Vertex{
-    glm::vec3 position, normal;
-    glm::vec2 uv;
-    int matChannel;
+    glm::vec4 positionu;
+    glm::vec4 normalv;
+    glm::vec4 tangentm;
+    glm::vec4 bitangent;
 };
 
 typedef std::vector<Vertex> VertexBuffer;
