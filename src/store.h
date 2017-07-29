@@ -44,11 +44,11 @@ class Store{
         unsigned dist = 0;
         while(true){
             unsigned pos = mask(key + dist);
-            unsigned cmp_dist = probe_distance(pos, names[pos]);
-            if(dist >= cmp_dist){
+            unsigned existing_dist = probe_distance(pos, names[pos]);
+            if(existing_dist < dist){
                 return pos;
             }
-            dist++;
+            ++dist;
         }
         return invalid_val;
     }

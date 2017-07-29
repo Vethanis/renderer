@@ -12,8 +12,8 @@ struct Mesh {
 };
 
 struct MeshStore{
-    Store<Mesh, 128> m_store;
-    VertexBuffer vb;
+    Store<Mesh, 32> m_store;
+    Store<VertexBuffer, 256> m_vbs;
     
     void load_mesh(Mesh& mesh, unsigned name);
     Mesh* get(unsigned name){
@@ -21,14 +21,16 @@ struct MeshStore{
         if(m){ return m; }
 
         if(m_store.full()){
-            m_store.remove_near(name)->deinit();
+            m = m_store.reuse_near(name);
+        }
+        else{
+            m_store.insert(name, {});
+            m = m_store.get(name);
+            m->init();
         }
 
-        Mesh new_mesh;
-        new_mesh.init();
-        load_mesh(new_mesh, name);
-        m_store.insert(name, new_mesh);
-        return m_store.get(name);
+        load_mesh(*m, name);
+        return m;
     }
     Mesh* operator[](unsigned name){ return get(name); }
     Mesh* operator[](const char* name){ return get(hash(name)); }

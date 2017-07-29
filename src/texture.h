@@ -108,7 +108,7 @@ struct Image{
 
 struct TextureStore{
     Store<Texture, 32> m_store; // kept in gpu memory
-    Store<Image, 128> m_images; // kept in cpu memory
+    Store<Image, 256> m_images; // kept in cpu memory
     
     void load_texture(Texture& tex, unsigned name, bool need_init);
     Texture* get(unsigned name){

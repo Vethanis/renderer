@@ -50,6 +50,7 @@ struct RenderResource{
 
         return bucket < oBucket;
     }
+    inline glm::mat4& getTransform();
 };
 
 struct Renderables{
@@ -87,6 +88,10 @@ struct Renderables{
 };
 
 extern Renderables g_Renderables;
+
+inline glm::mat4& RenderResource::getTransform(){
+    return g_Renderables.transforms[transform];
+}
 
 struct GBuffer{
     unsigned buff;

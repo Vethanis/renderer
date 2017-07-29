@@ -21,34 +21,22 @@ void begin_mesh_layout(){
 }
 
 template<>
-inline void mesh_layout<int>(int location){
-    glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 1, GL_INT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
-    offset_loc += sizeof(int);
-}
-template<>
-inline void mesh_layout<float>(int location){
-    glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 1, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
-    offset_loc += sizeof(float);
-}
-template<>
 inline void mesh_layout<glm::vec2>(int location){
     glEnableVertexAttribArray(location); MYGLERRORMACRO;
     glVertexAttribPointer(location, 2, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec2);
 }
 template<>
-inline void mesh_layout<glm::vec3>(int location){
-    glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
-    offset_loc += sizeof(glm::vec3);
-}
-template<>
 inline void mesh_layout<glm::vec4>(int location){
     glEnableVertexAttribArray(location); MYGLERRORMACRO;
     glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
     offset_loc += sizeof(glm::vec4);
+}
+template<>
+inline void mesh_layout<half4>(int location){
+    glEnableVertexAttribArray(location); MYGLERRORMACRO;
+    glVertexAttribPointer(location, 4, GL_HALF_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
+    offset_loc += sizeof(half4);
 }
 
 void Mesh::init(){
@@ -60,10 +48,10 @@ void Mesh::init(){
     glBindBuffer(GL_ARRAY_BUFFER, vbo); MYGLERRORMACRO;
 
     begin_mesh_layout<Vertex>();
-    mesh_layout<glm::vec4>(0);
-    mesh_layout<glm::vec4>(1);
-    mesh_layout<glm::vec4>(2);
-    mesh_layout<glm::vec4>(3);
+    mesh_layout<half4>(0);
+    mesh_layout<half4>(1);
+    mesh_layout<half4>(2);
+    mesh_layout<half4>(3);
 
 }
 
@@ -176,33 +164,48 @@ void parse_obj(VertexBuffer& out, const char* text){
         int mat = 0;
 
         out.push_back({
-            glm::vec4(pa.x, pa.y, pa.z, ua.x), 
-            glm::vec4(na.x, na.y, na.z, ua.y), 
-            glm::vec4(t.x, t.y, t.z, float(mat)), 
-            glm::vec4(b.x, b.y, b.z, 0.0f)
+            half4(pa.x, pa.y, pa.z, ua.x), 
+            half4(na.x, na.y, na.z, ua.y), 
+            half4(t.x, t.y, t.z, float(mat)), 
+            half4(b.x, b.y, b.z, 0.0f)
         });
         out.push_back({
-            glm::vec4(pb.x, pb.y, pb.z, ub.x), 
-            glm::vec4(nb.x, nb.y, nb.z, ub.y), 
-            glm::vec4(t.x, t.y, t.z, float(mat)), 
-            glm::vec4(b.x, b.y, b.z, 0.0f)
+            half4(pb.x, pb.y, pb.z, ub.x), 
+            half4(nb.x, nb.y, nb.z, ub.y), 
+            half4(t.x, t.y, t.z, float(mat)), 
+            half4(b.x, b.y, b.z, 0.0f)
         });
         out.push_back({
-            glm::vec4(pc.x, pc.y, pc.z, uc.x), 
-            glm::vec4(nc.x, nc.y, nc.z, uc.y), 
-            glm::vec4(t.x, t.y, t.z, float(mat)), 
-            glm::vec4(b.x, b.y, b.z, 0.0f)
+            half4(pc.x, pc.y, pc.z, uc.x), 
+            half4(nc.x, nc.y, nc.z, uc.y), 
+            half4(t.x, t.y, t.z, float(mat)), 
+            half4(b.x, b.y, b.z, 0.0f)
         });
     }
 }
 
 void MeshStore::load_mesh(Mesh& mesh, unsigned name){
+    VertexBuffer* vb = m_vbs[name];
+
+    if(vb){
+        mesh.upload(*vb);
+        return;
+    }
+
+    if(m_vbs.full()){
+        vb = m_vbs.reuse_near(name);
+    }
+    else{
+        m_vbs.insert(name, {});
+        vb = m_vbs[name];
+    }
+
     const char* filename = g_nameStore.get(name);
     assert(filename);
     const char* contents = load_file(filename);
-    parse_obj(vb, contents); 
+    parse_obj(*vb, contents); 
     release_file(contents);
-    mesh.upload(vb);
+    mesh.upload(*vb);
 }
 
 MeshStore g_MeshStore;
