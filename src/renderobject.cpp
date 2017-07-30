@@ -3,27 +3,28 @@
 
 const char* mesh_vert_shader_text = "\n\
 #version 450 core\n\
-layout(location = 0) in vec4 posu;\n\
-layout(location = 1) in vec4 norv;\n\
-layout(location = 2) in vec4 tm;\n\
-layout(location = 3) in vec4 b;\n\
-out vec3 fragPos;\n\
-out vec3 fragNorm;\n\
-out vec2 fragUv;\n\
-flat out int fragChannel;\n\
+\n\
+layout(location = 0) in vec4 p;\n\
+layout(location = 1) in vec4 n;\n\
+layout(location = 2) in vec4 t;\n\
+\n\
 out mat3 TBN;\n\
+out vec3 P;\n\
+out vec2 UV;\n\
+flat out int MID;\n\
+\n\
 uniform mat4 MVP;\n\
 uniform mat4 M;\n\
 uniform mat3 IM;\n\
+\n\
 void main() {\n\
-	gl_Position = MVP * vec4(posu.xyz, 1.0);\n\
-	fragPos = vec3(M * vec4(posu.xyz, 1.0));\n\
-	fragNorm = IM * norv.xyz;\n\
-	fragUv = vec2(posu.w, norv.w);\n\
-    fragChannel = int(tm.w);\n\
-    vec3 T = normalize(vec3(M * vec4(IM * tm.xyz, 0.0)));\n\
-    vec3 B = normalize(vec3(M * vec4(IM * b.xyz, 0.0)));\n\
-    vec3 N = normalize(vec3(M * vec4(IM * norv.xyz, 0.0)));\n\
+	gl_Position = MVP * vec4(p.xyz, 1.0);\n\
+    P = vec3(M * vec4(p.xyz, 1.0));\n\
+    UV = vec2(p.w, n.w);\n\
+    MID = int(t.w);\n\
+    vec3 T = normalize(vec3(M * vec4(IM * t.xyz, 0.0)));\n\
+    vec3 N = normalize(vec3(M * vec4(IM * n.xyz, 0.0)));\n\
+    vec3 B = cross(T, N);\n\
     TBN = mat3(T, B, N);\n\
 }\n\
 ";

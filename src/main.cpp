@@ -10,9 +10,7 @@
 #include <random>
 #include <ctime>
 
-using namespace glm;
-
-
+#include "gpu_octree.h"
 
 float randf(void){
     constexpr float inv = 1.0f / float(RAND_MAX);
@@ -41,9 +39,9 @@ int main(int argc, char* argv[]){
     store_test();
 
     srand((unsigned)time(0));
-    unsigned albedo = g_nameStore.add("basic_diffuse.png");
-    unsigned normal = g_nameStore.add("basic_normal.png");
-    unsigned mesh = g_nameStore.add("torus.obj");
+    unsigned albedo = g_nameStore.add("brick_diffuse.png");
+    unsigned normal = g_nameStore.add("brick_normal.png");
+    unsigned mesh = g_nameStore.add("building.obj");
 
     int WIDTH = int(1920.0f * 1.5f);
     int HEIGHT = int(1080.0f * 1.5f);
@@ -55,7 +53,7 @@ int main(int argc, char* argv[]){
 
     Camera camera;
     camera.resize(WIDTH, HEIGHT);
-    camera.setEye(vec3(0.0f, 0.0f, 3.0f));
+    camera.setEye(glm::vec3(0.0f, 0.0f, 3.0f));
     camera.update();
 
     Window window(WIDTH, HEIGHT, 4, 5, "Renderer");
@@ -64,17 +62,17 @@ int main(int argc, char* argv[]){
     g_Renderables.init();
     g_gBuffer.init(WIDTH, HEIGHT);
 
-    unsigned building = g_Renderables.grow();
-    g_Renderables[building].mesh = mesh;
-    g_Renderables[building].addMaterial({albedo, normal});
+    unsigned main_object = g_Renderables.grow();
+    g_Renderables[main_object].mesh = mesh;
+    g_Renderables[main_object].addMaterial({albedo, normal});
 
     LightSet lights;
 
     const auto randomizeLights = [&](){
         for(int i = 0; i < 32; i++){
-            lights[i].position.x = randf(25.0f);
-            lights[i].position.y = randf() * 25.0f;
-            lights[i].position.z = randf(25.0f);
+            lights[i].position.x = randf(10.0f);
+            lights[i].position.y = randf() * 10.0f;
+            lights[i].position.z = randf(10.0f);
             lights[i].color.x = randf();
             lights[i].color.y = randf();
             lights[i].color.z = randf();
@@ -83,6 +81,9 @@ int main(int argc, char* argv[]){
     };
 
     randomizeLights();
+
+    glm::mat4& mat = g_Renderables[main_object].getTransform();
+    mat = glm::scale(mat, {0.25f, 0.25f, 0.25f});
 
     input.poll();
     unsigned i = 0;
@@ -95,6 +96,8 @@ int main(int argc, char* argv[]){
             randomizeLights();
             wait_counter = 0;
         }
+
+        mat = glm::rotate(mat, 0.001f, {0.0f, 1.0f, 0.0f});
 
         g_gBuffer.draw(camera);
         window.swap();

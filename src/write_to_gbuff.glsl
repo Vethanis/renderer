@@ -4,11 +4,10 @@ layout (location = 0) out vec3 gPosition;
 layout (location = 1) out vec3 gNormal;
 layout (location = 2) out vec4 gMaterial;
 
-in vec3 fragPos;
-in vec3 fragNorm;
-in vec2 fragUv;
-flat in int  fragChannel;
 in mat3 TBN;
+in vec3 P;
+in vec2 UV;
+flat in int MID;
 
 uniform sampler2D albedoSampler0;
 uniform sampler2D normalSampler0;
@@ -20,39 +19,35 @@ uniform sampler2D albedoSampler3;
 uniform sampler2D normalSampler3;
 
 void main(){
-    gPosition = fragPos;
+    gPosition = P.xyz;
 
-    vec3 N = normalize(fragNorm);
-
-    vec3 SN = vec3(0.0);
-    vec4 albedo = vec4(1.0, 1.0, 1.0, 1.0);
-    switch(fragChannel){
+    vec3 SN = vec3(0.0, 0.0, 1.0);
+    vec4 albedo = vec4(0.0);
+    switch(MID){
         case 0:
         {
-            albedo = texture(albedoSampler0, fragUv).rgba;
-            SN = texture(normalSampler0, fragUv).rgb;
+            albedo = texture(albedoSampler0, UV).rgba;
+            SN = texture(normalSampler0, UV).rgb;
         }
         break;
-        /*
         case 1:
         {
-            albedo = texture(albedoSampler1, fragUv).rgba;
-            SN = texture(normalSampler1, fragUv).rgb;
+            albedo = texture(albedoSampler1, UV).rgba;
+            SN = texture(normalSampler1, UV).rgb;
         }
         break;
         case 2:
         {
-            albedo = texture(albedoSampler2, fragUv).rgba;
-            SN = texture(normalSampler2, fragUv).rgb;
+            albedo = texture(albedoSampler2, UV).rgba;
+            SN = texture(normalSampler2, UV).rgb;
         }
         break;
         case 3:
         {
-            albedo = texture(albedoSampler3, fragUv).rgba;
-            SN = texture(normalSampler3, fragUv).rgb;
+            albedo = texture(albedoSampler3, UV).rgba;
+            SN = texture(normalSampler3, UV).rgb;
         }
         break;
-        */
     }
 
     SN = normalize(TBN * normalize(SN * 2.0 - 1.0));

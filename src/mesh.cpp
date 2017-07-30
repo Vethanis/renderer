@@ -48,10 +48,9 @@ void Mesh::init(){
     glBindBuffer(GL_ARRAY_BUFFER, vbo); MYGLERRORMACRO;
 
     begin_mesh_layout<Vertex>();
-    mesh_layout<half4>(0);
-    mesh_layout<half4>(1);
-    mesh_layout<half4>(2);
-    mesh_layout<half4>(3);
+    mesh_layout<glm::vec4>(0);
+    mesh_layout<glm::vec4>(1);
+    mesh_layout<glm::vec4>(2);
 
 }
 
@@ -131,24 +130,24 @@ void parse_obj(VertexBuffer& out, const char* text){
 
     out.clear();
     for(Face& face : faces){
-        glm::vec3& pa = positions[face.v1 - 1];
-        glm::vec3& pb = positions[face.v2 - 1];
-        glm::vec3& pc = positions[face.v3 - 1];
+        const glm::vec3& pa = positions[face.v1 - 1];
+        const glm::vec3& pb = positions[face.v2 - 1];
+        const glm::vec3& pc = positions[face.v3 - 1];
 
-        glm::vec3& na = normals[face.vn1 - 1];
-        glm::vec3& nb = normals[face.vn2 - 1];
-        glm::vec3& nc = normals[face.vn3 - 1];
+        const glm::vec3& na = normals[face.vn1 - 1];
+        const glm::vec3& nb = normals[face.vn2 - 1];
+        const glm::vec3& nc = normals[face.vn3 - 1];
 
-        glm::vec2& ua = uvs[face.vt1 - 1];
-        glm::vec2& ub = uvs[face.vt2 - 1];
-        glm::vec2& uc = uvs[face.vt3 - 1];
+        const glm::vec2& ua = uvs[face.vt1 - 1];
+        const glm::vec2& ub = uvs[face.vt2 - 1];
+        const glm::vec2& uc = uvs[face.vt3 - 1];
 
-        glm::vec3 e1 = pb - pa;
-        glm::vec3 e2 = pc - pa;
-        glm::vec2 duv1 = ub - ua;
-        glm::vec2 duv2 = uc - ua;
+        const glm::vec3 e1 = pb - pa;
+        const glm::vec3 e2 = pc - pa;
+        const glm::vec2 duv1 = ub - ua;
+        const glm::vec2 duv2 = uc - ua;
 
-        glm::vec3 t, b;
+        glm::vec3 t;
         float f = 1.0f / (duv1.x * duv2.y - duv2.x * duv1.y);
 
         t.x = f * (duv2.y * e1.x - duv1.y * e2.x);
@@ -156,32 +155,26 @@ void parse_obj(VertexBuffer& out, const char* text){
         t.z = f * (duv2.y * e1.z - duv1.y * e2.z);
         t = glm::normalize(t);
 
-        b.x = f * (-duv2.x * e1.x + duv1.x * e2.x);
-        b.y = f * (-duv2.x * e1.y + duv1.x * e2.y);
-        b.z = f * (-duv2.x * e1.z + duv1.x * e2.z);
-        b = glm::normalize(b);
-
         int mat = 0;
 
         out.push_back({
-            half4(pa.x, pa.y, pa.z, ua.x), 
-            half4(na.x, na.y, na.z, ua.y), 
-            half4(t.x, t.y, t.z, float(mat)), 
-            half4(b.x, b.y, b.z, 0.0f)
-        });
+                {pa.x, pa.y, pa.z, ua.x},
+                {na.x, na.y, na.z, ua.y},
+                {t.x, t.y, t.z, float(mat)}
+            });
         out.push_back({
-            half4(pb.x, pb.y, pb.z, ub.x), 
-            half4(nb.x, nb.y, nb.z, ub.y), 
-            half4(t.x, t.y, t.z, float(mat)), 
-            half4(b.x, b.y, b.z, 0.0f)
-        });
+                {pb.x, pb.y, pb.z, ub.x},
+                {nb.x, nb.y, nb.z, ub.y},
+                {t.x, t.y, t.z, float(mat)}
+            });
         out.push_back({
-            half4(pc.x, pc.y, pc.z, uc.x), 
-            half4(nc.x, nc.y, nc.z, uc.y), 
-            half4(t.x, t.y, t.z, float(mat)), 
-            half4(b.x, b.y, b.z, 0.0f)
-        });
+                {pc.x, pc.y, pc.z, uc.x},
+                {nc.x, nc.y, nc.z, uc.y},
+                {t.x, t.y, t.z, float(mat)}
+            });
     }
+
+    assert(out.size() == 3 * faces.size());
 }
 
 void MeshStore::load_mesh(Mesh& mesh, unsigned name){

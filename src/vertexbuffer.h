@@ -4,7 +4,7 @@
 #include <vector>
 #include "store.h"
 
-inline unsigned short toHalf(float f){
+inline unsigned short toHalf(float f) {
     unsigned* p = (unsigned*)&f;
     unsigned short v = (*p >> 31) << 5;
     unsigned short t = (*p >> 23) & 0xff;
@@ -14,7 +14,7 @@ inline unsigned short toHalf(float f){
     return v;
 }
 
-struct half{
+struct half {
     unsigned short value;
     void set(float v){
         value = toHalf(v);
@@ -61,11 +61,17 @@ struct half4 {
     }
 };
 
-struct Vertex{
-    half4 positionu;
-    half4 normalv;
-    half4 tangentm;
-    half4 bitangent;
+// not align16'd nicely :(
+struct HalfVertex {
+    half4 position; // w = uv.x
+    half4 normal; // w = uv.y
+    half4 tangent; // w = mat
+};
+
+struct Vertex {
+    glm::vec4 position; // w = uv.x
+    glm::vec4 normal; // w = uv.y
+    glm::vec4 tangent; // w = mat
 };
 
 typedef std::vector<Vertex> VertexBuffer;
