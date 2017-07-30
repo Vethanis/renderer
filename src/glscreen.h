@@ -1,12 +1,6 @@
-#ifndef GLSCREEN_H
-#define GLSCREEN_H
+#pragma once 
 
-struct GLScreen{
-    unsigned vao, vbo;
-    unsigned vertexShader;
-    void init();
-    void deinit();
+namespace GLScreen {
     void draw();
+    int vertexShader();
 };
-
-#endif

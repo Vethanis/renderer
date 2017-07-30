@@ -10,8 +10,6 @@
 #include <random>
 #include <ctime>
 
-#include "gpu_octree.h"
-
 float randf(void){
     constexpr float inv = 1.0f / float(RAND_MAX);
     return rand() * inv;
@@ -83,12 +81,13 @@ int main(int argc, char* argv[]){
     randomizeLights();
 
     glm::mat4& mat = g_Renderables[main_object].getTransform();
-    mat = glm::scale(mat, {0.25f, 0.25f, 0.25f});
+    mat = glm::scale(mat, glm::vec3(0.5f));
 
     input.poll();
     unsigned i = 0;
     float t = (float)glfwGetTime();
     int wait_counter = 0;
+    float angle = 0.0f;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
 
@@ -98,6 +97,13 @@ int main(int argc, char* argv[]){
         }
 
         mat = glm::rotate(mat, 0.001f, {0.0f, 1.0f, 0.0f});
+        angle = glm::mod(angle + 0.01f, 3.141592f * 2.0f);
+        glm::vec3 offset = glm::vec3(
+            glm::cos(angle),
+            0.0f,
+            glm::sin(angle)
+        );
+        mat = glm::translate(mat, offset * 0.1f);
 
         g_gBuffer.draw(camera);
         window.swap();

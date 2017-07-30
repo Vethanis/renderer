@@ -1,46 +1,17 @@
 #include "renderobject.h"
 #include "shader.h"
 
-const char* mesh_vert_shader_text = "\n\
-#version 450 core\n\
-\n\
-layout(location = 0) in vec4 p;\n\
-layout(location = 1) in vec4 n;\n\
-layout(location = 2) in vec4 t;\n\
-\n\
-out mat3 TBN;\n\
-out vec3 P;\n\
-out vec2 UV;\n\
-flat out int MID;\n\
-\n\
-uniform mat4 MVP;\n\
-uniform mat4 M;\n\
-uniform mat3 IM;\n\
-\n\
-void main() {\n\
-	gl_Position = MVP * vec4(p.xyz, 1.0);\n\
-    P = vec3(M * vec4(p.xyz, 1.0));\n\
-    UV = vec2(p.w, n.w);\n\
-    MID = int(t.w);\n\
-    vec3 T = normalize(vec3(M * vec4(IM * t.xyz, 0.0)));\n\
-    vec3 N = normalize(vec3(M * vec4(IM * n.xyz, 0.0)));\n\
-    vec3 B = cross(T, N);\n\
-    TBN = mat3(T, B, N);\n\
-}\n\
-";
-
-static unsigned mesh_vert_handle = 0;
-
 void Renderables::init(){
     tail = 0;
-    if(!mesh_vert_handle){
-        mesh_vert_handle = createShader(mesh_vert_shader_text, GL_VERTEX_SHADER);
-    }
     prog.init();
-    prog.addShader(mesh_vert_handle);
-    int shader = prog.addShader("write_to_gbuff.glsl", GL_FRAGMENT_SHADER);
+    int vert = prog.addShader("vert.glsl", GL_VERTEX_SHADER);
+    int geom = prog.addShader("geom.glsl", GL_GEOMETRY_SHADER);
+    int frag = prog.addShader("write_to_gbuff.glsl", GL_FRAGMENT_SHADER);
     prog.link();
-    prog.freeShader(shader);
+    prog.freeShader(vert);
+    prog.freeShader(geom);
+    prog.freeShader(frag);
+    tree.init();
 }
 
 void GBuffer::init(int w, int h){
@@ -50,7 +21,6 @@ void GBuffer::init(int w, int h){
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     
-    screen.init();
     lightbuff.init(9);
 
     glGenFramebuffers(1, &buff);
@@ -91,13 +61,12 @@ void GBuffer::init(int w, int h){
     glBindFramebuffer(GL_FRAMEBUFFER, 0); MYGLERRORMACRO;
 
     prog.init();
-    prog.addShader(screen.vertexShader);
+    prog.addShader(GLScreen::vertexShader());
     int shader = prog.addShader("light_g_buff.glsl", GL_FRAGMENT_SHADER);
     prog.link();
     prog.freeShader(shader);
 }
 void GBuffer::deinit(){
-    screen.deinit();
     prog.deinit();
     lightbuff.deinit();
 }
@@ -141,7 +110,7 @@ void GBuffer::draw(const Camera& cam){
     prog.setUniformInt(seed_name, rand());
     prog.setUniform(eye_name, cam.getEye());
     prog.setUniform(forward_name, cam.getAxis());
-    screen.draw();
+    GLScreen::draw();
 
     // copy geom's zbuff to default zbuff
     // glBindFramebuffer(GL_READ_FRAMEBUFFER, buff); MYGLERRORMACRO;

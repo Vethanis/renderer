@@ -8,6 +8,7 @@
 #include "SSBO.h"
 #include "light.h"
 #include "camera.h"
+#include "gpu_octree.h"
 
 struct Material{
     unsigned albedo;
@@ -59,13 +60,18 @@ struct Renderables{
     RenderResource objects[capacity];
     unsigned tail;
     GLProgram prog;
+    oct::gpu_octree tree;
     void init();
-    void deinit(){ prog.deinit(); }
+    void deinit(){
+        prog.deinit();
+        tree.deinit();
+    }
     void draw(const glm::mat4& VP){
         static const int mvp_name = prog.getUniformLocation("MVP");
         static const int m_name = prog.getUniformLocation("M");
         static const int im_name = prog.getUniformLocation("IM");
         prog.bind();
+        tree.upload();
         for(unsigned i = 0; i < tail; i++){
             glm::mat4& M = transforms[objects[i].transform];
             glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
@@ -98,7 +104,6 @@ struct GBuffer{
     unsigned rboDepth;
     unsigned posbuff, normbuff, matbuff;
     unsigned width, height;
-    GLScreen screen;
     GLProgram prog;
     SSBO lightbuff;
     void init(int w, int h);
