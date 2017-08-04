@@ -97,13 +97,13 @@ int main(int argc, char* argv[]){
         }
 
         mat = glm::rotate(mat, 0.001f, {0.0f, 1.0f, 0.0f});
-        angle = glm::mod(angle + 0.01f, 3.141592f * 2.0f);
-        glm::vec3 offset = glm::vec3(
-            glm::cos(angle),
-            0.0f,
-            glm::sin(angle)
-        );
-        mat = glm::translate(mat, offset * 0.1f);
+        // angle = glm::mod(angle + 0.01f, 3.141592f * 2.0f);
+        // glm::vec3 offset = glm::vec3(
+        //     glm::cos(angle),
+        //     0.0f,
+        //     glm::sin(angle)
+        // );
+        // mat = glm::translate(mat, offset * 0.1f);
 
         g_gBuffer.draw(camera);
         window.swap();

@@ -10,6 +10,8 @@
 #include "camera.h"
 #include "gpu_octree.h"
 
+#include "mt.h"
+
 struct Material{
     unsigned albedo;
     unsigned normal;

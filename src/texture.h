@@ -47,6 +47,9 @@ struct Texture{
         if(p.mip)
             glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
     }
+    void uploadPortion(int level, int x, int y, int w, int h, int format, int type, const void* p){
+        glTextureSubImage2D(handle, level, x, y, w, h, format, type, p);
+    }
     void bindAlbedo(int channel, GLProgram& prog){
         static const int names[] = { // only works for first prog used
             prog.getUniformLocation("albedoSampler0"),
@@ -106,30 +109,24 @@ struct Image{
     bool mip;
 };
 
-struct TextureStore{
-    Store<Texture, 32> m_store; // kept in gpu memory
-    Store<Image, 256> m_images; // kept in cpu memory
-    
-    void load_texture(Texture& tex, unsigned name, bool need_init);
-    Texture* get(unsigned name){
-        Texture* m = m_store.get(name);
-        if(m){ return m; }
+struct ImageStore{
+    Store<Image, 256> m_images;
 
-        bool need_init = false;
+    Image* get(unsigned name){
+        Image* m = m_store.get(name);
+        if(m){return m;}
+
         if(m_store.full()){
             m = m_store.reuse_near(name);
         }
         else{
-            need_init = true;
             m_store.insert(name, {});
             m = m_store[name];
         }
 
-        load_texture(*m, name, need_init);
-        return m;
+        load_image(*m, name);
     }
-    Texture* operator[](unsigned name){ return get(name); }
-    Texture* operator[](const char* name){ return get(hash(name)); }
+    Image* operator[](unsigned name){ return get(name); }
 };
 
-extern TextureStore g_TextureStore;
+extern ImageStore g_ImageStore;

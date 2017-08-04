@@ -122,7 +122,7 @@ float intersect(int node, vec3 pos, vec3 dir, out int nFace, out vec2 uv){
     return t;
 }
 
-int find_first_face(vec3 pos, vec3 dir, out t, out vec2 uv){
+int find_first_face(vec3 pos, vec3 dir, out float t, out vec2 uv){
     t = OT_Radius * 10.0;
     int eval_tail = 0;
     int eval_head = 0;
@@ -151,6 +151,18 @@ int find_first_face(vec3 pos, vec3 dir, out t, out vec2 uv){
     }
 
     return face;
+}
+
+vec3 sampleNormal(vec2 uv, int mat){
+    return vec3(1.0);
+}
+
+vec3 sampleReflectance(vec2 uv, int mat){
+    return vec3(1.0);
+}
+
+vec3 sampleEmittance(vec2 uv, int mat){
+    return vec3(1.0);
 }
 
 vec3 trace(vec3 pos, vec3 dir){
