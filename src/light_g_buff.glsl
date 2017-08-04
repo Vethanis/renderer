@@ -23,7 +23,7 @@ layout(binding=9) buffer light_buf {
 // ------------------------ uniforms --------------------------------
 
 uniform vec3 eye;
-uniform vec3 forwadir;
+uniform vec3 forward;
 uniform int seed;
 
 // ------------------------ bvh ------------------------------------
