@@ -94,6 +94,7 @@ bool contains(vec3 position, float rad, vec3 lo, vec3 hi){
 
 void main() {
     // insert face into octree
+    #if 0
     {
         int node = 0;
         float node_radius = OT_Radius;
@@ -139,6 +140,7 @@ void main() {
         }
 
     }
+    #endif
 
     // passthrough...
     for(int i = 0; i < 3; i++){

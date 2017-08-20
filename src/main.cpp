@@ -5,7 +5,6 @@
 #include "window.h"
 #include "input.h"
 #include "renderobject.h"
-#include "filestore.h"
 
 #include <random>
 #include <ctime>
@@ -34,12 +33,11 @@ float frameBegin(unsigned& i, float& t){
 }
 
 int main(int argc, char* argv[]){
-    store_test();
-
     srand((unsigned)time(0));
-    unsigned albedo = g_nameStore.add("brick_diffuse.png");
-    unsigned normal = g_nameStore.add("brick_normal.png");
-    unsigned mesh = g_nameStore.add("building.obj");
+    
+    HashString albedo("brick_diffuse.png");
+    HashString normal("brick_normal.png");
+    HashString mesh("building.obj");
 
     int WIDTH = int(1920.0f * 1.5f);
     int HEIGHT = int(1080.0f * 1.5f);
@@ -60,28 +58,36 @@ int main(int argc, char* argv[]){
     g_Renderables.init();
     g_gBuffer.init(WIDTH, HEIGHT);
 
-    unsigned main_object = g_Renderables.grow();
-    g_Renderables[main_object].mesh = mesh;
-    g_Renderables[main_object].addMaterial({albedo, normal});
+
+    HashString building_xform;
+    {   
+        RenderResource& building = g_Renderables.grow();
+        building.mesh = mesh;
+        building.addMaterial({albedo, normal});
+        building_xform = building.transform;
+    }
 
     LightSet lights;
+    lights.resize(lights.capacity());
 
     const auto randomizeLights = [&](){
-        for(int i = 0; i < 32; i++){
-            lights[i].position.x = randf(10.0f);
-            lights[i].position.y = randf() * 10.0f;
-            lights[i].position.z = randf(10.0f);
-            lights[i].color.x = randf();
-            lights[i].color.y = randf();
-            lights[i].color.z = randf();
+        for(light& l : lights){
+            l.position.x = randf(10.0f);
+            l.position.y = randf() * 10.0f;
+            l.position.z = randf(10.0f);
+            l.color.x = randf();
+            l.color.y = randf();
+            l.color.z = randf();
         }
         g_gBuffer.updateLights(lights);
     };
 
     randomizeLights();
 
-    glm::mat4& mat = g_Renderables[main_object].getTransform();
-    mat = glm::scale(mat, glm::vec3(0.5f));
+    {
+        Transform* mat = building_xform;
+        *mat = glm::scale(*mat, glm::vec3(0.5f));
+    }
 
     input.poll();
     unsigned i = 0;
@@ -96,14 +102,10 @@ int main(int argc, char* argv[]){
             wait_counter = 0;
         }
 
-        mat = glm::rotate(mat, 0.001f, {0.0f, 1.0f, 0.0f});
-        // angle = glm::mod(angle + 0.01f, 3.141592f * 2.0f);
-        // glm::vec3 offset = glm::vec3(
-        //     glm::cos(angle),
-        //     0.0f,
-        //     glm::sin(angle)
-        // );
-        // mat = glm::translate(mat, offset * 0.1f);
+        {
+            Transform* mat = building_xform;
+            *mat = glm::rotate(*mat, 0.001f, {0.0f, 1.0f, 0.0f});
+        }
 
         g_gBuffer.draw(camera);
         window.swap();

@@ -1,72 +1,77 @@
-#ifndef DEBUGMACRO_H
-#define DEBUGMACRO_H
+#pragma once
 
 #include <cstdio>
 
-#define PLM printf("%s :: %d\n", __FILE__, __LINE__); 
+#define PLM() printf("%s :: %d\n", __FILE__, __LINE__)
 
-//#define DEBUG
+#define DEBUG_OPENGL_CALLS 0
 
-#ifdef DEBUG
+#if DEBUG_OPENGL_CALLS
 
-#define MYGLERRORMACRO {    \
+#define GL_DEBUG_BREAK() __debugbreak()
+
+#define DebugGL(); {    \
     GLenum err = GL_NO_ERROR; \
     while((err = glGetError()) != GL_NO_ERROR){ \
         switch(err){    \
-            case 0x0500:    \
-                printf("invalid enumeration at ");  \
-                PLM  \
-                __debugbreak(); \
+            case 0x500:    \
+                puts("[OpenGL] Invalid enumeration.");  \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x501: \
-                printf("invalid value at ");    \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Invalid value.");    \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x502: \
-                printf("invalid operation at ");    \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Invalid operation.");    \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x503: \
-                printf("stack overflow at ");   \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Stack overflow.");   \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x504: \
-                printf("stack underflow at ");  \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Stack underflow.");  \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x505: \
-                printf("out of memory at ");    \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Out of memory.");    \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x506: \
-                printf("invalid framebuffer operation at ");    \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Invalid framebuffer operation.");    \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x507: \
-                printf("context lost at "); \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Context lost."); \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
             case 0x508: \
-                printf("table too large at ");  \
-                PLM  \
-                __debugbreak(); \
+                puts("[OpenGL] Table too large.");  \
+                PLM();  \
+                GL_DEBUG_BREAK(); \
                 break;  \
         }   \
     }   \
 }
 
- 
-
 #else
-#define MYGLERRORMACRO ;
-#endif //ifdef DEBUG
+
+#define DebugGL() 
+
+#endif // DEBUG_OPENGL_CALLS
+
+#define GLM_PRINT_FUNCTIONS 0
+
+#if GLM_PRINT_FUNCTIONS
 
 #include "glm/glm.hpp"
 
@@ -95,4 +100,4 @@ inline void print(const glm::mat4& m){
     print(m[3]);
 }
 
-#endif //debugmacro_h
+#endif // GLM_PRINT_FUNCTIONS

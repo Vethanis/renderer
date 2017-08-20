@@ -1,16 +1,10 @@
 #pragma once 
 
 #include "glm/glm.hpp"
+#include "array.h"
 
 struct light{
     glm::vec4 position, color;
 };
 
-constexpr int num_lights = 32;
-struct LightSet{
-    light lights[num_lights];
-    int tail = 0;
-    light& operator[](unsigned i){ return lights[i]; }
-    light* begin(){ return lights; }
-    light* end(){ return lights + num_lights; }
-};
+typedef Array<light, 8> LightSet;

@@ -1,8 +1,12 @@
 #pragma once 
 
+#if 0
+
 #include "texture.h"
 #include "SSBO.h"
 #include "glm/glm.hpp"
+
+// will debug this in a cpu renderer later.
 
 typedef unsigned uint;
 
@@ -225,3 +229,4 @@ namespace MT {
     };
 };
 
+#endif

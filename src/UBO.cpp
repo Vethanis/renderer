@@ -5,23 +5,23 @@
 static unsigned binding_tail = 0;
 
 UBO::UBO(void* ptr, size_t size, const char* name, unsigned* programs, int num_progs){
-    glGenBuffers(1, &id);MYGLERRORMACRO
-    glBindBuffer(GL_UNIFORM_BUFFER, id);MYGLERRORMACRO
-    glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);MYGLERRORMACRO
+    glGenBuffers(1, &id);DebugGL();
+    glBindBuffer(GL_UNIFORM_BUFFER, id);DebugGL();
+    glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);DebugGL();
 
     for(int i = 0; i < num_progs; i++){
         unsigned idx = glGetUniformBlockIndex(programs[i], name);
         glUniformBlockBinding(programs[i], idx, binding_tail);
     }
 
-    glBindBufferBase(GL_UNIFORM_BUFFER, binding_tail, id);MYGLERRORMACRO
+    glBindBufferBase(GL_UNIFORM_BUFFER, binding_tail, id);DebugGL();
     
     binding_tail++;
 }
 UBO::~UBO(){
-    glDeleteBuffers(1, &id);MYGLERRORMACRO
+    glDeleteBuffers(1, &id);DebugGL();
 }
 void UBO::upload(void* ptr, size_t size){
-    glBindBuffer(GL_UNIFORM_BUFFER, id);MYGLERRORMACRO
-    glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);MYGLERRORMACRO
+    glBindBuffer(GL_UNIFORM_BUFFER, id);DebugGL();
+    glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);DebugGL();
 }

@@ -3,8 +3,6 @@
 #include "myglheaders.h"
 #include "glm/glm.hpp"
 #include "debugmacro.h"
-#include "glprogram.h"
-
 #include "store.h"
 
 struct Texture{
@@ -21,67 +19,54 @@ struct Texture{
     };
 
     void init(const parameter& p){
-        glGenTextures(1, &handle);  MYGLERRORMACRO;
-        glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
+        glGenTextures(1, &handle);  DebugGL();
+        glBindTexture(GL_TEXTURE_2D, handle);  DebugGL();
         if(p.mip){
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);    MYGLERRORMACRO
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);    DebugGL();
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);    DebugGL();
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);    DebugGL();
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);    DebugGL();
         }
         else{
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);    MYGLERRORMACRO
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);    MYGLERRORMACRO
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    DebugGL();
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    DebugGL();
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);    DebugGL();
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);    DebugGL();
         }
-        glTexImage2D(GL_TEXTURE_2D, 0, p.FullType, p.width, p.height, 0, p.Channels, p.ComponentType, p.ptr);    MYGLERRORMACRO        
+        glTexImage2D(GL_TEXTURE_2D, 0, p.FullType, p.width, p.height, 0, p.Channels, p.ComponentType, p.ptr);    DebugGL();        
         if(p.mip)
-            glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
+            glGenerateMipmap(GL_TEXTURE_2D);    DebugGL();
     }
     void deinit(){
-        glDeleteTextures(1, &handle);    MYGLERRORMACRO
+        glDeleteTextures(1, &handle);    DebugGL();
     }
     void upload(const parameter& p){
-        glTexImage2D(GL_TEXTURE_2D, 0, p.FullType, p.width, p.height, 0, p.Channels, p.ComponentType, p.ptr);  MYGLERRORMACRO;        
+        glBindTexture(GL_TEXTURE_2D, handle);  DebugGL();
+        glTexImage2D(GL_TEXTURE_2D, 0, p.FullType, p.width, p.height, 0, p.Channels, p.ComponentType, p.ptr);  DebugGL();
         if(p.mip)
-            glGenerateMipmap(GL_TEXTURE_2D);    MYGLERRORMACRO
+            glGenerateMipmap(GL_TEXTURE_2D);    DebugGL();
     }
     void uploadPortion(int level, int x, int y, int w, int h, int format, int type, const void* p){
         glTextureSubImage2D(handle, level, x, y, w, h, format, type, p);
     }
-    void bindAlbedo(int channel, GLProgram& prog){
-        static const int names[] = { // only works for first prog used
-            prog.getUniformLocation("albedoSampler0"),
-            prog.getUniformLocation("albedoSampler1"),
-            prog.getUniformLocation("albedoSampler2"),
-            prog.getUniformLocation("albedoSampler3"),
-        };
-        glActiveTexture(GL_TEXTURE0 + 2 * channel);  MYGLERRORMACRO;
-        glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
-        prog.setUniformInt(names[channel], 2 * channel);
+    void bindAlbedo(int channel){
+        glActiveTexture(GL_TEXTURE0 + 2 * channel);  DebugGL();
+        glBindTexture(GL_TEXTURE_2D, handle);  DebugGL();
     }
-    void bindNormal(int channel, GLProgram& prog){
-        static const int names[] = { // only works for first prog used
-            prog.getUniformLocation("normalSampler0"),
-            prog.getUniformLocation("normalSampler1"),
-            prog.getUniformLocation("normalSampler2"),
-            prog.getUniformLocation("normalSampler3"),
-        };
-        glActiveTexture(GL_TEXTURE0 + 2 * channel + 1);  MYGLERRORMACRO;
-        glBindTexture(GL_TEXTURE_2D, handle);  MYGLERRORMACRO;
-        prog.setUniformInt(names[channel], 2 * channel + 1);
+    void bindNormal(int channel){
+        glActiveTexture(GL_TEXTURE0 + 2 * channel + 1);  DebugGL();
+        glBindTexture(GL_TEXTURE_2D, handle);  DebugGL();
     }
     void setCSBinding(int FullType, int binding){
-        glBindImageTexture(binding, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);  MYGLERRORMACRO;
+        glBindImageTexture(binding, handle, 0, GL_FALSE, 0, GL_READ_WRITE, FullType);  DebugGL();
     }
 
 #define TEX_TYPE_MACRO(name, a, b, c) \
-    void init##name(int w, int h, bool mip = false, const void* ptr = nullptr){ \
+    void init##name(int w, int h, bool mip, const void* ptr){ \
         parameter p = { ptr, a, b, c, w, h, mip }; \
         init(p); \
     }\
-    void upload##name(int w, int h, bool mip = false, const void* ptr = nullptr){ \
+    void upload##name(int w, int h, bool mip, const void* ptr){ \
         parameter p = { ptr, a, b, c, w, h, mip }; \
         upload(p); \
     }
@@ -107,13 +92,15 @@ struct Image{
     unsigned char* image;
     int width, height;
     bool mip;
+    Image() : image(nullptr), width(0), height(0), mip(true){}
 };
 
 struct ImageStore{
-    Store<Image, 256> m_images;
+    Store<Image, 256> m_store;
 
+    void load_image(Image& img, unsigned name);
     Image* get(unsigned name){
-        Image* m = m_store.get(name);
+        Image* m = m_store[name];
         if(m){return m;}
 
         if(m_store.full()){
@@ -125,8 +112,39 @@ struct ImageStore{
         }
 
         load_image(*m, name);
+
+        return m;
     }
     Image* operator[](unsigned name){ return get(name); }
 };
 
 extern ImageStore g_ImageStore;
+
+struct TextureStore{
+    Store<Texture, 32> m_store;
+
+    Texture* get(unsigned name){
+        Texture* m = m_store[name];
+        if(m){return m;}
+
+        Image* img = g_ImageStore[name];
+        assert(img);
+
+        if(m_store.full()){
+            m = m_store.reuse_near(name);
+            m->upload4uc(img->width, img->height, img->mip, img->image);
+        }
+        else{
+            m_store.insert(name, {});
+            m = m_store[name];
+            m->init4uc(img->width, img->height, img->mip, img->image);
+        }
+
+        return m;
+    }
+    Texture* operator[](unsigned name){
+        return get(name);
+    }
+};
+
+extern TextureStore g_TextureStore;

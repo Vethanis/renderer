@@ -38,7 +38,7 @@ namespace GLScreen {
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        MYGLERRORMACRO
+        DebugGL();
     }
 
     int vertexShader(){
@@ -57,7 +57,7 @@ namespace GLScreen {
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-        MYGLERRORMACRO
+        DebugGL();
     }
 
 }; // namespace GLScreen

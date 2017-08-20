@@ -15,7 +15,7 @@ struct light {
     vec4 position;
     vec4 color;
 };
-const int num_lights = 32;
+const int num_lights = 8;
 layout(binding=9) buffer light_buf {
     light lights[num_lights];
 };
@@ -23,7 +23,6 @@ layout(binding=9) buffer light_buf {
 // ------------------------ uniforms --------------------------------
 
 uniform vec3 eye;
-uniform vec3 forward;
 uniform int seed;
 
 // ------------------------ bvh ------------------------------------
@@ -231,8 +230,8 @@ void main(){
     float spec = texture(materialSampler, fragUv).a * 128.0;
 
     vec3 V = normalize(eye - pos);
-    vec3 dir = normalize(reflect(V, N)); // change this to cos hemisphere sampling
-    pos += dir * 0.001;
+    //vec3 dir = normalize(reflect(V, N)); // change this to cos hemisphere sampling
+    //pos += dir * 0.001;
 
     vec3 lighting = albedo * 0.01;
 

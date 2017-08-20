@@ -1,6 +1,5 @@
 #pragma once 
 
-#include "glm/glm.hpp"
 #include "mesh.h"
 #include "texture.h"
 #include "glprogram.h"
@@ -9,58 +8,54 @@
 #include "light.h"
 #include "camera.h"
 #include "gpu_octree.h"
-
-#include "mt.h"
+#include "array.h"
+#include "transform.h"
+#include "hashstring.h"
 
 struct Material{
-    unsigned albedo;
-    unsigned normal;
+    HashString albedo;
+    HashString normal;
+
+    void bind(GLProgram& prog, int channel){
+        {
+            Texture* ta = albedo;
+            ta->bindAlbedo(channel);
+            prog.bindAlbedo(channel);
+        }
+        {
+            Texture* tn = normal;
+            tn->bindNormal(channel);
+            prog.bindNormal(channel);
+        }
+    }
 };
 
 struct RenderResource{
-    static constexpr unsigned max_channels = 4;
-    Material channels[max_channels];
-    unsigned num_channels;
-    unsigned mesh;
-    unsigned transform;
-    RenderResource(){
-        memset(this, 0, sizeof(*this));
-    }
+    Array<Material, 4> materials;
+    HashString mesh;
+    HashString transform;
+
     void bind(GLProgram& prog){
-        for(unsigned i = 0; i < num_channels; i++){
-            g_TextureStore[channels[i].albedo]->bindAlbedo(i, prog);
-            g_TextureStore[channels[i].normal]->bindNormal(i, prog);
+        for(unsigned i = 0; i < materials.count(); ++i){
+            materials[i].bind(prog, i);
         }
     }
-    bool valid()const{
-        bool is_valid = true;
-        for(unsigned i = 0; i < num_channels; i++){
-            is_valid = is_valid && g_TextureStore[channels[i].albedo];
-            is_valid = is_valid && g_TextureStore[channels[i].normal];
-        }
-        return is_valid;
-    }
-    void addMaterial(const Material& mat){ 
-        assert(num_channels < max_channels); 
-        channels[num_channels++] = mat;
+    void addMaterial(const Material& mat){
+        materials.grow() = mat;
     }
     bool operator<(const RenderResource& o)const{
-        unsigned matHash = hash(channels, sizeof(Material) * num_channels);
-        unsigned bucket = matHash << 16 | mesh;
-
-        unsigned oHash = hash(o.channels, sizeof(Material) * o.num_channels);
-        unsigned oBucket = oHash << 16 | o.mesh;
-
+        unsigned bucket = materials.hash() << 16 | (0xffff & mesh);
+        unsigned oBucket = o.materials.hash() << 16 | (0xffff & o.mesh);
         return bucket < oBucket;
     }
-    inline glm::mat4& getTransform();
+    void draw(){
+        Mesh* m = mesh;
+        m->draw();
+    }
 };
 
 struct Renderables{
-    static constexpr unsigned capacity = 1024;
-    glm::mat4 transforms[capacity];
-    RenderResource objects[capacity];
-    unsigned tail;
+    Array<RenderResource, 256> resources;
     GLProgram prog;
     oct::gpu_octree tree;
     void init();
@@ -68,38 +63,33 @@ struct Renderables{
         prog.deinit();
         tree.deinit();
     }
-    void draw(const glm::mat4& VP){
+    void draw(const Transform& VP){
         static const int mvp_name = prog.getUniformLocation("MVP");
         static const int m_name = prog.getUniformLocation("M");
         static const int im_name = prog.getUniformLocation("IM");
         prog.bind();
         tree.upload();
-        for(unsigned i = 0; i < tail; i++){
-            glm::mat4& M = transforms[objects[i].transform];
-            glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
-            prog.setUniform(mvp_name, VP * M);
-            prog.setUniform(m_name, M);
+        for(RenderResource& res : resources){
+            Transform* M = res.transform;
+            glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
+            prog.setUniform(mvp_name, VP * *M);
+            prog.setUniform(m_name, *M);
             prog.setUniform(im_name, IM);
-            objects[i].bind(prog);
-            g_MeshStore[objects[i].mesh]->draw();
+            res.bind(prog);
+            res.draw();
         }
     }
-    unsigned grow(){
-        assert(tail < capacity);
-        objects[tail].transform = tail;
-        return tail++;
+    RenderResource& grow(){
+        RenderResource& r = resources.grow();
+        r.transform = g_TransformStore.grow();
+        return r;
     }
-    void sortByBucket(){
-        std::sort(objects, objects + tail);
+    void finishGrow(){
+        std::sort(resources.begin(), resources.end());
     }
-    RenderResource& operator[](unsigned i){ return objects[i]; }
 };
 
 extern Renderables g_Renderables;
-
-inline glm::mat4& RenderResource::getTransform(){
-    return g_Renderables.transforms[transform];
-}
 
 struct GBuffer{
     unsigned buff;

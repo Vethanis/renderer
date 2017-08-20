@@ -6,7 +6,8 @@
 #include "debugmacro.h"
 #include "vertexbuffer.h"
 #include "glm/glm.hpp"
-#include "filestore.h"
+#include "loadfile.h"
+#include "hashstring.h"
 
 template<typename T>
 void mesh_layout(int location);
@@ -22,30 +23,30 @@ void begin_mesh_layout(){
 
 template<>
 inline void mesh_layout<glm::vec2>(int location){
-    glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 2, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
+    glEnableVertexAttribArray(location); DebugGL();;
+    glVertexAttribPointer(location, 2, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); DebugGL();;
     offset_loc += sizeof(glm::vec2);
 }
 template<>
 inline void mesh_layout<glm::vec4>(int location){
-    glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
+    glEnableVertexAttribArray(location); DebugGL();;
+    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); DebugGL();;
     offset_loc += sizeof(glm::vec4);
 }
 template<>
 inline void mesh_layout<half4>(int location){
-    glEnableVertexAttribArray(location); MYGLERRORMACRO;
-    glVertexAttribPointer(location, 4, GL_HALF_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); MYGLERRORMACRO;
+    glEnableVertexAttribArray(location); DebugGL();;
+    glVertexAttribPointer(location, 4, GL_HALF_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); DebugGL();;
     offset_loc += sizeof(half4);
 }
 
 void Mesh::init(){
     num_vertices = 0;
-    glGenVertexArrays(1, &vao); MYGLERRORMACRO;
-    glGenBuffers(1, &vbo); MYGLERRORMACRO;
+    glGenVertexArrays(1, &vao); DebugGL();;
+    glGenBuffers(1, &vbo); DebugGL();;
 
-    glBindVertexArray(vao); MYGLERRORMACRO;
-    glBindBuffer(GL_ARRAY_BUFFER, vbo); MYGLERRORMACRO;
+    glBindVertexArray(vao); DebugGL();;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();;
 
     begin_mesh_layout<Vertex>();
     mesh_layout<glm::vec4>(0);
@@ -55,22 +56,22 @@ void Mesh::init(){
 }
 
 void Mesh::deinit(){
-    glDeleteBuffers(1, &vbo); MYGLERRORMACRO;
-    glDeleteVertexArrays(1, &vao); MYGLERRORMACRO;
-    MYGLERRORMACRO
+    glDeleteBuffers(1, &vbo); DebugGL();;
+    glDeleteVertexArrays(1, &vao); DebugGL();;
+    DebugGL();
 }
 
 void Mesh::upload(const VertexBuffer& vb){
-    glBindVertexArray(vao); MYGLERRORMACRO;
-    glBindBuffer(GL_ARRAY_BUFFER, vbo); MYGLERRORMACRO;
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vb.size(), vb.data(), GL_STATIC_DRAW); MYGLERRORMACRO;
+    glBindVertexArray(vao); DebugGL();;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();;
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vb.size(), vb.data(), GL_STATIC_DRAW); DebugGL();;
     num_vertices = unsigned(vb.size());
 }
 
 void Mesh::draw(){
     if(!num_vertices){return;}
-    glBindVertexArray(vao); MYGLERRORMACRO;
-    glDrawArrays(GL_TRIANGLES, 0, num_vertices); MYGLERRORMACRO;
+    glBindVertexArray(vao); DebugGL();;
+    glDrawArrays(GL_TRIANGLES, 0, num_vertices); DebugGL();;
 }
 
 void parse_obj(VertexBuffer& out, const char* text){
@@ -92,24 +93,30 @@ void parse_obj(VertexBuffer& out, const char* text){
                 switch(p[1]){
                     case ' ':
                     {
-                        positions.push_back({});
-                        glm::vec3& pos = positions.back();
-                        sscanf(p, "v %f %f %f", &pos.x, &pos.y, &pos.z);
+                        glm::vec3 pos;
+                        assert(sscanf(p, "v %f %f %f", &pos.x, &pos.y, &pos.z));
+                        {
+                            positions.push_back(pos);
+                        }
                     }
                     break;
                     case 't':
                     {
-                        uvs.push_back({});
-                        glm::vec2& uv = uvs.back();
-                        sscanf(p, "vt %f %f", &uv.x, &uv.y);
+                        glm::vec2 uv;
+                        assert(sscanf(p, "vt %f %f", &uv.x, &uv.y));
+                        {
+                            uvs.push_back(uv);
+                        }
                     }
                     break;
                     case 'n':
                     {
-                        normals.push_back({});
-                        glm::vec3& norm = normals.back();
-                        sscanf(p, "vn %f %f %f", &norm.x, &norm.y, &norm.z);
-                        norm = glm::normalize(norm);
+                        glm::vec3 norm;
+                        assert(sscanf(p, "vn %f %f %f", &norm.x, &norm.y, &norm.z));
+                        {
+                            norm = glm::normalize(norm);
+                            normals.push_back(norm);
+                        }
                     }
                     break;
                 }
@@ -117,11 +124,14 @@ void parse_obj(VertexBuffer& out, const char* text){
             break;
             case 'f':
             {
-                faces.push_back({});
-                Face& f = faces.back();
-                sscanf(p, "f %i/%i/%i %i/%i/%i %i/%i/%i", &f.v1, &f.vt1, &f.vn1,
+                Face f;
+                assert(sscanf(p, "f %i/%i/%i %i/%i/%i %i/%i/%i", &f.v1, &f.vt1, &f.vn1,
                     &f.v2, &f.vt2, &f.vn2,
-                    &f.v3, &f.vt3, &f.vn3);
+                    &f.v3, &f.vt3, &f.vn3));
+                {
+                    faces.push_back(f);
+                }
+
                 
             }
         }
@@ -193,12 +203,18 @@ void MeshStore::load_mesh(Mesh& mesh, unsigned name){
         vb = m_vbs[name];
     }
 
-    const char* filename = g_nameStore.get(name);
+    const char* filename = HashString(name);
     assert(filename);
     const char* contents = load_file(filename);
     parse_obj(*vb, contents); 
     release_file(contents);
     mesh.upload(*vb);
+
+    printf("[mesh] loaded %s\n", filename);
 }
 
 MeshStore g_MeshStore;
+
+HashString::operator Mesh*() const{
+    return g_MeshStore[m_hash];
+}

@@ -33,7 +33,7 @@ struct MeshStore{
         return m;
     }
     Mesh* operator[](unsigned name){ return get(name); }
-    Mesh* operator[](const char* name){ return get(hash(name)); }
+    Mesh* operator[](const char* name){ return get(fnv(name)); }
 };
 
 extern MeshStore g_MeshStore;

@@ -53,15 +53,15 @@ ComputeShader::ComputeShader(const std::string& filename){
         return;
     }
     
-    MYGLERRORMACRO
+    DebugGL();
 }
 ComputeShader::~ComputeShader(){
     glDeleteProgram(progid);
-    MYGLERRORMACRO
+    DebugGL();
 }
 void ComputeShader::bind(){
     glUseProgram(progid);
-    MYGLERRORMACRO
+    DebugGL();
 }
 void ComputeShader::call(unsigned x, unsigned y, unsigned z){
     glDispatchCompute(x, y, z);

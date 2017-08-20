@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cassert>
 #include "hash.h"
+#include <random>
 
 template<typename T, const unsigned cap>
 class Store{
@@ -90,20 +91,20 @@ public:
         }
     }
     void insert(const char* name, const T& val){
-        insert(hash(name), val);
+        insert(fnv(name), val);
     }
     T* get(unsigned key){
         unsigned loc = index_of(key);
         return loc == invalid_val ? nullptr : data + loc;
     }
     T* get(const char* name){
-        return get(hash(name));
+        return get(fnv(name));
     }
     T* operator[](unsigned key){
         return get(key);
     }
     T* operator[](const char* name){
-        return get(hash(name));
+        return get(fnv(name));
     }
     T* remove(unsigned key){
         unsigned loc = index_of(key);
@@ -115,14 +116,14 @@ public:
         return nullptr;
     }
     T* remove(const char* name){
-        return remove(hash(name));
+        return remove(fnv(name));
     }
     bool exists(unsigned key){
         unsigned loc = index_of(key);
         return loc != invalid_key;
     }
     bool exists(const char* name){
-        return exists(hash(name));
+        return exists(fnv(name));
     }
     unsigned empty_slots(){
         return cap - count;
@@ -136,7 +137,7 @@ public:
         return data + loc;
     }
     T* remove_near(const char* name){
-        return remove_near(hash(name));
+        return remove_near(fnv(name));
     }
     T* reuse_near(unsigned name){
         assert(full());
@@ -145,7 +146,16 @@ public:
         return data + loc;
     }
     T* reuse_near(const char* name){
-        return reuse_near(hash(name));
+        return reuse_near(fnv(name));
+    }
+    unsigned grow(){
+        assert(full() == false);
+        unsigned key = 0x7fffffff & rand();
+        while(key == 0 || get(key)){
+            key = 0x7fffffff & rand();
+        }
+        insert(key, {});
+        return key;
     }
 };
 
