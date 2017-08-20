@@ -5,13 +5,13 @@
 #include "hashstring.h"
 
 struct GLProgram{
-    unsigned id;
+    unsigned m_id;
     Store<int, 32> locations;
     void init();
     void deinit();
     int addShader(const char* path, int type);
     void addShader(unsigned handle);
-    void freeShader(int id);
+    void freeShader(unsigned handle);
     void link();
     void bind();
     int getUniformLocation(HashString name);

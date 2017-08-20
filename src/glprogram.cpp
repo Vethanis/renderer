@@ -8,44 +8,42 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "stdio.h"
 #include "namestore.h"
-#include "hashstring.h"
 
 void GLProgram::init(){
-    id = glCreateProgram();  DebugGL();;
+    m_id = glCreateProgram();  DebugGL();;
 }
 
 void GLProgram::deinit(){
-    glDeleteProgram(id); DebugGL();;
+    glDeleteProgram(m_id); DebugGL();;
 }
 
 int GLProgram::addShader(const char* path, int type){
     char* src = load_file(path);
     unsigned handle = createShader(src, type);
-    glAttachShader(id, handle);  DebugGL();;
+    glAttachShader(m_id, handle);  DebugGL();;
     release_file(src);
-    return id;
+    return handle;
 }
 
 void GLProgram::addShader(unsigned handle){
-    glAttachShader(id, handle);  DebugGL();;
+    glAttachShader(m_id, handle);  DebugGL();;
 }
 
 
-void GLProgram::freeShader(int id){
-    // this is causing opengl errors somehow?
-    //deleteShader(id);
+void GLProgram::freeShader(unsigned handle){
+    deleteShader(handle);
 }
 
 void GLProgram::link(){
-    glLinkProgram(id);  DebugGL();;
+    glLinkProgram(m_id);  DebugGL();;
 
     int result = 0;
-    glGetProgramiv(id, GL_LINK_STATUS, &result);
+    glGetProgramiv(m_id, GL_LINK_STATUS, &result);
     if(!result){
         int loglen = 0;
-        glGetProgramiv(id, GL_INFO_LOG_LENGTH, &loglen);  DebugGL();;
+        glGetProgramiv(m_id, GL_INFO_LOG_LENGTH, &loglen);  DebugGL();;
         char* log = new char[loglen + 1];
-        glGetProgramInfoLog(id, loglen, NULL, log);  DebugGL();;
+        glGetProgramInfoLog(m_id, loglen, NULL, log);  DebugGL();;
         log[loglen] = 0;
         puts(log);
         delete[] log;
@@ -53,13 +51,13 @@ void GLProgram::link(){
 }
 
 void GLProgram::bind(){
-    glUseProgram(id);  DebugGL();;
+    glUseProgram(m_id);  DebugGL();;
 }
 
 int GLProgram::getUniformLocation(HashString hash){
     int* pLoc = locations[hash.m_hash];
     if(!pLoc){
-        locations.insert(hash.m_hash, glGetUniformLocation(id, hash));
+        locations.insert(hash.m_hash, glGetUniformLocation(m_id, hash));
         pLoc = locations[hash.m_hash];
         if(*pLoc == -1){
             printf("[GLProgram] Invalid uniform detected: %s\n", hash.str());
