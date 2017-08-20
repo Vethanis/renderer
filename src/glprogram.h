@@ -24,4 +24,5 @@ struct GLProgram{
     void setUniformFloat(int loc, const float v);
     void bindAlbedo(int channel);
     void bindNormal(int channel);
+    void computeCall(int x=0, int y=0, int z=0);
 };

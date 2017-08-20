@@ -62,10 +62,10 @@ void Mesh::deinit(){
 }
 
 void Mesh::upload(const VertexBuffer& vb){
-    glBindVertexArray(vao); DebugGL();;
-    glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();;
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vb.size(), vb.data(), GL_STATIC_DRAW); DebugGL();;
-    num_vertices = unsigned(vb.size());
+    glBindVertexArray(vao); DebugGL();
+    glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();
+    glBufferData(GL_ARRAY_BUFFER, vb.bytes(), vb.begin(), GL_STATIC_DRAW); DebugGL();
+    num_vertices = unsigned(vb.count());
 }
 
 void Mesh::draw(){
@@ -75,19 +75,17 @@ void Mesh::draw(){
 }
 
 void parse_obj(VertexBuffer& out, const char* text){
-    const char* p = text;
-
     struct Face{
         int v1, vt1, vn1, v2, vt2, vn2, v3, vt3, vn3;
     };
 
-    std::vector<glm::vec3> positions;
-    std::vector<glm::vec3> normals;
-    std::vector<glm::vec2> uvs;
-    std::vector<Face> faces;
+    Vector<glm::vec3> positions;
+    Vector<glm::vec3> normals;
+    Vector<glm::vec2> uvs;
+    Vector<Face> faces;
 
-    while(*p && p[1]){
-        switch(*p){
+    for(const char* p = text; p[0] && p[1]; p = nextline(p)){
+        switch(p[0]){
             case 'v':
             {
                 switch(p[1]){
@@ -96,7 +94,7 @@ void parse_obj(VertexBuffer& out, const char* text){
                         glm::vec3 pos;
                         assert(sscanf(p, "v %f %f %f", &pos.x, &pos.y, &pos.z));
                         {
-                            positions.push_back(pos);
+                            positions.grow() = pos;
                         }
                     }
                     break;
@@ -105,7 +103,7 @@ void parse_obj(VertexBuffer& out, const char* text){
                         glm::vec2 uv;
                         assert(sscanf(p, "vt %f %f", &uv.x, &uv.y));
                         {
-                            uvs.push_back(uv);
+                            uvs.grow() = uv;
                         }
                     }
                     break;
@@ -115,7 +113,7 @@ void parse_obj(VertexBuffer& out, const char* text){
                         assert(sscanf(p, "vn %f %f %f", &norm.x, &norm.y, &norm.z));
                         {
                             norm = glm::normalize(norm);
-                            normals.push_back(norm);
+                            normals.grow() = norm;
                         }
                     }
                     break;
@@ -129,13 +127,10 @@ void parse_obj(VertexBuffer& out, const char* text){
                     &f.v2, &f.vt2, &f.vn2,
                     &f.v3, &f.vt3, &f.vn3));
                 {
-                    faces.push_back(f);
+                    faces.grow() = f;
                 }
-
-                
             }
         }
-        p = nextline(p);
     }
 
     out.clear();
@@ -167,24 +162,24 @@ void parse_obj(VertexBuffer& out, const char* text){
 
         int mat = 0;
 
-        out.push_back({
+        out.grow() = {
                 {pa.x, pa.y, pa.z, ua.x},
                 {na.x, na.y, na.z, ua.y},
                 {t.x, t.y, t.z, float(mat)}
-            });
-        out.push_back({
+            };
+        out.grow() = {
                 {pb.x, pb.y, pb.z, ub.x},
                 {nb.x, nb.y, nb.z, ub.y},
                 {t.x, t.y, t.z, float(mat)}
-            });
-        out.push_back({
+            };
+        out.grow() = {
                 {pc.x, pc.y, pc.z, uc.x},
                 {nc.x, nc.y, nc.z, uc.y},
                 {t.x, t.y, t.z, float(mat)}
-            });
+            };
     }
 
-    assert(out.size() == 3 * faces.size());
+    assert(out.count() == 3 * faces.count());
 }
 
 void MeshStore::load_mesh(Mesh& mesh, unsigned name){

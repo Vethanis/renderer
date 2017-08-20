@@ -1,6 +1,5 @@
 #pragma once 
 
-#include <algorithm>
 #include <cstring>
 #include <cassert>
 #include "hash.h"

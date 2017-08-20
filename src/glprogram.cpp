@@ -110,3 +110,6 @@ void GLProgram::bindNormal(int channel){
     unsigned loc = getUniformLocation(normal_names[channel]);
     setUniformInt(loc, channel * 2 + 1);
 }
+void GLProgram::computeCall(int x, int y, int z){
+    glDispatchCompute(x, y, z);
+}

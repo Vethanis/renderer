@@ -1,7 +1,7 @@
 #pragma once
 
 #include "glm/glm.hpp"
-#include <vector>
+#include "array.h"
 #include "store.h"
 
 inline unsigned short toHalf(float f) {
@@ -74,4 +74,4 @@ struct Vertex {
     glm::vec4 tangent; // w = mat
 };
 
-typedef std::vector<Vertex> VertexBuffer;
+typedef Vector<Vertex> VertexBuffer;

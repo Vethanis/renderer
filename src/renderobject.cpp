@@ -71,7 +71,7 @@ void GBuffer::deinit(){
 }
 
 void GBuffer::updateLights(const LightSet& lights){
-    lightbuff.upload(lights.data, lights.bytes());
+    lightbuff.upload(lights.begin(), lights.bytes());
 }
 
 Renderables g_Renderables;

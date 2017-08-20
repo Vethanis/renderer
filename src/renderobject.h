@@ -36,17 +36,21 @@ struct RenderResource{
     HashString transform;
 
     void bind(GLProgram& prog){
-        for(unsigned i = 0; i < materials.count(); ++i){
+        for(int i = 0; i < materials.count(); ++i){
             materials[i].bind(prog, i);
         }
     }
     void addMaterial(const Material& mat){
         materials.grow() = mat;
     }
-    bool operator<(const RenderResource& o)const{
-        unsigned bucket = materials.hash() << 16 | (0xffff & mesh);
-        unsigned oBucket = o.materials.hash() << 16 | (0xffff & o.mesh);
-        return bucket < oBucket;
+    unsigned bucket()const{
+        return materials.hash() << 16 | (0xffff & mesh);
+    }
+    bool operator < (const RenderResource& o)const{
+        return bucket() < o.bucket();
+    }
+    bool operator > (const RenderResource& o)const{
+        return bucket() > o.bucket();
     }
     void draw(){
         Mesh* m = mesh;
@@ -85,7 +89,7 @@ struct Renderables{
         return r;
     }
     void finishGrow(){
-        std::sort(resources.begin(), resources.end());
+        resources.sort();
     }
 };
 
