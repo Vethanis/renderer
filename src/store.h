@@ -3,7 +3,7 @@
 #include <cstring>
 #include <cassert>
 #include "hash.h"
-#include <random>
+#include <cstdio>
 
 template<typename T, const unsigned cap>
 class Store{
@@ -54,9 +54,7 @@ class Store{
     }
 public:
     Store(){
-        count = 0;
-        for(unsigned i = 0; i < cap; i++)
-            names[i] = 0;
+        memset(this, 0, sizeof(*this));
     }
     void insert(unsigned key, const T& _val){
         assert(count < cap);
@@ -64,6 +62,14 @@ public:
         unsigned dist = 0;
         T val = _val;
         while(true){
+            if(names[pos] == key){
+                if(val == data[pos]){
+                    return;
+                }
+                else{
+                    assert(false);
+                }
+            }
             if(names[pos] == 0){
                 names[pos] = key;
                 data[pos] = val;
@@ -80,8 +86,17 @@ public:
                     return;
                 }
 
-                std::swap(key, names[pos]);
-                std::swap(val, data[pos]);
+                {
+                    const unsigned tname = key;
+                    key = names[pos];
+                    names[pos] = tname;
+                }
+                {
+                    const T tval = val;
+                    val = data[pos];
+                    data[pos] = tval;
+                }
+
                 dist = existing_dist;
             }
 
@@ -149,9 +164,9 @@ public:
     }
     unsigned grow(){
         assert(full() == false);
-        unsigned key = 0x7fffffff & rand();
-        while(key == 0 || get(key)){
-            key = 0x7fffffff & rand();
+        static unsigned key = 1;
+        while(get(key)){
+            key = ((key + 1) & 0x7fffffff) | 1;
         }
         insert(key, {});
         return key;

@@ -81,6 +81,9 @@ struct Array{
     void sort(){
         sort(0, _tail);
     }
+    bool operator==(const Array& other)const{
+        return begin() == other.begin();
+    }
 };
 
 template<typename T>
@@ -202,5 +205,8 @@ struct Vector{
     }
     ~Vector(){
         delete[] _data;
+    }
+    bool operator==(const Vector& other)const{
+        return begin() == other.begin();
     }
 };

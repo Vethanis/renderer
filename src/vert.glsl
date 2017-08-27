@@ -14,7 +14,7 @@ uniform mat4 M;
 uniform mat3 IM;
 
 void main() {
-	gl_Position = MVP * vec4(p.xyz, 1.0);
+    gl_Position = MVP * vec4(p.xyz, 1.0);
     P = vec3(M * vec4(p.xyz, 1.0));
     UV = vec2(p.w, n.w);
     MID = int(t.w);

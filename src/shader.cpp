@@ -18,6 +18,7 @@ unsigned createShader(const char* src, int type){
         glGetShaderInfoLog(handle, loglen, NULL, log);  DebugGL();;
         log[loglen] = 0;
         puts(log);
+        puts(src);
         delete[] log;
     }
 

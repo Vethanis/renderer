@@ -4,24 +4,24 @@
 
 static unsigned binding_tail = 0;
 
-UBO::UBO(void* ptr, size_t size, const char* name, unsigned* programs, int num_progs){
+void UBO::init(void* ptr, unsigned size, const char* name, unsigned* programs, int num_progs){
     glGenBuffers(1, &id);DebugGL();
     glBindBuffer(GL_UNIFORM_BUFFER, id);DebugGL();
     glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);DebugGL();
 
     for(int i = 0; i < num_progs; i++){
-        unsigned idx = glGetUniformBlockIndex(programs[i], name);
-        glUniformBlockBinding(programs[i], idx, binding_tail);
+        unsigned idx = glGetUniformBlockIndex(programs[i], name);DebugGL();
+        glUniformBlockBinding(programs[i], idx, binding_tail);DebugGL();
     }
 
     glBindBufferBase(GL_UNIFORM_BUFFER, binding_tail, id);DebugGL();
     
     binding_tail++;
 }
-UBO::~UBO(){
+void UBO::deinit(){
     glDeleteBuffers(1, &id);DebugGL();
 }
-void UBO::upload(void* ptr, size_t size){
+void UBO::upload(void* ptr, unsigned size){
     glBindBuffer(GL_UNIFORM_BUFFER, id);DebugGL();
     glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);DebugGL();
 }

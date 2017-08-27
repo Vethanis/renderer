@@ -4,7 +4,6 @@
 
 struct NameStore{
     Store<const char*, 1024> m_store;
-    
     const char* get(unsigned name){
         const char** res = m_store.get(name);
         return res ? *res : nullptr;

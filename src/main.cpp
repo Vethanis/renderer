@@ -34,10 +34,6 @@ float frameBegin(unsigned& i, float& t){
 
 int main(int argc, char* argv[]){
     srand((unsigned)time(0));
-    
-    HashString albedo("brick_diffuse.png");
-    HashString normal("brick_normal.png");
-    HashString mesh("building.obj");
 
     int WIDTH = int(1920.0f * 1.5f);
     int HEIGHT = int(1080.0f * 1.5f);
@@ -56,33 +52,19 @@ int main(int argc, char* argv[]){
     Input input(window.getWindow());
 
     g_Renderables.init();
-    g_gBuffer.init(WIDTH, HEIGHT);
-
 
     HashString building_xform;
     {   
         RenderResource& building = g_Renderables.grow();
-        building.mesh = mesh;
-        building.addMaterial({albedo, normal});
+        building.mesh = "suzanne.obj";
+        building.addMaterial({"grimy_metal_diffuse.png", "grimy_metal_normal.png"});
         building_xform = building.transform;
+        auto& sky = g_Renderables.grow();
+        sky.mesh = "sphere.obj";
+        sky.addMaterial({"sky_diffuse.png", "sky_normal.png"});
+        sky.set_flag(DF_SKYMAP);
     }
-
-    LightSet lights;
-    lights.resize(lights.capacity());
-
-    const auto randomizeLights = [&](){
-        for(light& l : lights){
-            l.position.x = randf(10.0f);
-            l.position.y = randf() * 10.0f;
-            l.position.z = randf(10.0f);
-            l.color.x = randf();
-            l.color.y = randf();
-            l.color.z = randf();
-        }
-        g_gBuffer.updateLights(lights);
-    };
-
-    randomizeLights();
+    g_Renderables.finishGrow();
 
     {
         Transform* mat = building_xform;
@@ -92,28 +74,19 @@ int main(int argc, char* argv[]){
     input.poll();
     unsigned i = 0;
     float t = (float)glfwGetTime();
-    int wait_counter = 0;
-    float angle = 0.0f;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
-
-        if(glfwGetKey(window.getWindow(), GLFW_KEY_E) && wait_counter > 10){
-            randomizeLights();
-            wait_counter = 0;
-        }
 
         {
             Transform* mat = building_xform;
             *mat = glm::rotate(*mat, 0.001f, {0.0f, 1.0f, 0.0f});
         }
 
-        g_gBuffer.draw(camera);
+        g_Renderables.mainDraw(camera);
         window.swap();
-        wait_counter++;
     }
 
     g_Renderables.deinit();
-    g_gBuffer.deinit();
 
     return 0;
 }

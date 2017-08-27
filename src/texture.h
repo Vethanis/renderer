@@ -18,6 +18,9 @@ struct Texture{
         bool mip;
     };
 
+    bool operator==(const Texture& other)const{
+        return handle == other.handle;
+    }
     void init(const parameter& p){
         glGenTextures(1, &handle);  DebugGL();
         glBindTexture(GL_TEXTURE_2D, handle);  DebugGL();
@@ -93,6 +96,9 @@ struct Image{
     int width, height;
     bool mip;
     Image() : image(nullptr), width(0), height(0), mip(true){}
+    bool operator==(const Image& other)const{
+        return image == other.image;
+    }
 };
 
 struct ImageStore{

@@ -18,6 +18,8 @@ uniform sampler2D normalSampler2;
 uniform sampler2D albedoSampler3;
 uniform sampler2D normalSampler3;
 
+uniform vec3 sunDirection;
+
 void main(){
     gPosition = P.xyz;
 

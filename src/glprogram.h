@@ -25,4 +25,18 @@ struct GLProgram{
     void bindAlbedo(int channel);
     void bindNormal(int channel);
     void computeCall(int x=0, int y=0, int z=0);
+    void setup(const char** filenames, int count);
+    template<typename T>
+    void setUniform(const char* name, const T& t){
+        int loc = getUniformLocation(HashString(name));
+        setUniform(loc, t);
+    }
+    void setUniformInt(const char* name, const int v){
+        int loc = getUniformLocation(HashString(name));
+        setUniformInt(loc, v);
+    }
+    void setUniformFloat(const char* name, const float v){
+        int loc = getUniformLocation(HashString(name));
+        setUniformFloat(loc, v);
+    }
 };

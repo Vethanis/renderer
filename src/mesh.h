@@ -9,6 +9,9 @@ struct Mesh {
     void upload(const VertexBuffer& vb);
     void init();
     void deinit();
+    bool operator==(const Mesh& other)const{
+        return vao == other.vao;
+    }
 };
 
 struct MeshStore{

@@ -7,7 +7,6 @@
 #include "debugmacro.h"
 #include "glm/gtc/type_ptr.hpp"
 #include "stdio.h"
-#include "namestore.h"
 
 void GLProgram::init(){
     m_id = glCreateProgram();  DebugGL();;
@@ -29,9 +28,9 @@ void GLProgram::addShader(unsigned handle){
     glAttachShader(m_id, handle);  DebugGL();;
 }
 
-
 void GLProgram::freeShader(unsigned handle){
-    deleteShader(handle);
+    glDetachShader(m_id, handle);  DebugGL();;
+    glDeleteShader(handle);  DebugGL();;
 }
 
 void GLProgram::link(){
@@ -57,11 +56,13 @@ void GLProgram::bind(){
 int GLProgram::getUniformLocation(HashString hash){
     int* pLoc = locations[hash.m_hash];
     if(!pLoc){
-        locations.insert(hash.m_hash, glGetUniformLocation(m_id, hash));
+        const char* loc_str = hash.str();
+        assert(loc_str);
+        locations.insert(hash.m_hash, glGetUniformLocation(m_id, loc_str));
         pLoc = locations[hash.m_hash];
         if(*pLoc == -1){
-            printf("[GLProgram] Invalid uniform detected: %s\n", hash.str());
-            assert(false);
+            printf("[GLProgram] Invalid uniform detected: %s\n", loc_str);
+            //assert(false);
         }
     }
     return *pLoc;
@@ -88,28 +89,54 @@ void GLProgram::setUniformInt(int location, const int v){
 void GLProgram::setUniformFloat(int location, const float v){
     glUniform1f(location, v);  DebugGL();;
 }
-
-static const unsigned albedo_names[] = {
-    HashString("albedoSampler0"),
-    HashString("albedoSampler1"),
-    HashString("albedoSampler2"),
-    HashString("albedoSampler3"),
-};
-static const unsigned normal_names[] = {
-    HashString("normalSampler0"),
-    HashString("normalSampler1"),
-    HashString("normalSampler2"),
-    HashString("normalSampler3"),
-};
-
 void GLProgram::bindAlbedo(int channel){
+    static const HashString albedo_names[] = {
+        HashString("albedoSampler0"),
+        HashString("albedoSampler1"),
+        HashString("albedoSampler2"),
+        HashString("albedoSampler3"),
+    };
     unsigned loc = getUniformLocation(albedo_names[channel]);
     setUniformInt(loc, channel * 2);
 }
 void GLProgram::bindNormal(int channel){
+    static const HashString normal_names[] = {
+        HashString("normalSampler0"),
+        HashString("normalSampler1"),
+        HashString("normalSampler2"),
+        HashString("normalSampler3"),
+    };
     unsigned loc = getUniformLocation(normal_names[channel]);
     setUniformInt(loc, channel * 2 + 1);
 }
 void GLProgram::computeCall(int x, int y, int z){
     glDispatchCompute(x, y, z);
+}
+
+void GLProgram::setup(const char** filenames, int count){
+    static const int sequences[] = {
+        GL_COMPUTE_SHADER, 
+        GL_VERTEX_SHADER, 
+        GL_FRAGMENT_SHADER, 
+        GL_VERTEX_SHADER, 
+        GL_GEOMETRY_SHADER,
+        GL_FRAGMENT_SHADER
+    };
+    assert(count > 0 && count < 4);
+    int names[] = {0, 0, 0};
+    init();
+    int begin = 0;
+    if(count == 2){
+        begin = 1;
+    }
+    else if(count == 3){
+        begin = 3;
+    }
+    for(int i = 0; i < count; ++i){
+        names[i] = addShader(filenames[i], sequences[begin + i]);
+    }
+    link();
+    for(int i = 0; i < count; ++i){
+        freeShader(names[i]);
+    }
 }
