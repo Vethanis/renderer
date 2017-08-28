@@ -22,8 +22,8 @@ uniform vec3 sunDirection;
 uniform vec3 sunColor;
 uniform vec3 eye;
 uniform int seed;
-uniform int is_cubemap;
-uniform int flags;
+uniform int draw_flags;
+uniform int object_flags;
 
 float rand( inout uint f) {
     f = (f ^ 61) ^ (f >> 16);
@@ -74,12 +74,13 @@ vec3 direct_lighting(inout uint s){
     getNormalAndAlbedo(N, albedo);
 
     const vec3 L = sunDirection;
-    const float spec = albedo.a * 128.0;
+    const float spec = albedo.a * 256.0;
     const vec3 V = normalize(eye - P);
     const vec3 H = normalize(V + L);
     const float D = max(0.0, dot(L, N));
     const float S = D > 0.0 ? pow(max(0.0, dot(H, N)), spec) : 0.0;
-    vec3 lighting = (0.01 + D + S) * albedo.rgb;
+    const vec3 env = S * sunColor;
+    vec3 lighting = (vec3(0.01 + D) + env) * albedo.rgb;
     return lighting;
 }
 
@@ -89,12 +90,13 @@ vec3 direct_lighting_ref(inout uint s){
     getNormalAndAlbedo(N, albedo);
 
     const vec3 L = sunDirection;
-    const float spec = albedo.a * 128.0;
+    const float spec = albedo.a * 256.0;
     const vec3 V = normalize(eye - P);
     const vec3 H = normalize(V + L);
     const float D = max(0.0, dot(L, N));
     const float S = D > 0.0 ? pow(max(0.0, dot(H, N)), spec) : 0.0;
-    const vec3 env = S * texture(env_cm, N).rgb;
+    const vec3 R = normalize(reflect(-V, N));
+    const vec3 env = S * texture(env_cm, R).rgb;
     vec3 lighting = (vec3(0.01 + D) + env) * albedo.rgb;
     return lighting;
 }
@@ -126,48 +128,106 @@ vec3 indirect_lighting(inout uint s){
 
     const vec3 mask = albedo.rgb;
     const float roughness = 1.0 - albedo.a;
-    const vec3 V = normalize(P - eye);
-    const vec3 R = normalize(reflect(V, N));
+    const vec3 V = normalize(eye - P);
+    const vec3 R = normalize(reflect(-V, N));
     const int samples = 16;
-    const float scaling = 1.0 / float(samples);
+    const float scaling = 3.141592 / float(samples);
     
     vec3 light = vec3(0.0);
     vec3 u, v;
     cosHemiUV(N, u, v);
     for(int i = 0; i < samples; ++i){
         const vec3 randomDir = cosHemi(N, u, v, s);
-        const vec3 dir = normalize(mix(R, randomDir, roughness));
-        const float dirscale = max(0.0, dot(N, dir));
-        light += mask * texture(env_cm, dir).rgb * scaling * dirscale;
+        const vec3 L = normalize(mix(R, randomDir, roughness));
+        const vec3 li = texture(env_cm, L).rgb;
+        light += li * max(0.0, dot(L, N));
     }
+
+    light *= scaling * mask;
 
     return light;
 }
 
 vec3 skymap_lighting(){
-    const float sunMag = pow(max(0.0, dot(TBN[2], -sunDirection)), 256.0) * 10000000.0;
-    const vec3 sun = sunColor * sunMag;
+    vec3 sky = vec3(0.0);
+
+    vec4 albedo;
+    vec3 N;
+    getNormalAndAlbedo(N, albedo);
+
+    sky += max(0.0, pow(dot(-N, sunDirection), 128.0)) * sunColor * 10.0;
+
     switch(MID){
-        case 0: return sun + texture(albedoSampler0, UV).rgb * 0.01;
-        case 1: return sun + texture(albedoSampler1, UV).rgb* 0.01;
-        case 2: return sun + texture(albedoSampler2, UV).rgb* 0.01;
-        case 3: return sun + texture(albedoSampler3, UV).rgb* 0.01;
+        case 0: sky += texture(albedoSampler0, UV).rgb;
+        break;
+        case 1: sky += texture(albedoSampler1, UV).rgb;
+        break;
+        case 2: sky += texture(albedoSampler2, UV).rgb;
+        break;
+        case 3: sky += texture(albedoSampler3, UV).rgb;
+        break;
     }
-    return sun;
+    return sky;
+}
+
+vec3 visualizeReflections(inout uint s){
+    vec4 albedo;
+    vec3 N;
+    getNormalAndAlbedo(N, albedo);
+
+    const vec3 mask = albedo.rgb;
+    const float roughness = 1.0 - albedo.a;
+    const vec3 V = normalize(eye - P);
+    const vec3 R = normalize(reflect(-V, N));
+    const int samples = 16;
+    
+    vec3 light = vec3(0.0);
+    vec3 u, v;
+    cosHemiUV(N, u, v);
+    for(int i = 0; i < samples; ++i){
+        const vec3 randomDir = cosHemi(N, u, v, s);
+        const vec3 L = normalize(mix(R, randomDir, roughness));
+        light += texture(env_cm, L).rgb * max(0.0, dot(N, L));
+    }
+
+    const float scaling = 1.0 / float(samples);
+    light *= scaling;
+
+    return light;
 }
 
 void main(){
-    uint s = uint(seed) ^ uint(UV.x * 951489.0) ^ uint(UV.y * 7561182.0);
+    uint s = uint(seed) 
+        ^ uint(gl_FragCoord.x * 10.0) 
+        ^ uint(gl_FragCoord.y * 1000.0);
 
     vec3 lighting;
-    if((flags & 1) == 1){
+    if((object_flags & 1) == 1){
         lighting = skymap_lighting();
     }
-    else if(is_cubemap == 1){
+    else if((draw_flags & 1) == 1){
         lighting = direct_lighting(s);
     }
-    else{
+    else if((draw_flags & 2) == 2){
         lighting = direct_lighting_ref(s);
+    }
+    else if((draw_flags & 4) == 4){
+        lighting = indirect_lighting(s);
+    }
+    else if((draw_flags & 8) == 8){
+        vec4 albedo;
+        vec3 normal;
+        getNormalAndAlbedo(normal, albedo);
+        outColor = vec4(normal.rgb * 0.5 + 0.5, 1.0);
+        return;
+    }
+    else if((draw_flags & 16) == 16){
+        outColor = vec4(visualizeReflections(s), 1.0);
+        return;
+    }
+    else if((draw_flags & 32) == 32){
+        outColor = vec4(fract(UV.xy), 0.0, 1.0);
+        return;
     }
 
     lighting.rgb.x += 0.0001 * randBi(s);

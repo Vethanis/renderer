@@ -27,6 +27,6 @@ public:
     static float cursorY();
     static float relCursorX();
     static float relCursorY();
-    static int activeKey();
+    bool getKey(int key);
 };
 #endif

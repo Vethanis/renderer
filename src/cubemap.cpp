@@ -24,7 +24,7 @@ void Cubemap::init(s32 size){
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     for(u32 i = 0; i < num_faces; ++i){
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 
-            GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); DebugGL();
+            GL_RGBA, size, size, 0, GL_RGBA, GL_FLOAT, nullptr); DebugGL();
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR); DebugGL();
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); DebugGL();
@@ -71,8 +71,8 @@ void Cubemap::drawInto(const Camera& cam){
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0); DebugGL();
     glBindFramebuffer(GL_FRAMEBUFFER, fbos[current_face]); DebugGL();
     const Transform VP = P * glm::translate(Vs[current_face], cam.getEye());
-    g_Renderables.fwdDraw(cam, VP, 1);
-
+    g_Renderables.fwdDraw(cam, VP, DF_CUBEMAP | DF_DIRECT);
+ 
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP); DebugGL();
 

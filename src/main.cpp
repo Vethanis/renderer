@@ -55,14 +55,17 @@ int main(int argc, char* argv[]){
 
     HashString building_xform;
     {   
-        RenderResource& building = g_Renderables.grow();
-        building.mesh = "suzanne.obj";
-        building.addMaterial({"grimy_metal_diffuse.png", "grimy_metal_normal.png"});
+        auto& building = g_Renderables.grow();
+        building.mesh = "building.obj";
+        building.addMaterial({"brick_diffuse.png", "brick_normal.png"});
         building_xform = building.transform;
+
         auto& sky = g_Renderables.grow();
         sky.mesh = "sphere.obj";
         sky.addMaterial({"sky_diffuse.png", "sky_normal.png"});
-        sky.set_flag(DF_SKYMAP);
+        sky.set_flag(ODF_SKY | ODF_ENV);
+        Transform* sky_xform = sky.transform;
+        *sky_xform = glm::scale(*sky_xform, glm::vec3(2.0f));
     }
     g_Renderables.finishGrow();
 
@@ -74,6 +77,7 @@ int main(int argc, char* argv[]){
     input.poll();
     unsigned i = 0;
     float t = (float)glfwGetTime();
+    u32 flag = DF_DIRECT;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
 
@@ -82,7 +86,26 @@ int main(int argc, char* argv[]){
             *mat = glm::rotate(*mat, 0.001f, {0.0f, 1.0f, 0.0f});
         }
 
-        g_Renderables.mainDraw(camera);
+        if(input.getKey(GLFW_KEY_1)){
+            flag = DF_INDIRECT;
+        }
+        else if(input.getKey(GLFW_KEY_2)){
+            flag = DF_DIRECT_REF;
+        }
+        else if(input.getKey(GLFW_KEY_3)){
+            flag = DF_DIRECT;
+        }
+        else if(input.getKey(GLFW_KEY_4)){
+            flag = DF_REFLECT;
+        }
+        else if(input.getKey(GLFW_KEY_5)){
+            flag = DF_NORMALS;
+        }
+        else if(input.getKey(GLFW_KEY_6)){
+            flag = DF_UV;
+        }
+
+        g_Renderables.mainDraw(camera, flag);
         window.swap();
     }
 
