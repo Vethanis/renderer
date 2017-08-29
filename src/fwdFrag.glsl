@@ -156,21 +156,7 @@ vec3 visualizeReflections(inout uint s){
     const float roughness = 1.0 - albedo.a;
     const vec3 I = normalize(P - eye);
     const vec3 R = reflect(I, N);
-    const int samples = 16;
-    
-    vec3 light = vec3(0.0);
-    vec3 u, v;
-    cosHemiUV(N, u, v);
-    for(int i = 0; i < samples; ++i){
-        const vec3 randomDir = cosHemi(N, u, v, s);
-        const vec3 L = normalize(mix(R, randomDir, roughness));
-        light += texture(env_cm, L).rgb;
-    }
-
-    const float scaling = 3.141592 / float(samples);
-    light *= scaling;
-
-    return clamp(light, 0.0, 1.0);
+    return texture(env_cm, R).rgb;
 }
 
 vec3 skymap_lighting(){

@@ -64,13 +64,13 @@ void Cubemap::drawInto(const Camera& cam){
         glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
         glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
         glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-        glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
     };
-    static const Transform P = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);  
+    static const Transform P = glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, 100.0f);  
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0); DebugGL();
     glBindFramebuffer(GL_FRAMEBUFFER, fbos[current_face]); DebugGL();
-    const Transform VP = P * glm::translate(Vs[current_face], cam.getEye());
+    const Transform VP = P * glm::translate(Vs[current_face], -cam.getEye());
     g_Renderables.fwdDraw(cam, VP, DF_CUBEMAP | DF_DIRECT);
  
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
