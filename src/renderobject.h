@@ -23,6 +23,7 @@ enum draw_flag : u32 {
     DF_REFLECT      = 1 << 4,   // visualize cubemap reflections
     DF_UV           = 1 << 5,   // visualize uvs
     DF_CUBEMAP      = 1 << 6,   // draw into cubemap
+    DF_VIS_CUBEMAP  = 1 << 7,   // visualize cubemap
 };
 
 // per-object flags
@@ -80,12 +81,6 @@ struct RenderResource{
     void unset_flag(u32 flag){
         oflag &= ~flag;
     }
-    bool filtered(u32 flag)const {
-        bool f = false;
-        // skip if drawing cubemap and this isnt part of the environment
-        f |= !get_flag(ODF_ENV) && (flag & DF_CUBEMAP);
-        return f;
-    }
 };
 
 struct Renderables{
@@ -120,18 +115,14 @@ struct Renderables{
         zProg.deinit();
         cm.deinit();
     }
-    void prePass(const Transform& VP, u32 dflag){
+    void prePass(const Transform& VP){
         glDepthFunc(GL_LESS); DebugGL();
-        glColorMask(0,0,0,0); DebugGL();
         glDepthMask(GL_TRUE); DebugGL();
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
+        glColorMask(0,0,0,0); DebugGL();
 
         zProg.bind();
         for(RenderResource& res : resources){
-            if(res.filtered(dflag))
-                continue;
-
             Transform* M = res.transform;
             zProg.setUniform("MVP", VP * *M);
             res.draw();
@@ -143,7 +134,7 @@ struct Renderables{
     }
     void fwdDraw(const Camera& cam, const Transform& VP, u32 dflag){
         #if PREPASS_ENABLED
-            prePass(VP, dflag);
+            prePass(VP);
         #else
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
         #endif
@@ -156,8 +147,6 @@ struct Renderables{
         fwdProg.setUniformInt("draw_flags", dflag);
         
         for(RenderResource& res : resources){
-            if(res.filtered(dflag))
-                continue;
 
             Transform* M = res.transform;
             glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));

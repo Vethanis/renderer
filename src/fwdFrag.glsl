@@ -128,10 +128,9 @@ vec3 indirect_lighting(inout uint s){
 
     const vec3 mask = albedo.rgb;
     const float roughness = 1.0 - albedo.a;
-    const vec3 V = normalize(eye - P);
-    const vec3 R = normalize(reflect(-V, N));
+    const vec3 I = normalize(P - eye);
+    const vec3 R = reflect(I, N);
     const int samples = 16;
-    const float scaling = 3.141592 / float(samples);
     
     vec3 light = vec3(0.0);
     vec3 u, v;
@@ -139,13 +138,39 @@ vec3 indirect_lighting(inout uint s){
     for(int i = 0; i < samples; ++i){
         const vec3 randomDir = cosHemi(N, u, v, s);
         const vec3 L = normalize(mix(R, randomDir, roughness));
-        const vec3 li = texture(env_cm, L).rgb;
-        light += li * max(0.0, dot(L, N));
+        light += texture(env_cm, L).rgb;
     }
 
+    const float scaling = 3.141592 / float(samples);
     light *= scaling * mask;
 
-    return light;
+    return clamp(light, 0.0, 1.0);
+}
+
+vec3 visualizeReflections(inout uint s){
+    vec4 albedo;
+    vec3 N;
+    getNormalAndAlbedo(N, albedo);
+
+    const vec3 mask = albedo.rgb;
+    const float roughness = 1.0 - albedo.a;
+    const vec3 I = normalize(P - eye);
+    const vec3 R = reflect(I, N);
+    const int samples = 16;
+    
+    vec3 light = vec3(0.0);
+    vec3 u, v;
+    cosHemiUV(N, u, v);
+    for(int i = 0; i < samples; ++i){
+        const vec3 randomDir = cosHemi(N, u, v, s);
+        const vec3 L = normalize(mix(R, randomDir, roughness));
+        light += texture(env_cm, L).rgb;
+    }
+
+    const float scaling = 3.141592 / float(samples);
+    light *= scaling;
+
+    return clamp(light, 0.0, 1.0);
 }
 
 vec3 skymap_lighting(){
@@ -155,7 +180,8 @@ vec3 skymap_lighting(){
     vec3 N;
     getNormalAndAlbedo(N, albedo);
 
-    sky += max(0.0, pow(dot(-N, sunDirection), 128.0)) * sunColor * 10.0;
+    sky += max(0.0, pow(dot(-N, sunDirection), 8.0)) * sunColor * 64.0;
+    return sky;
 
     switch(MID){
         case 0: sky += texture(albedoSampler0, UV).rgb;
@@ -170,30 +196,9 @@ vec3 skymap_lighting(){
     return sky;
 }
 
-vec3 visualizeReflections(inout uint s){
-    vec4 albedo;
-    vec3 N;
-    getNormalAndAlbedo(N, albedo);
-
-    const vec3 mask = albedo.rgb;
-    const float roughness = 1.0 - albedo.a;
-    const vec3 V = normalize(eye - P);
-    const vec3 R = normalize(reflect(-V, N));
-    const int samples = 16;
-    
-    vec3 light = vec3(0.0);
-    vec3 u, v;
-    cosHemiUV(N, u, v);
-    for(int i = 0; i < samples; ++i){
-        const vec3 randomDir = cosHemi(N, u, v, s);
-        const vec3 L = normalize(mix(R, randomDir, roughness));
-        light += texture(env_cm, L).rgb * max(0.0, dot(N, L));
-    }
-
-    const float scaling = 1.0 / float(samples);
-    light *= scaling;
-
-    return light;
+vec3 visualizeCubemap(){
+    vec3 I = normalize(P - eye);
+    return texture(env_cm, I).rgb;
 }
 
 void main(){
@@ -227,6 +232,10 @@ void main(){
     }
     else if((draw_flags & 32) == 32){
         outColor = vec4(fract(UV.xy), 0.0, 1.0);
+        return;
+    }
+    else if((draw_flags & 128) == 128){
+        outColor = vec4(visualizeCubemap().rgb, 1.0);
         return;
     }
 

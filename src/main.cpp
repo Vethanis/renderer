@@ -53,26 +53,24 @@ int main(int argc, char* argv[]){
 
     g_Renderables.init();
 
-    HashString building_xform;
     {   
-        auto& building = g_Renderables.grow();
-        building.mesh = "building.obj";
-        building.addMaterial({"brick_diffuse.png", "brick_normal.png"});
-        building_xform = building.transform;
+        HashString mesh("suzanne.obj");
+        Material mat = {"basic_diffuse.png", "basic_normal.png"};
 
-        auto& sky = g_Renderables.grow();
-        sky.mesh = "sphere.obj";
-        sky.addMaterial({"sky_diffuse.png", "sky_normal.png"});
-        sky.set_flag(ODF_SKY | ODF_ENV);
-        Transform* sky_xform = sky.transform;
-        *sky_xform = glm::scale(*sky_xform, glm::vec3(2.0f));
+        for(float x = -10.0f; x <= 10.0f; x += 2.0f){
+            for(float z = -10.0f; z <= 10.0f; z += 2.0f){
+
+                glm::vec3 pos = glm::vec3(x, 0.0f, z);
+                auto& building = g_Renderables.grow();
+                building.mesh = mesh;
+                building.addMaterial(mat);
+                Transform* t = building.transform;
+                *t = glm::translate(*t, pos);
+            }
+        }
+        
     }
     g_Renderables.finishGrow();
-
-    {
-        Transform* mat = building_xform;
-        *mat = glm::scale(*mat, glm::vec3(0.5f));
-    }
 
     input.poll();
     unsigned i = 0;
@@ -80,11 +78,6 @@ int main(int argc, char* argv[]){
     u32 flag = DF_DIRECT;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
-
-        {
-            Transform* mat = building_xform;
-            *mat = glm::rotate(*mat, 0.001f, {0.0f, 1.0f, 0.0f});
-        }
 
         if(input.getKey(GLFW_KEY_1)){
             flag = DF_INDIRECT;
@@ -103,6 +96,9 @@ int main(int argc, char* argv[]){
         }
         else if(input.getKey(GLFW_KEY_6)){
             flag = DF_UV;
+        }
+        else if(input.getKey(GLFW_KEY_7)){
+            flag = DF_VIS_CUBEMAP;
         }
 
         g_Renderables.mainDraw(camera, flag);
