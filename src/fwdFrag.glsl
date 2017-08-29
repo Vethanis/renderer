@@ -138,13 +138,13 @@ vec3 indirect_lighting(inout uint s){
     for(int i = 0; i < samples; ++i){
         const vec3 randomDir = cosHemi(N, u, v, s);
         const vec3 L = normalize(mix(R, randomDir, roughness));
-        light += texture(env_cm, L).rgb;
+        light += texture(env_cm, L).rgb * max(0.0, dot(N, L));
     }
 
-    const float scaling = 3.141592 / float(samples);
+    const float scaling = 1.0 / float(samples);
     light *= scaling * mask;
 
-    return clamp(light, 0.0, 1.0);
+    return light;
 }
 
 vec3 visualizeReflections(inout uint s){
@@ -166,8 +166,7 @@ vec3 skymap_lighting(){
     vec3 N;
     getNormalAndAlbedo(N, albedo);
 
-    sky += max(0.0, pow(dot(-N, sunDirection), 8.0)) * sunColor * 64.0;
-    return sky;
+    sky += max(0.0, pow(dot(-N, sunDirection), 128.0)) * sunColor * 10000.0;
 
     switch(MID){
         case 0: sky += texture(albedoSampler0, UV).rgb;
@@ -179,7 +178,7 @@ vec3 skymap_lighting(){
         case 3: sky += texture(albedoSampler3, UV).rgb;
         break;
     }
-    return sky;
+    return sky * 0.01;
 }
 
 vec3 visualizeCubemap(){

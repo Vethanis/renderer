@@ -57,18 +57,23 @@ int main(int argc, char* argv[]){
         HashString mesh("suzanne.obj");
         Material mat = {"basic_diffuse.png", "basic_normal.png"};
 
-        for(float x = -10.0f; x <= 10.0f; x += 2.0f){
-            for(float z = -10.0f; z <= 10.0f; z += 2.0f){
+        for(float x = -10.0f; x <= 10.0f; x += 2.5f){
+            for(float z = -10.0f; z <= 10.0f; z += 2.5f){
 
                 glm::vec3 pos = glm::vec3(x, 0.0f, z);
-                auto& building = g_Renderables.grow();
-                building.mesh = mesh;
-                building.addMaterial(mat);
-                Transform* t = building.transform;
+                auto& obj = g_Renderables.grow();
+                obj.mesh = mesh;
+                obj.addMaterial(mat);
+                Transform* t = obj.transform;
                 *t = glm::translate(*t, pos);
             }
         }
         
+
+        auto& obj = g_Renderables.grow();
+        obj.mesh = "sphere.obj";
+        obj.addMaterial({"sky_diffuse.png", "sky_normal.png"});
+        obj.set_flag(ODF_SKY);
     }
     g_Renderables.finishGrow();
 
