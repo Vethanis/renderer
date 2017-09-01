@@ -88,21 +88,18 @@ int main(int argc, char* argv[]){
             flag = DF_INDIRECT;
         }
         else if(input.getKey(GLFW_KEY_2)){
-            flag = DF_DIRECT_REF;
-        }
-        else if(input.getKey(GLFW_KEY_3)){
             flag = DF_DIRECT;
         }
-        else if(input.getKey(GLFW_KEY_4)){
+        else if(input.getKey(GLFW_KEY_3)){
             flag = DF_REFLECT;
         }
-        else if(input.getKey(GLFW_KEY_5)){
+        else if(input.getKey(GLFW_KEY_4)){
             flag = DF_NORMALS;
         }
-        else if(input.getKey(GLFW_KEY_6)){
+        else if(input.getKey(GLFW_KEY_5)){
             flag = DF_UV;
         }
-        else if(input.getKey(GLFW_KEY_7)){
+        else if(input.getKey(GLFW_KEY_6)){
             flag = DF_VIS_CUBEMAP;
         }
 

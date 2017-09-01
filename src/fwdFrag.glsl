@@ -7,6 +7,8 @@ in vec3 P;
 in vec2 UV;
 flat in int MID;
 
+// ------------------------------------------------------------------------
+
 uniform sampler2D albedoSampler0;
 uniform sampler2D normalSampler0;
 uniform sampler2D albedoSampler1;
@@ -25,6 +27,21 @@ uniform int seed;
 uniform int draw_flags;
 uniform int object_flags;
 
+// ------------------------------------------------------------------------
+
+#define DF_DIRECT       0
+#define DF_INDIRECT     1
+#define DF_NORMALS      2
+#define DF_REFLECT      3
+#define DF_UV           4
+#define DF_CUBEMAP      5
+#define DF_VIS_CUBEMAP  6
+
+#define ODF_DEFAULT     0
+#define ODF_SKY         1
+
+// ------------------------------------------------------------------------
+
 float rand( inout uint f) {
     f = (f ^ 61) ^ (f >> 16);
     f *= 9;
@@ -36,6 +53,26 @@ float rand( inout uint f) {
 
 float randBi(inout uint s){
     return rand(s) * 2.0 - 1.0;
+}
+
+void cosHemiUV(vec3 N, out vec3 u, out vec3 v){
+    if(abs(N.x) > 0.1)
+        u = cross(vec3(0.0, 1.0, 0.0), N);
+    else
+        u = cross(vec3(1.0, 0.0, 0.0), N);
+    u = normalize(u);
+    v = cross(N, u);
+}
+
+vec3 cosHemi(vec3 N, vec3 u, vec3 v, inout uint s){
+    float r1 = 3.141592 * 2.0 * rand(s);
+    float r2 = rand(s);
+    float r2s = sqrt(r2);
+    return normalize(
+        u * cos(r1) * r2s 
+        + v * sin(r1) * r2s 
+        + N * sqrt(1.0 - r2)
+        );
 }
 
 void getNormalAndAlbedo(out vec3 N, out vec4 albedo){
@@ -68,6 +105,8 @@ void getNormalAndAlbedo(out vec3 N, out vec4 albedo){
     N = normalize(TBN * normalize(N * 2.0 - 1.0));
 }
 
+// ------------------------------------------------------------------------
+
 vec3 direct_lighting(inout uint s){
     vec4 albedo;
     vec3 N;
@@ -82,43 +121,6 @@ vec3 direct_lighting(inout uint s){
     const vec3 env = S * sunColor;
     vec3 lighting = (vec3(0.01 + D) + env) * albedo.rgb;
     return lighting;
-}
-
-vec3 direct_lighting_ref(inout uint s){
-    vec4 albedo;
-    vec3 N;
-    getNormalAndAlbedo(N, albedo);
-
-    const vec3 L = sunDirection;
-    const float spec = albedo.a * 256.0;
-    const vec3 V = normalize(eye - P);
-    const vec3 H = normalize(V + L);
-    const float D = max(0.0, dot(L, N));
-    const float S = D > 0.0 ? pow(max(0.0, dot(H, N)), spec) : 0.0;
-    const vec3 R = normalize(reflect(-V, N));
-    const vec3 env = S * texture(env_cm, R).rgb;
-    vec3 lighting = (vec3(0.01 + D) + env) * albedo.rgb;
-    return lighting;
-}
-
-void cosHemiUV(vec3 N, out vec3 u, out vec3 v){
-    if(abs(N.x) > 0.1)
-        u = cross(vec3(0.0, 1.0, 0.0), N);
-    else
-        u = cross(vec3(1.0, 0.0, 0.0), N);
-    u = normalize(u);
-    v = cross(N, u);
-}
-
-vec3 cosHemi(vec3 N, vec3 u, vec3 v, inout uint s){
-    float r1 = 3.141592 * 2.0 * rand(s);
-    float r2 = rand(s);
-    float r2s = sqrt(r2);
-    return normalize(
-        u * cos(r1) * r2s 
-        + v * sin(r1) * r2s 
-        + N * sqrt(1.0 - r2)
-        );
 }
 
 vec3 indirect_lighting(inout uint s){
@@ -147,7 +149,7 @@ vec3 indirect_lighting(inout uint s){
     return light;
 }
 
-vec3 visualizeReflections(inout uint s){
+vec3 visualizeReflections(){
     vec4 albedo;
     vec3 N;
     getNormalAndAlbedo(N, albedo);
@@ -159,6 +161,17 @@ vec3 visualizeReflections(inout uint s){
     return texture(env_cm, R).rgb;
 }
 
+vec3 visualizeNormals(){
+    vec4 albedo;
+    vec3 normal;
+    getNormalAndAlbedo(normal, albedo);
+    return normal;
+}
+
+vec3 visualizeUVs(){
+    return vec3(fract(UV.xy), 0.0);
+}
+
 vec3 skymap_lighting(){
     vec3 sky = vec3(0.0);
 
@@ -166,7 +179,7 @@ vec3 skymap_lighting(){
     vec3 N;
     getNormalAndAlbedo(N, albedo);
 
-    sky += max(0.0, pow(dot(-N, sunDirection), 128.0)) * sunColor * 10000.0;
+    sky += max(0.0, pow(dot(N, -sunDirection), 100.0)) * sunColor * 1000.0;
 
     switch(MID){
         case 0: sky += texture(albedoSampler0, UV).rgb;
@@ -178,7 +191,7 @@ vec3 skymap_lighting(){
         case 3: sky += texture(albedoSampler3, UV).rgb;
         break;
     }
-    return sky * 0.01;
+    return sky * 0.1;
 }
 
 vec3 visualizeCubemap(){
@@ -186,42 +199,41 @@ vec3 visualizeCubemap(){
     return texture(env_cm, I).rgb;
 }
 
+// ------------------------------------------------------------------------
+
 void main(){
     uint s = uint(seed) 
         ^ uint(gl_FragCoord.x * 10.0) 
         ^ uint(gl_FragCoord.y * 1000.0);
 
     vec3 lighting;
-    if((object_flags & 1) == 1){
+    if(object_flags == ODF_SKY){
         lighting = skymap_lighting();
     }
-    else if((draw_flags & 1) == 1){
-        lighting = direct_lighting(s);
-    }
-    else if((draw_flags & 2) == 2){
-        lighting = direct_lighting_ref(s);
-    }
-    else if((draw_flags & 4) == 4){
-        lighting = indirect_lighting(s);
-    }
-    else if((draw_flags & 8) == 8){
-        vec4 albedo;
-        vec3 normal;
-        getNormalAndAlbedo(normal, albedo);
-        outColor = vec4(normal.rgb * 0.5 + 0.5, 1.0);
-        return;
-    }
-    else if((draw_flags & 16) == 16){
-        outColor = vec4(visualizeReflections(s), 1.0);
-        return;
-    }
-    else if((draw_flags & 32) == 32){
-        outColor = vec4(fract(UV.xy), 0.0, 1.0);
-        return;
-    }
-    else if((draw_flags & 128) == 128){
-        outColor = vec4(visualizeCubemap().rgb, 1.0);
-        return;
+    else {
+        switch(draw_flags){
+            case DF_DIRECT:
+                lighting = direct_lighting(s);
+                break;
+            case DF_INDIRECT:
+                lighting = indirect_lighting(s);
+                break;
+            case DF_NORMALS:
+                lighting = visualizeNormals();
+                break;
+            case DF_REFLECT:
+                lighting = visualizeReflections();
+                break;
+            case DF_UV:
+                lighting = visualizeUVs();
+                break;
+            case DF_VIS_CUBEMAP:
+                lighting = visualizeCubemap();
+                break;
+            default:
+                lighting = direct_lighting(s);
+                break;
+        }
     }
 
     lighting.rgb.x += 0.0001 * randBi(s);

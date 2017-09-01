@@ -12,25 +12,22 @@
 #include "cubemap.h"
 #include <random>
 
+// ------------------------------------------------------------------------
+
 #define PREPASS_ENABLED 1
 
-// per-frame flags
-enum draw_flag : u32 {
-    DF_DIRECT       = 1 << 0,   // direct lighting
-    DF_DIRECT_REF   = 1 << 1,   // direct with cubemap reflections
-    DF_INDIRECT     = 1 << 2,   // pseudo-IBL
-    DF_NORMALS      = 1 << 3,   // visualize normals
-    DF_REFLECT      = 1 << 4,   // visualize cubemap reflections
-    DF_UV           = 1 << 5,   // visualize uvs
-    DF_CUBEMAP      = 1 << 6,   // draw into cubemap
-    DF_VIS_CUBEMAP  = 1 << 7,   // visualize cubemap
-};
+#define DF_DIRECT       0
+#define DF_INDIRECT     1
+#define DF_NORMALS      2
+#define DF_REFLECT      3
+#define DF_UV           4
+#define DF_CUBEMAP      5
+#define DF_VIS_CUBEMAP  6
 
-// per-object flags
-enum object_draw_flag : u32 {
-    ODF_SKY = 1 << 0,   // use sky lighting
-    ODF_ENV = 1 << 1,   // part of the environment
-};
+#define ODF_DEFAULT     0
+#define ODF_SKY         1
+
+// ------------------------------------------------------------------------
 
 struct Material{
     HashString albedo;

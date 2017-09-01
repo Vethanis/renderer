@@ -66,7 +66,7 @@ void Cubemap::drawInto(const Camera& cam){
         glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
         glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
     };
-    static const Transform P = glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, 100.0f);  
+    static const Transform P = glm::perspective(glm::radians(90.0f), 1.0f, 5.0f, 100.0f);  
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0); DebugGL();
     glBindFramebuffer(GL_FRAMEBUFFER, fbos[current_face]); DebugGL();
