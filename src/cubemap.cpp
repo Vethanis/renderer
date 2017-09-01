@@ -66,15 +66,16 @@ void Cubemap::drawInto(const Camera& cam){
         glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
         glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
     };
-    static const Transform P = glm::perspective(glm::radians(90.0f), 1.0f, 5.0f, 100.0f);  
+    static const Transform P = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);  
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0); DebugGL();
     glBindFramebuffer(GL_FRAMEBUFFER, fbos[current_face]); DebugGL();
+
     const Transform VP = P * glm::translate(Vs[current_face], -cam.getEye());
-    g_Renderables.fwdDraw(cam, VP, DF_CUBEMAP | DF_DIRECT);
+    g_Renderables.fwdDraw(cam, VP, DF_DIRECT);
  
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP); DebugGL();
 
-    current_face = (current_face + 1) % 6;
+    current_face = (current_face + 1) % num_faces;
 }

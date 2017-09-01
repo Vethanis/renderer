@@ -21,8 +21,8 @@
 #define DF_NORMALS      2
 #define DF_REFLECT      3
 #define DF_UV           4
-#define DF_CUBEMAP      5
 #define DF_VIS_CUBEMAP  6
+#define DF_VIS_REFRACT  7
 
 #define ODF_DEFAULT     0
 #define ODF_SKY         1
@@ -87,10 +87,11 @@ struct Renderables{
     Cubemap cm;
     glm::vec3 sunDirection;
     glm::vec3 sunColor;
+    float iorr;
     void init(){
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
+        glEnable(GL_DEPTH_TEST); DebugGL();
+        glEnable(GL_CULL_FACE); DebugGL();
+        glCullFace(GL_BACK); DebugGL();
 
         const char* fwdFilenames[] = {
             "vert.glsl",
@@ -105,7 +106,9 @@ struct Renderables{
 
         sunDirection = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
         sunColor = glm::vec3(1.0f, 0.75f, 0.5f);
-        cm.init(1024);
+        iorr = 0.9f;
+
+        cm.init(2048);
     }
     void deinit(){
         fwdProg.deinit();
@@ -142,6 +145,7 @@ struct Renderables{
         fwdProg.setUniformInt("seed", rand());
         fwdProg.setUniform("eye", cam.getEye());
         fwdProg.setUniformInt("draw_flags", dflag);
+        fwdProg.setUniformFloat("iorr", iorr);
         
         for(RenderResource& res : resources){
 
@@ -167,7 +171,7 @@ struct Renderables{
     }
     void mainDraw(const Camera& cam, u32 dflag){
         cm.drawInto(cam);
-        cm.bind(8, fwdProg);
+        cm.bind(20, fwdProg);
         glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();
         fwdDraw(cam, cam.getVP(), dflag);
     }

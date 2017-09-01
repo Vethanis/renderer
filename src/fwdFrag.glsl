@@ -27,6 +27,8 @@ uniform int seed;
 uniform int draw_flags;
 uniform int object_flags;
 
+uniform float iorr;
+
 // ------------------------------------------------------------------------
 
 #define DF_DIRECT       0
@@ -34,8 +36,8 @@ uniform int object_flags;
 #define DF_NORMALS      2
 #define DF_REFLECT      3
 #define DF_UV           4
-#define DF_CUBEMAP      5
 #define DF_VIS_CUBEMAP  6
+#define DF_VIS_REFRACT  7
 
 #define ODF_DEFAULT     0
 #define ODF_SKY         1
@@ -158,7 +160,7 @@ vec3 visualizeReflections(){
     const float roughness = 1.0 - albedo.a;
     const vec3 I = normalize(P - eye);
     const vec3 R = reflect(I, N);
-    return texture(env_cm, R).rgb;
+    return texture(env_cm, R).rgb * max(0.0, dot(N, R));
 }
 
 vec3 visualizeNormals(){
@@ -173,13 +175,16 @@ vec3 visualizeUVs(){
 }
 
 vec3 skymap_lighting(){
+    vec3 I = normalize(P - eye);
+    //return I * 0.5 + 0.5;
+
     vec3 sky = vec3(0.0);
 
     vec4 albedo;
     vec3 N;
     getNormalAndAlbedo(N, albedo);
 
-    sky += max(0.0, pow(dot(N, -sunDirection), 100.0)) * sunColor * 1000.0;
+    sky += max(0.0, pow(dot(N, -sunDirection), 200.0)) * sunColor * 1000000.0;
 
     switch(MID){
         case 0: sky += texture(albedoSampler0, UV).rgb;
@@ -197,6 +202,15 @@ vec3 skymap_lighting(){
 vec3 visualizeCubemap(){
     vec3 I = normalize(P - eye);
     return texture(env_cm, I).rgb;
+}
+
+vec3 visualizeDiffraction(){
+    const vec3 I = normalize(P - eye);
+    vec4 albedo;
+    vec3 N;
+    getNormalAndAlbedo(N, albedo);
+    const vec3 R = refract(I, N, iorr);
+    return texture(env_cm, R).rgb;
 }
 
 // ------------------------------------------------------------------------
@@ -230,6 +244,9 @@ void main(){
             case DF_VIS_CUBEMAP:
                 lighting = visualizeCubemap();
                 break;
+            case DF_VIS_REFRACT:
+                lighting = visualizeDiffraction();
+                break;
             default:
                 lighting = direct_lighting(s);
                 break;
@@ -240,6 +257,6 @@ void main(){
     lighting.rgb.y += 0.0001 * randBi(s);
     lighting.rgb.z += 0.0001 * randBi(s);
 
-    outColor = vec4(pow(lighting.rgb, vec3(0.5)), 1.0);
+    outColor = vec4(pow(lighting.rgb, vec3(1.0 / 2.2)), 1.0);
 
 }

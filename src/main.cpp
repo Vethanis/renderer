@@ -35,8 +35,8 @@ float frameBegin(unsigned& i, float& t){
 int main(int argc, char* argv[]){
     srand((unsigned)time(0));
 
-    int WIDTH = int(1920.0f * 1.5f);
-    int HEIGHT = int(1080.0f * 1.5f);
+    int WIDTH = int(2048);
+    int HEIGHT = int(2048);
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -101,6 +101,16 @@ int main(int argc, char* argv[]){
         }
         else if(input.getKey(GLFW_KEY_6)){
             flag = DF_VIS_CUBEMAP;
+        }
+        else if(input.getKey(GLFW_KEY_7)){
+            flag = DF_VIS_REFRACT;
+        }
+
+        if(input.getKey(GLFW_KEY_UP)){
+            g_Renderables.iorr += 0.01f;
+        }
+        else if(input.getKey(GLFW_KEY_DOWN)){
+            g_Renderables.iorr -= 0.01f;
         }
 
         g_Renderables.mainDraw(camera, flag);

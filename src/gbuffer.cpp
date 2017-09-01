@@ -54,7 +54,7 @@ void GBuffer::init(int w, int h){
     prog.link();
     prog.freeShader(shader);
 
-    cmap.init(w >> 1);
+    //cmap.init(w, h);
 }
 void GBuffer::deinit(){
     prog.deinit();
