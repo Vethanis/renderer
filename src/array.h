@@ -206,6 +206,20 @@ struct Vector{
     ~Vector(){
         delete[] _data;
     }
+    void copy(const Vector& other){
+        resize(other.count());
+        memcpy(_data, other._data, bytes());
+    }
+    void shallow_copy(Vector& other){
+        resize(0);
+        memcpy(this, &other, sizeof(*this));
+        other._data = nullptr;
+        other.resize(0);
+    }
+    Vector& operator=(const Vector& other){
+        copy(other);
+        return *this;
+    }
     bool operator==(const Vector& other)const{
         return begin() == other.begin();
     }
