@@ -108,7 +108,7 @@ struct Renderables{
         sunColor = glm::vec3(1.0f, 0.75f, 0.5f);
         iorr = 0.9f;
 
-        cm.init(2048);
+        cm.init(1024);
     }
     void deinit(){
         fwdProg.deinit();
@@ -132,7 +132,9 @@ struct Renderables{
         glColorMask(1,1,1,1); DebugGL();
         glDepthMask(GL_FALSE); DebugGL();
     }
-    void fwdDraw(const Camera& cam, const Transform& VP, u32 dflag){
+    void fwdDraw(const Camera& cam, const Transform& VP, u32 dflag, s32 width, s32 height){
+        glViewport(0, 0, width, height);
+
         #if PREPASS_ENABLED
             prePass(VP);
         #else
@@ -169,11 +171,11 @@ struct Renderables{
     void finishGrow(){
         resources.sort();
     }
-    void mainDraw(const Camera& cam, u32 dflag){
+    void mainDraw(const Camera& cam, u32 dflag, s32 width, s32 height){
         cm.drawInto(cam);
         cm.bind(20, fwdProg);
         glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();
-        fwdDraw(cam, cam.getVP(), dflag);
+        fwdDraw(cam, cam.getVP(), dflag, width, height);
     }
 };
 

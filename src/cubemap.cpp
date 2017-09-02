@@ -6,49 +6,44 @@
 
 void Cubemap::init(s32 size){
     current_face = 0;
-
-    glGenTextures(1, &depth_cubemap); DebugGL();
-    glBindTexture(GL_TEXTURE_CUBE_MAP, depth_cubemap); DebugGL();
-    for(u32 i = 0; i < num_faces; ++i){
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 
-            GL_DEPTH_COMPONENT, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr); DebugGL();
-    }
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST); DebugGL();
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST); DebugGL();
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); DebugGL();
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); DebugGL();
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); DebugGL();
+    m_size = size;
 
     glGenTextures(1, &color_cubemap); DebugGL();
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     for(u32 i = 0; i < num_faces; ++i){
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 
-            GL_RGBA, size, size, 0, GL_RGBA, GL_FLOAT, nullptr); DebugGL();
+            GL_RGBA, m_size, m_size, 0, GL_RGBA, GL_FLOAT, nullptr); DebugGL();
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR); DebugGL();
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); DebugGL();
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); DebugGL();
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); DebugGL();
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); DebugGL();
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP); DebugGL();
 
-    glGenFramebuffers(num_faces, fbos); DebugGL();
-    for(u32 i = 0; i < num_faces; ++i){
-        glBindFramebuffer(GL_FRAMEBUFFER, fbos[i]); DebugGL();
-        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_cubemap, 0, i); DebugGL();
-        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, color_cubemap, 0, i); DebugGL();
-        glDrawBuffer(GL_COLOR_ATTACHMENT0); DebugGL();    
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-            puts("Framebuffer not complete!");
-            assert(false);
-        }
+    glGenFramebuffers(1, &fbo); DebugGL();
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo); DebugGL();
+    glGenRenderbuffers(1, &rbo); DebugGL();
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo); DebugGL();
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 
+        m_size, m_size); DebugGL();
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_CUBE_MAP_POSITIVE_X, color_cubemap, 0); DebugGL();
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
+        GL_RENDERBUFFER, rbo); DebugGL();
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+        GL_TEXTURE_CUBE_MAP_POSITIVE_X, color_cubemap, 0); DebugGL();
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+        puts("[OpenGL] Incomplete framebuffer.");
+        assert(false);
     }
 }
 
 void Cubemap::deinit(){
-    glDeleteFramebuffers(num_faces, fbos);
+    glDeleteFramebuffers(1, &fbo);
+    glDeleteRenderbuffers(1, &rbo);
     glDeleteTextures(1, &color_cubemap);
-    glDeleteTextures(1, &depth_cubemap);
 }
 
 void Cubemap::bind(u32 channel, GLProgram& prog){
@@ -69,10 +64,12 @@ void Cubemap::drawInto(const Camera& cam){
     static const Transform P = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);  
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0); DebugGL();
-    glBindFramebuffer(GL_FRAMEBUFFER, fbos[current_face]); DebugGL();
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo); DebugGL();
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_CUBE_MAP_POSITIVE_X + current_face, color_cubemap, 0); DebugGL();
 
     const Transform VP = P * glm::translate(Vs[current_face], -cam.getEye());
-    g_Renderables.fwdDraw(cam, VP, DF_DIRECT);
+    g_Renderables.fwdDraw(cam, VP, DF_DIRECT, m_size, m_size);
  
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP); DebugGL();

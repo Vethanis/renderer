@@ -35,8 +35,8 @@ float frameBegin(unsigned& i, float& t){
 int main(int argc, char* argv[]){
     srand((unsigned)time(0));
 
-    int WIDTH = int(2048);
-    int HEIGHT = int(2048);
+    int WIDTH = int(1920.0f * 1.5f);
+    int HEIGHT = int(1080.0f * 1.5f);
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]){
             g_Renderables.iorr -= 0.01f;
         }
 
-        g_Renderables.mainDraw(camera, flag);
+        g_Renderables.mainDraw(camera, flag, WIDTH, HEIGHT);
         window.swap();
     }
 
