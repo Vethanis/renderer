@@ -31,16 +31,17 @@ uniform float iorr;
 
 // ------------------------------------------------------------------------
 
-#define DF_DIRECT       0
-#define DF_INDIRECT     1
-#define DF_NORMALS      2
-#define DF_REFLECT      3
-#define DF_UV           4
-#define DF_VIS_CUBEMAP  6
-#define DF_VIS_REFRACT  7
+#define DF_DIRECT           0
+#define DF_INDIRECT         1
+#define DF_NORMALS          2
+#define DF_REFLECT          3
+#define DF_UV               4
+#define DF_DIRECT_CUBEMAP   5
+#define DF_VIS_CUBEMAP      6
+#define DF_VIS_REFRACT      7
 
-#define ODF_DEFAULT     0
-#define ODF_SKY         1
+#define ODF_DEFAULT         0
+#define ODF_SKY             1
 
 // ------------------------------------------------------------------------
 
@@ -241,6 +242,9 @@ void main(){
             case DF_UV:
                 lighting = visualizeUVs();
                 break;
+            case DF_DIRECT_CUBEMAP:
+                lighting = direct_lighting(s);
+                break;
             case DF_VIS_CUBEMAP:
                 lighting = visualizeCubemap();
                 break;
@@ -257,6 +261,10 @@ void main(){
     lighting.rgb.y += 0.0001 * randBi(s);
     lighting.rgb.z += 0.0001 * randBi(s);
 
-    outColor = vec4(pow(lighting.rgb, vec3(1.0 / 2.2)), 1.0);
+    if(draw_flags != DF_DIRECT_CUBEMAP){
+        lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
+    }
+
+    outColor = vec4(lighting.rgb, 1.0);
 
 }

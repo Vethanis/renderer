@@ -14,18 +14,19 @@
 
 // ------------------------------------------------------------------------
 
-#define PREPASS_ENABLED 1
+#define PREPASS_ENABLED     1
 
-#define DF_DIRECT       0
-#define DF_INDIRECT     1
-#define DF_NORMALS      2
-#define DF_REFLECT      3
-#define DF_UV           4
-#define DF_VIS_CUBEMAP  6
-#define DF_VIS_REFRACT  7
+#define DF_DIRECT           0
+#define DF_INDIRECT         1
+#define DF_NORMALS          2
+#define DF_REFLECT          3
+#define DF_UV               4
+#define DF_DIRECT_CUBEMAP   5
+#define DF_VIS_CUBEMAP      6
+#define DF_VIS_REFRACT      7
 
-#define ODF_DEFAULT     0
-#define ODF_SKY         1
+#define ODF_DEFAULT         0
+#define ODF_SKY             1
 
 // ------------------------------------------------------------------------
 
