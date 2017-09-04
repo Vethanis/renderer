@@ -28,162 +28,71 @@ inline void mesh_layout<glm::vec2>(int location){
     offset_loc += sizeof(glm::vec2);
 }
 template<>
+inline void mesh_layout<glm::vec3>(int location){
+    glEnableVertexAttribArray(location); DebugGL();;
+    glVertexAttribPointer(location, 3, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); DebugGL();;
+    offset_loc += sizeof(glm::vec3);
+}
+template<>
 inline void mesh_layout<glm::vec4>(int location){
     glEnableVertexAttribArray(location); DebugGL();;
     glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); DebugGL();;
     offset_loc += sizeof(glm::vec4);
 }
 template<>
-inline void mesh_layout<half4>(int location){
-    glEnableVertexAttribArray(location); DebugGL();;
-    glVertexAttribPointer(location, 4, GL_HALF_FLOAT, GL_FALSE, (int)stride, (void*)offset_loc); DebugGL();;
-    offset_loc += sizeof(half4);
+inline void mesh_layout<unsigned>(int location){
+    glEnableVertexAttribArray(location); DebugGL();
+    glVertexAttribPointer(location, 1, GL_UNSIGNED_INT, GL_FALSE, (int)stride, (void*)offset_loc); DebugGL();
+    offset_loc += sizeof(unsigned);
 }
 
 void Mesh::init(){
-    num_vertices = 0;
+    num_indices = 0;
     glGenVertexArrays(1, &vao); DebugGL();;
     glGenBuffers(1, &vbo); DebugGL();;
+    glGenBuffers(1, &ebo); DebugGL();
 
     glBindVertexArray(vao); DebugGL();;
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo); DebugGL();
 
     begin_mesh_layout<Vertex>();
     mesh_layout<glm::vec4>(0);
     mesh_layout<glm::vec4>(1);
-    mesh_layout<glm::vec4>(2);
-
+    mesh_layout<glm::vec3>(2);
+    mesh_layout<unsigned>(3);
 }
 
 void Mesh::deinit(){
+    glDeleteBuffers(1, &ebo); DebugGL();
     glDeleteBuffers(1, &vbo); DebugGL();;
     glDeleteVertexArrays(1, &vao); DebugGL();;
     DebugGL();
 }
 
-void Mesh::upload(const VertexBuffer& vb){
+void Mesh::upload(const mesh_interchange::Model& vb){
     glBindVertexArray(vao); DebugGL();
+
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();
-    glBufferData(GL_ARRAY_BUFFER, vb.bytes(), vb.begin(), GL_STATIC_DRAW); DebugGL();
-    num_vertices = unsigned(vb.count());
+    glBufferData(GL_ARRAY_BUFFER, vb.meshes.vertices.bytes(), 
+        vb.meshes.vertices.begin(), GL_STATIC_DRAW); DebugGL();
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo); DebugGL();
+    num_indices = vb.meshes.indices.count();
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, vb.meshes.indices.bytes(), 
+        vb.meshes.indices.begin(), GL_STATIC_DRAW); DebugGL();
 }
 
 void Mesh::draw(){
-    if(!num_vertices){return;}
-    glBindVertexArray(vao); DebugGL();;
-    glDrawArrays(GL_TRIANGLES, 0, num_vertices); DebugGL();;
+    if(!num_indices)
+        return;
+
+    glBindVertexArray(vao); DebugGL();
+    glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0); DebugGL();
 }
 
-void parse_obj(VertexBuffer& out, const char* text){
-    struct Face{
-        int v1, vt1, vn1, v2, vt2, vn2, v3, vt3, vn3;
-    };
-
-    Vector<glm::vec3> positions;
-    Vector<glm::vec3> normals;
-    Vector<glm::vec2> uvs;
-    Vector<Face> faces;
-
-    for(const char* p = text; p[0] && p[1]; p = nextline(p)){
-        switch(p[0]){
-            case 'v':
-            {
-                switch(p[1]){
-                    case ' ':
-                    {
-                        glm::vec3 pos;
-                        assert(sscanf(p, "v %f %f %f", &pos.x, &pos.y, &pos.z));
-                        {
-                            positions.grow() = pos;
-                        }
-                    }
-                    break;
-                    case 't':
-                    {
-                        glm::vec2 uv;
-                        assert(sscanf(p, "vt %f %f", &uv.x, &uv.y));
-                        {
-                            uvs.grow() = uv;
-                        }
-                    }
-                    break;
-                    case 'n':
-                    {
-                        glm::vec3 norm;
-                        assert(sscanf(p, "vn %f %f %f", &norm.x, &norm.y, &norm.z));
-                        {
-                            norm = glm::normalize(norm);
-                            normals.grow() = norm;
-                        }
-                    }
-                    break;
-                }
-            }
-            break;
-            case 'f':
-            {
-                Face f;
-                assert(sscanf(p, "f %i/%i/%i %i/%i/%i %i/%i/%i", &f.v1, &f.vt1, &f.vn1,
-                    &f.v2, &f.vt2, &f.vn2,
-                    &f.v3, &f.vt3, &f.vn3));
-                {
-                    faces.grow() = f;
-                }
-            }
-        }
-    }
-
-    out.clear();
-    for(Face& face : faces){
-        const glm::vec3& pa = positions[face.v1 - 1];
-        const glm::vec3& pb = positions[face.v2 - 1];
-        const glm::vec3& pc = positions[face.v3 - 1];
-
-        const glm::vec3& na = normals[face.vn1 - 1];
-        const glm::vec3& nb = normals[face.vn2 - 1];
-        const glm::vec3& nc = normals[face.vn3 - 1];
-
-        const glm::vec2& ua = uvs[face.vt1 - 1];
-        const glm::vec2& ub = uvs[face.vt2 - 1];
-        const glm::vec2& uc = uvs[face.vt3 - 1];
-
-        const glm::vec3 e1 = pb - pa;
-        const glm::vec3 e2 = pc - pa;
-        const glm::vec2 duv1 = ub - ua;
-        const glm::vec2 duv2 = uc - ua;
-
-        glm::vec3 t;
-        float f = 1.0f / (duv1.x * duv2.y - duv2.x * duv1.y);
-
-        t.x = f * (duv2.y * e1.x - duv1.y * e2.x);
-        t.y = f * (duv2.y * e1.y - duv1.y * e2.y);
-        t.z = f * (duv2.y * e1.z - duv1.y * e2.z);
-        t = glm::normalize(t);
-
-        int mat = 0;
-
-        out.grow() = {
-                {pa.x, pa.y, pa.z, ua.x},
-                {na.x, na.y, na.z, ua.y},
-                {t.x, t.y, t.z, float(mat)}
-            };
-        out.grow() = {
-                {pb.x, pb.y, pb.z, ub.x},
-                {nb.x, nb.y, nb.z, ub.y},
-                {t.x, t.y, t.z, float(mat)}
-            };
-        out.grow() = {
-                {pc.x, pc.y, pc.z, uc.x},
-                {nc.x, nc.y, nc.z, uc.y},
-                {t.x, t.y, t.z, float(mat)}
-            };
-    }
-
-    assert(out.count() == 3 * faces.count());
-}
-
-void MeshStore::load_mesh(Mesh& mesh, unsigned name){
-    VertexBuffer* vb = m_vbs[name];
+void MeshStore::load_mesh(Mesh& mesh, HashString name){
+    auto* vb = m_vbs[name.m_hash];
 
     if(vb){
         mesh.upload(*vb);
@@ -191,18 +100,37 @@ void MeshStore::load_mesh(Mesh& mesh, unsigned name){
     }
 
     if(m_vbs.full()){
-        vb = m_vbs.reuse_near(name);
+        vb = m_vbs.reuse_near(name.m_hash);
     }
     else{
-        m_vbs.insert(name, {});
-        vb = m_vbs[name];
+        m_vbs.insert(name.m_hash, {});
+        vb = m_vbs[name.m_hash];
     }
 
-    const char* filename = HashString(name);
+    const char* filename = name;
     assert(filename);
-    const char* contents = load_file(filename);
-    parse_obj(*vb, contents); 
-    release_file(contents);
+    FILE* pFile = fopen(filename, "rb");
+
+    if(pFile){
+        vb->load(pFile);
+        fclose(pFile);
+    }
+    else{        
+        char buff[256] = {0};
+    
+        sprintf(buff, "%s", filename);
+        char* extptr = strstr(buff, ".mesh");
+        assert(extptr);
+        sprintf(extptr, "%s", ".fbx");
+
+        vb->parse(buff);
+        
+        pFile = fopen(filename, "wb");
+        assert(pFile);
+        vb->serialize(pFile);
+        fclose(pFile);
+    }
+
     mesh.upload(*vb);
 
     printf("[mesh] loaded %s\n", filename);

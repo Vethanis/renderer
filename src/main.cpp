@@ -54,7 +54,7 @@ int main(int argc, char* argv[]){
     g_Renderables.init();
 
     {   
-        HashString mesh("suzanne.obj");
+        HashString mesh("suzanne.mesh");
         Material mat = {"basic_diffuse.png", "basic_normal.png"};
 
         for(float x = -10.0f; x <= 10.0f; x += 2.5f){
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]){
         
 
         auto& obj = g_Renderables.grow();
-        obj.mesh = "sphere.obj";
+        obj.mesh = "sphere.mesh";
         obj.addMaterial({"sky_diffuse.png", "sky_normal.png"});
         obj.set_flag(ODF_SKY);
     }

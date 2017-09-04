@@ -5,7 +5,7 @@ out vec4 outColor;
 in mat3 TBN;
 in vec3 P;
 in vec2 UV;
-flat in int MID;
+flat in uint MID;
 
 // ------------------------------------------------------------------------
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cstdio>
 #include "hash.h"
 
 template<typename T, int _capacity>
@@ -83,6 +84,10 @@ struct Array{
     }
     bool operator==(const Array& other)const{
         return begin() == other.begin();
+    }
+    void serialize(FILE* pFile){
+        fwrite(&_tail, sizeof(u32), 1, pFile);
+        fwrite(_data, sizeof(T), _tail, pFile);
     }
 };
 
@@ -204,7 +209,9 @@ struct Vector{
         _tail = 0;
     }
     ~Vector(){
-        delete[] _data;
+        if(_data){
+            delete[] _data;
+        }
     }
     void copy(const Vector& other){
         resize(other.count());
@@ -222,5 +229,35 @@ struct Vector{
     }
     bool operator==(const Vector& other)const{
         return begin() == other.begin();
+    }
+    void serialize(FILE* pFile){
+        fwrite(&_tail, sizeof(s32), 1, pFile);
+        fwrite(_data, sizeof(T), _tail, pFile);
+    }
+    // does NOT work on nested vectors
+    void serialize_composite(FILE* pFile){
+        fwrite(&_tail, sizeof(s32), 1, pFile);
+        for(s32 i = 0; i < _tail; ++i){
+            _data[i].serialize(pFile);
+        }
+    }
+    void load(FILE* pFile){
+        resize(0);
+        s32 count = 0;
+        fread(&count, sizeof(s32), 1, pFile);
+        resize(count);
+        _tail = count;
+        fread(_data, sizeof(T), count, pFile);
+    }
+    // does NOT work on nested vectors
+    void load_composite(FILE* pFile){        
+        resize(0);
+        s32 count = 0;
+        fread(&count, sizeof(s32), 1, pFile);
+        resize(count);
+        _tail = count;
+        for(s32 i = 0; i < _tail; ++i){
+            _data[i].load(pFile);
+        }
     }
 };

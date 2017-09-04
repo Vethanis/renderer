@@ -24,7 +24,7 @@ if(WIN32)
     set(CMAKE_CXX_FLAGS "/EHsc /W3 /MT /std:c++latest")
     include_directories(${CMAKE_SOURCE_DIR}/include)
     link_directories(${CMAKE_SOURCE_DIR}/lib "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Lib/x64")
-    set(PROJECT_LINK_LIBS glfw3dll glew32 OpenGL32 )
+    set(PROJECT_LINK_LIBS glfw3dll glew32 OpenGL32 assimp-vc140-mt)
     file(GLOB DLL_FILES "lib/*.dll")
     file(COPY ${DLL_FILES} DESTINATION ${CMAKE_BINARY_DIR}/Release NO_SOURCE_PERMISSIONS)
     file(COPY ${DLL_FILES} DESTINATION ${CMAKE_BINARY_DIR}/Debug NO_SOURCE_PERMISSIONS)
@@ -36,12 +36,9 @@ elseif(UNIX)
     set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -Wfatal-errors -pthread")
     include_directories("/usr/include")
     link_directories("/usr/lib")
-    set(PROJECT_LINK_LIBS GLEW GL glfw)
+    set(PROJECT_LINK_LIBS GLEW GL glfw assimp)
     file(COPY ${GLSL_FILES} DESTINATION ${CMAKE_BINARY_DIR} NO_SOURCE_PERMISSIONS)
 endif()
-
-
-
 
 
 # wildcard add source files like so:
