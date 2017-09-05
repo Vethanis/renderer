@@ -34,7 +34,7 @@ void Input::poll(float dt, Camera& cam){
     v.x += glfwGetKey(m_glwindow, GLFW_KEY_D) ? dt : 0.0f;
     v.y += glfwGetKey(m_glwindow, GLFW_KEY_SPACE) ? dt : 0.0f;
     v.y -= glfwGetKey(m_glwindow, GLFW_KEY_LEFT_SHIFT) ? dt : 0.0f;
-    cam.move(v);
+    cam.move(v * 2.0f);
     cam.yaw(m_relCursorX * dt);
     cam.pitch(m_relCursorY * dt);
     m_relCursorX = 0.0f;

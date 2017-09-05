@@ -57,15 +57,24 @@ int main(int argc, char* argv[]){
         HashString mesh("suzanne.mesh");
         Material mat = {"basic_diffuse.png", "basic_normal.png"};
 
+        float roughness = 0.0f;
+        float amt = 1.0f / 9.0f;
+
         for(float x = -10.0f; x <= 10.0f; x += 2.5f){
             for(float z = -10.0f; z <= 10.0f; z += 2.5f){
 
                 glm::vec3 pos = glm::vec3(x, 0.0f, z);
                 auto& obj = g_Renderables.grow();
                 obj.mesh = mesh;
+                obj.roughness_multiplier = roughness;
                 obj.addMaterial(mat);
                 Transform* t = obj.transform;
                 *t = glm::translate(*t, pos);
+
+                roughness += amt;
+                if(roughness > 2.0f){
+                    roughness = 0.0f;
+                }
             }
         }
         

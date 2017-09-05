@@ -28,6 +28,7 @@ uniform int draw_flags;
 uniform int object_flags;
 
 uniform float iorr;
+uniform float roughness_multiplier;
 
 // ------------------------------------------------------------------------
 
@@ -132,7 +133,7 @@ vec3 indirect_lighting(inout uint s){
     getNormalAndAlbedo(N, albedo);
 
     const vec3 mask = albedo.rgb;
-    const float roughness = 1.0 - albedo.a;
+    const float roughness = roughness_multiplier * (1.0 - albedo.a);
     const vec3 I = normalize(P - eye);
     const vec3 R = reflect(I, N);
     const int samples = 16;
@@ -197,7 +198,7 @@ vec3 skymap_lighting(){
         case 3: sky += texture(albedoSampler3, UV).rgb;
         break;
     }
-    return sky * 0.1;
+    return sky * 0.5;
 }
 
 vec3 visualizeCubemap(){

@@ -48,11 +48,13 @@ struct RenderResource{
     HashString mesh;
     HashString transform;
     u32 oflag = 0;
+    float roughness_multiplier = 1.0f;
 
     void bind(GLProgram& prog){
         for(int i = 0; i < materials.count(); ++i){
             materials[i].bind(prog, i);
         }
+        prog.setUniformFloat("roughness_multiplier", roughness_multiplier);
     }
     void addMaterial(const Material& mat){
         materials.grow() = mat;
