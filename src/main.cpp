@@ -53,12 +53,10 @@ int main(int argc, char* argv[]){
 
     g_Renderables.init();
 
-    {   
+    HashString sky_xform;
+    {
         HashString mesh("suzanne.mesh");
         Material mat = {"basic_diffuse.png", "basic_normal.png"};
-
-        float roughness = 0.0f;
-        float amt = 1.0f / 9.0f;
 
         for(float x = -10.0f; x <= 10.0f; x += 2.5f){
             for(float z = -10.0f; z <= 10.0f; z += 2.5f){
@@ -66,15 +64,10 @@ int main(int argc, char* argv[]){
                 glm::vec3 pos = glm::vec3(x, 0.0f, z);
                 auto& obj = g_Renderables.grow();
                 obj.mesh = mesh;
-                obj.roughness_multiplier = roughness;
+                obj.roughness_multiplier = (x + 10.0f) / 20.0f;
                 obj.addMaterial(mat);
                 Transform* t = obj.transform;
                 *t = glm::translate(*t, pos);
-
-                roughness += amt;
-                if(roughness > 2.0f){
-                    roughness = 0.0f;
-                }
             }
         }
         
@@ -83,6 +76,10 @@ int main(int argc, char* argv[]){
         obj.mesh = "sphere.mesh";
         obj.addMaterial({"sky_diffuse.png", "sky_normal.png"});
         obj.set_flag(ODF_SKY);
+        Transform* t = obj.transform;
+        *t = glm::scale(*t, glm::vec3(4.0f));
+
+        sky_xform = obj.transform;
     }
     g_Renderables.finishGrow();
 
@@ -92,6 +89,11 @@ int main(int argc, char* argv[]){
     u32 flag = DF_DIRECT;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
+
+        {
+            Transform* t = sky_xform;
+            (*t)[3] = glm::vec4(camera.getEye().x, camera.getEye().y, camera.getEye().z, 1.0f);
+        }
 
         if(input.getKey(GLFW_KEY_1)){
             flag = DF_INDIRECT;
