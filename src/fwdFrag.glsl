@@ -30,8 +30,12 @@ uniform int object_flags;
 uniform float iorr;
 uniform float roughness_offset;
 uniform float metalness_offset;
+uniform float roughness_multiplier;
+uniform float metalness_multiplier;
 
 // ------------------------------------------------------------------------
+
+#define PREPASS_ENABLED     1
 
 #define DF_DIRECT           0
 #define DF_INDIRECT         1
@@ -41,6 +45,8 @@ uniform float metalness_offset;
 #define DF_DIRECT_CUBEMAP   5
 #define DF_VIS_CUBEMAP      6
 #define DF_VIS_REFRACT      7
+#define DF_VIS_ROUGHNESS    8
+#define DF_VIS_METALNESS    9
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -91,40 +97,40 @@ vec3 cosHemi(vec3 N, vec3 u, vec3 v, inout uint s){
 
 material getMaterial(){
     material mat;
-    vec4 a, n;
+    vec4 albedo, normal;
     
     switch(MID){
         default:
         case 0:
         {
-            a = texture(albedoSampler0, UV).rgba;
-            n = texture(normalSampler0, UV).rgba;
+            albedo = texture(albedoSampler0, UV).rgba;
+            normal = texture(normalSampler0, UV).rgba;
         }
         break;
         case 1:
         {
-            a = texture(albedoSampler1, UV).rgba;
-            n = texture(normalSampler1, UV).rgba;
+            albedo = texture(albedoSampler1, UV).rgba;
+            normal = texture(normalSampler1, UV).rgba;
         }
         break;
         case 2:
         {
-            a = texture(albedoSampler2, UV).rgba;
-            n = texture(normalSampler2, UV).rgba;
+            albedo = texture(albedoSampler2, UV).rgba;
+            normal = texture(normalSampler2, UV).rgba;
         }
         break;
         case 3:
         {
-            a = texture(albedoSampler3, UV).rgba;
-            n = texture(normalSampler3, UV).rgba;
+            albedo = texture(albedoSampler3, UV).rgba;
+            normal = texture(normalSampler3, UV).rgba;
         }
         break;
     }
 
-    mat.albedo = pow(a.rgb, vec3(2.2));
-    mat.roughness = clamp(a.a + roughness_offset, 0.01, 0.99);
-    mat.normal = normalize(TBN * normalize(n.xyz * 2.0 - 1.0));
-    mat.metalness = clamp(n.a + metalness_offset, 0.01, 0.99);
+    mat.albedo = pow(albedo.rgb, vec3(2.2));
+    mat.roughness = clamp(albedo.a * roughness_multiplier + roughness_offset, 0.01, 0.99);
+    mat.normal = normalize(TBN * normalize(normal.xyz * 2.0 - 1.0));
+    mat.metalness = clamp(normal.a * metalness_multiplier + metalness_offset, 0.01, 0.99);
 
     return mat;
 }
@@ -261,6 +267,16 @@ vec3 visualizeDiffraction(){
     return texture(env_cm, R).rgb;
 }
 
+vec3 visualizeRoughness(){
+    const material mat = getMaterial();
+    return vec3(mat.roughness);
+}
+
+vec3 visualizeMetalness(){
+    const material mat = getMaterial();
+    return vec3(mat.metalness);
+}
+
 // ------------------------------------------------------------------------
 
 void main(){
@@ -274,6 +290,7 @@ void main(){
     }
     else {
         switch(draw_flags){
+            default:
             case DF_DIRECT:
                 lighting = direct_lighting(s);
                 break;
@@ -298,8 +315,11 @@ void main(){
             case DF_VIS_REFRACT:
                 lighting = visualizeDiffraction();
                 break;
-            default:
-                lighting = direct_lighting(s);
+            case DF_VIS_ROUGHNESS:
+                lighting = visualizeRoughness();
+                break;
+            case DF_VIS_METALNESS:
+                lighting = visualizeMetalness();
                 break;
         }
     }

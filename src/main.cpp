@@ -58,14 +58,12 @@ int main(int argc, char* argv[]){
         HashString mesh("suzanne.mesh");
         Material mat = {"basic_diffuse.png", "basic_normal.png"};
 
-        for(float x = -5.0f; x <= 5.0f; x += 2.f){
-            for(float y = -5.0f; y <= 5.0f; y += 2.f){
+        for(float x = 0.0f; x <= 10.0f; x += 2.5f){
+            for(float y = 0.0f; y <= 10.0f; y += 2.5f){
 
                 glm::vec3 pos = glm::vec3(x, y, 0.0f);
                 auto& obj = g_Renderables.grow();
                 obj.mesh = mesh;
-                obj.roughness_offset = (x + 5.0f) / 10.0f;
-                obj.metalness_offset = (y + 5.0f) / 10.0f;
                 obj.addMaterial(mat);
                 Transform* t = obj.transform;
                 *t = glm::translate(*t, pos);
@@ -117,12 +115,82 @@ int main(int argc, char* argv[]){
         else if(input.getKey(GLFW_KEY_7)){
             flag = DF_VIS_REFRACT;
         }
+        else if(input.getKey(GLFW_KEY_8)){
+            flag = DF_VIS_ROUGHNESS;
+        }
+        else if(input.getKey(GLFW_KEY_9)){
+            flag = DF_VIS_METALNESS;
+        }
 
         if(input.getKey(GLFW_KEY_UP)){
             g_Renderables.iorr += 0.01f;
         }
         else if(input.getKey(GLFW_KEY_DOWN)){
             g_Renderables.iorr -= 0.01f;
+        }
+
+        if(input.getKey(GLFW_KEY_KP_7)){
+            for(auto& res : g_Renderables.resources){
+                res.metalness_offset += 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_4)){
+            for(auto& res : g_Renderables.resources){
+                res.metalness_offset -= 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_1)){
+            for(auto& res : g_Renderables.resources){
+                res.metalness_offset = 0.0f;
+            }
+        }
+
+        if(input.getKey(GLFW_KEY_KP_8)){
+            for(auto& res : g_Renderables.resources){
+                res.roughness_offset += 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_5)){
+            for(auto& res : g_Renderables.resources){
+                res.roughness_offset -= 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_2)){
+            for(auto& res : g_Renderables.resources){
+                res.roughness_offset = 0.0f;
+            }
+        }
+
+        if(input.getKey(GLFW_KEY_KP_9)){
+            for(auto& res : g_Renderables.resources){
+                res.metalness_multiplier += 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_6)){
+            for(auto& res : g_Renderables.resources){
+                res.metalness_multiplier -= 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_3)){
+            for(auto& res : g_Renderables.resources){
+                res.metalness_multiplier = 1.0f;
+            }
+        }
+
+        if(input.getKey(GLFW_KEY_KP_ADD)){
+            for(auto& res : g_Renderables.resources){
+                res.roughness_multiplier += 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_ENTER)){
+            for(auto& res : g_Renderables.resources){
+                res.roughness_multiplier -= 0.01f;
+            }
+        }
+        else if(input.getKey(GLFW_KEY_KP_SUBTRACT)){
+            for(auto& res : g_Renderables.resources){
+                res.roughness_multiplier = 1.0f;
+            }
         }
 
         g_Renderables.mainDraw(camera, flag, WIDTH, HEIGHT);

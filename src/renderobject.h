@@ -24,6 +24,8 @@
 #define DF_DIRECT_CUBEMAP   5
 #define DF_VIS_CUBEMAP      6
 #define DF_VIS_REFRACT      7
+#define DF_VIS_ROUGHNESS    8
+#define DF_VIS_METALNESS    9
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -50,6 +52,8 @@ struct RenderResource{
     u32 oflag = 0;
     float roughness_offset = 0.0f;
     float metalness_offset = 0.0f;
+    float roughness_multiplier = 1.0f;
+    float metalness_multiplier = 1.0f;
 
     void bind(GLProgram& prog){
         for(int i = 0; i < materials.count(); ++i){
@@ -57,6 +61,8 @@ struct RenderResource{
         }
         prog.setUniformFloat("roughness_offset", roughness_offset);
         prog.setUniformFloat("metalness_offset", metalness_offset);
+        prog.setUniformFloat("roughness_multiplier", roughness_multiplier);
+        prog.setUniformFloat("metalness_multiplier", metalness_multiplier);
     }
     void addMaterial(const Material& mat){
         materials.grow() = mat;
