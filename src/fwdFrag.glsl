@@ -28,7 +28,8 @@ uniform int draw_flags;
 uniform int object_flags;
 
 uniform float iorr;
-uniform float roughness_multiplier;
+uniform float roughness_offset;
+uniform float metalness_offset;
 
 // ------------------------------------------------------------------------
 
@@ -43,6 +44,15 @@ uniform float roughness_multiplier;
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
+
+// -----------------------------------------------------------------------
+
+struct material {
+    vec3 albedo;
+    float roughness;
+    vec3 normal;
+    float metalness;
+};
 
 // ------------------------------------------------------------------------
 
@@ -79,37 +89,44 @@ vec3 cosHemi(vec3 N, vec3 u, vec3 v, inout uint s){
         );
 }
 
-void getNormalAndAlbedo(out vec3 N, out vec4 albedo){
+material getMaterial(){
+    material mat;
+    vec4 a, n;
+    
     switch(MID){
         default:
         case 0:
         {
-            albedo = texture(albedoSampler0, UV).rgba;
-            N = texture(normalSampler0, UV).rgb;
+            a = texture(albedoSampler0, UV).rgba;
+            n = texture(normalSampler0, UV).rgba;
         }
         break;
         case 1:
         {
-            albedo = texture(albedoSampler1, UV).rgba;
-            N = texture(normalSampler1, UV).rgb;
+            a = texture(albedoSampler1, UV).rgba;
+            n = texture(normalSampler1, UV).rgba;
         }
         break;
         case 2:
         {
-            albedo = texture(albedoSampler2, UV).rgba;
-            N = texture(normalSampler2, UV).rgb;
+            a = texture(albedoSampler2, UV).rgba;
+            n = texture(normalSampler2, UV).rgba;
         }
         break;
         case 3:
         {
-            albedo = texture(albedoSampler3, UV).rgba;
-            N = texture(normalSampler3, UV).rgb;
+            a = texture(albedoSampler3, UV).rgba;
+            n = texture(normalSampler3, UV).rgba;
         }
         break;
     }
-    N = normalize(TBN * normalize(N * 2.0 - 1.0));
 
-    albedo.xyz = pow(albedo.xyz, vec3(2.2));
+    mat.albedo = pow(a.rgb, vec3(2.2));
+    mat.roughness = clamp(a.a + roughness_offset, 0.01, 0.99);
+    mat.normal = normalize(TBN * normalize(n.xyz * 2.0 - 1.0));
+    mat.metalness = clamp(n.a + metalness_offset, 0.01, 0.99);
+
+    return mat;
 }
 
 // ------------------------------------------------------------------------
@@ -129,7 +146,7 @@ float DisGGX(vec3 N, vec3 H, float roughness){
 
 float GeomSchlickGGX(float NdV, float roughness){
     const float r = (roughness + 1.0);
-    const float k = (r * r) * 0.125;
+    const float k = (r * r) / 8.0;
 
     const float nom = NdV;
     const float denom = NdV * (1.0 - k) + k;
@@ -147,98 +164,77 @@ float GeomSmith(vec3 N, vec3 V, vec3 L, float roughness){
 }
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0){
-    const float x = 1.0 - cosTheta;
-    const float x2 = x * x;
-    const float x5 = x2 * x2 * x;
-    return F0 + (1.0 - F0) * x5;
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 // ------------------------------------------------------------------------
 
-vec3 pbr_lighting(vec3 V, vec3 L, vec3 N, vec3 albedo, vec3 radiance, float roughness, float metalness){
-    const float NdL = max(0.0, dot(N, L));
-    const vec3 F0 = mix(vec3(0.04), albedo, metalness);
+vec3 pbr_lighting(vec3 V, vec3 L, const material mat, vec3 radiance){
+    const float NdL = max(0.0, dot(mat.normal, L));
+    const vec3 F0 = mix(vec3(0.04), mat.albedo, mat.metalness);
     const vec3 H = normalize(V + L);
 
-    const float NDF = DisGGX(N, H, roughness);
-    const float G = GeomSmith(N, V, L, roughness);
+    const float NDF = DisGGX(mat.normal, H, mat.roughness);
+    const float G = GeomSmith(mat.normal, V, L, mat.roughness);
     const vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
     const vec3 nom = NDF * G * F;
-    const float denom = 4.0 * max(dot(N, V), 0.0) * NdL + 0.001;
+    const float denom = 4.0 * max(dot(mat.normal, V), 0.0) * NdL + 0.001;
     const vec3 specular = nom / denom;
 
     const vec3 kS = F;
-    const vec3 kD = (vec3(1.0) - kS) * (1.0 - metalness);
+    const vec3 kD = (vec3(1.0) - kS) * (1.0 - mat.metalness);
 
-    return (kD * albedo / 3.141592 + specular) * radiance * NdL;
+    return (kD * mat.albedo / 3.141592 + specular) * radiance * NdL;
 }
 
 vec3 direct_lighting(inout uint s){
-    vec4 albedo;
-    vec3 N;
-    getNormalAndAlbedo(N, albedo);
+    const material mat = getMaterial();
 
     const vec3 V = normalize(eye - P);
     const vec3 L = sunDirection;
-    const float roughness = roughness_multiplier * (1.0 - albedo.a);
-    const float metalness = 0.1;
     const vec3 radiance = sunColor;
 
-    vec3 light = pbr_lighting(V, L, N, albedo.rgb, radiance, roughness, metalness);
+    vec3 light = pbr_lighting(V, L, mat, radiance);
 
+    light += vec3(0.01) * mat.albedo;
     light = light / (light + vec3(1.0));
 
     return light;
 }
 
 vec3 indirect_lighting(inout uint s){
-    vec4 albedo;
-    vec3 N;
-    getNormalAndAlbedo(N, albedo);
-
-    const vec3 mask = albedo.rgb;
-    const float roughness = roughness_multiplier * (1.0 - albedo.a);
-    const float metalness = 0.99;
+    const material mat = getMaterial();
     const vec3 I = normalize(P - eye);
-    const vec3 R = reflect(I, N);
-    const int samples = 16;
+    const vec3 R = reflect(I, mat.normal);
+    const int samples = 32;
+    const float scaling = 1.0 / float(samples);
     
     vec3 light = vec3(0.0);
     vec3 u, v;
-    cosHemiUV(N, u, v);
+    cosHemiUV(mat.normal, u, v);
     for(int i = 0; i < samples; ++i){
-        const vec3 randomDir = cosHemi(N, u, v, s);
-        const vec3 L = normalize(mix(R, randomDir, roughness));
+        const vec3 L = cosHemi(mat.normal, u, v, s);
         const vec3 radiance = texture(env_cm, L).rgb;
-        light += pbr_lighting(-I, L, N, mask, radiance, roughness, metalness);
+        light += pbr_lighting(-I, L, mat, radiance);
     }
 
-    const float scaling = 1.0 / float(samples);
-    light *= scaling * mask;
-
+    light *= scaling;
     light = light / (light + vec3(1.0));
 
     return light;
 }
 
 vec3 visualizeReflections(){
-    vec4 albedo;
-    vec3 N;
-    getNormalAndAlbedo(N, albedo);
-
-    const vec3 mask = albedo.rgb;
-    const float roughness = 1.0 - albedo.a;
+    const material mat = getMaterial();
     const vec3 I = normalize(P - eye);
-    const vec3 R = reflect(I, N);
-    return texture(env_cm, R).rgb * max(0.0, dot(N, R));
+    const vec3 R = reflect(I, mat.normal);
+    return texture(env_cm, R).rgb * max(0.0, dot(mat.normal, R));
 }
 
 vec3 visualizeNormals(){
-    vec4 albedo;
-    vec3 normal;
-    getNormalAndAlbedo(normal, albedo);
-    return normal;
+    const material mat = getMaterial();
+    return mat.normal;
 }
 
 vec3 visualizeUVs(){
@@ -246,28 +242,11 @@ vec3 visualizeUVs(){
 }
 
 vec3 skymap_lighting(){
-    vec3 I = normalize(P - eye);
-    //return I * 0.5 + 0.5;
-
     vec3 sky = vec3(0.0);
-
-    vec4 albedo;
-    vec3 N;
-    getNormalAndAlbedo(N, albedo);
-
-    sky += max(0.0, pow(dot(N, -sunDirection), 200.0)) * sunColor * 1000000.0;
-
-    switch(MID){
-        case 0: sky += texture(albedoSampler0, UV).rgb;
-        break;
-        case 1: sky += texture(albedoSampler1, UV).rgb;
-        break;
-        case 2: sky += texture(albedoSampler2, UV).rgb;
-        break;
-        case 3: sky += texture(albedoSampler3, UV).rgb;
-        break;
-    }
-    return sky * 0.5;
+    const material mat = getMaterial();
+    sky += max(0.0, pow(dot(mat.normal, -sunDirection), 200.0)) * sunColor * 1000000.0;
+    sky += mat.albedo * 0.5;
+    return sky;
 }
 
 vec3 visualizeCubemap(){
@@ -277,10 +256,8 @@ vec3 visualizeCubemap(){
 
 vec3 visualizeDiffraction(){
     const vec3 I = normalize(P - eye);
-    vec4 albedo;
-    vec3 N;
-    getNormalAndAlbedo(N, albedo);
-    const vec3 R = refract(I, N, iorr);
+    const material mat = getMaterial();
+    const vec3 R = refract(I, mat.normal, iorr);
     return texture(env_cm, R).rgb;
 }
 

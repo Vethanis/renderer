@@ -48,13 +48,15 @@ struct RenderResource{
     HashString mesh;
     HashString transform;
     u32 oflag = 0;
-    float roughness_multiplier = 1.0f;
+    float roughness_offset = 0.0f;
+    float metalness_offset = 0.0f;
 
     void bind(GLProgram& prog){
         for(int i = 0; i < materials.count(); ++i){
             materials[i].bind(prog, i);
         }
-        prog.setUniformFloat("roughness_multiplier", roughness_multiplier);
+        prog.setUniformFloat("roughness_offset", roughness_offset);
+        prog.setUniformFloat("metalness_offset", metalness_offset);
     }
     void addMaterial(const Material& mat){
         materials.grow() = mat;

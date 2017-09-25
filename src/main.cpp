@@ -35,8 +35,8 @@ float frameBegin(unsigned& i, float& t){
 int main(int argc, char* argv[]){
     srand((unsigned)time(0));
 
-    int WIDTH = int(1920.0f * 1.5f);
-    int HEIGHT = int(1080.0f * 1.5f);
+    int WIDTH = int(1920.0f * 1.75f);
+    int HEIGHT = int(1080.0f * 1.75f);
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -58,13 +58,14 @@ int main(int argc, char* argv[]){
         HashString mesh("suzanne.mesh");
         Material mat = {"basic_diffuse.png", "basic_normal.png"};
 
-        for(float x = -10.0f; x <= 10.0f; x += 2.5f){
-            for(float z = -10.0f; z <= 10.0f; z += 2.5f){
+        for(float x = -5.0f; x <= 5.0f; x += 2.f){
+            for(float y = -5.0f; y <= 5.0f; y += 2.f){
 
-                glm::vec3 pos = glm::vec3(x, 0.0f, z);
+                glm::vec3 pos = glm::vec3(x, y, 0.0f);
                 auto& obj = g_Renderables.grow();
                 obj.mesh = mesh;
-                obj.roughness_multiplier = (x + 10.0f) / 20.0f;
+                obj.roughness_offset = (x + 5.0f) / 10.0f;
+                obj.metalness_offset = (y + 5.0f) / 10.0f;
                 obj.addMaterial(mat);
                 Transform* t = obj.transform;
                 *t = glm::translate(*t, pos);
