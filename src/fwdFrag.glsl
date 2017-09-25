@@ -81,6 +81,7 @@ vec3 cosHemi(vec3 N, vec3 u, vec3 v, inout uint s){
 
 void getNormalAndAlbedo(out vec3 N, out vec4 albedo){
     switch(MID){
+        default:
         case 0:
         {
             albedo = texture(albedoSampler0, UV).rgba;
@@ -107,24 +108,88 @@ void getNormalAndAlbedo(out vec3 N, out vec4 albedo){
         break;
     }
     N = normalize(TBN * normalize(N * 2.0 - 1.0));
+
+    albedo.xyz = pow(albedo.xyz, vec3(2.2));
 }
 
 // ------------------------------------------------------------------------
+
+float DisGGX(vec3 N, vec3 H, float roughness){
+    const float a = roughness * roughness;
+    const float a2 = a * a;
+    const float NdH = max(dot(N, H), 0.0);
+    const float NdH2 = NdH * NdH;
+
+    const float nom = a2;
+    const float denom_term = (NdH2 * (a2 - 1.0) + 1.0);
+    const float denom = 3.141592 * denom_term * denom_term;
+
+    return nom / denom;
+}
+
+float GeomSchlickGGX(float NdV, float roughness){
+    const float r = (roughness + 1.0);
+    const float k = (r * r) * 0.125;
+
+    const float nom = NdV;
+    const float denom = NdV * (1.0 - k) + k;
+
+    return nom / denom;
+}
+
+float GeomSmith(vec3 N, vec3 V, vec3 L, float roughness){
+    const float NdV = max(dot(N, V), 0.0);
+    const float NdL = max(dot(N, L), 0.0);
+    const float ggx2 = GeomSchlickGGX(NdV, roughness);
+    const float ggx1 = GeomSchlickGGX(NdL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0){
+    const float x = 1.0 - cosTheta;
+    const float x2 = x * x;
+    const float x5 = x2 * x2 * x;
+    return F0 + (1.0 - F0) * x5;
+}
+
+// ------------------------------------------------------------------------
+
+vec3 pbr_lighting(vec3 V, vec3 L, vec3 N, vec3 albedo, vec3 radiance, float roughness, float metalness){
+    const float NdL = max(0.0, dot(N, L));
+    const vec3 F0 = mix(vec3(0.04), albedo, metalness);
+    const vec3 H = normalize(V + L);
+
+    const float NDF = DisGGX(N, H, roughness);
+    const float G = GeomSmith(N, V, L, roughness);
+    const vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    const vec3 nom = NDF * G * F;
+    const float denom = 4.0 * max(dot(N, V), 0.0) * NdL + 0.001;
+    const vec3 specular = nom / denom;
+
+    const vec3 kS = F;
+    const vec3 kD = (vec3(1.0) - kS) * (1.0 - metalness);
+
+    return (kD * albedo / 3.141592 + specular) * radiance * NdL;
+}
 
 vec3 direct_lighting(inout uint s){
     vec4 albedo;
     vec3 N;
     getNormalAndAlbedo(N, albedo);
 
-    const vec3 L = sunDirection;
-    const float spec = albedo.a * 256.0;
     const vec3 V = normalize(eye - P);
-    const vec3 H = normalize(V + L);
-    const float D = max(0.0, dot(L, N));
-    const float S = D > 0.0 ? pow(max(0.0, dot(H, N)), spec) : 0.0;
-    const vec3 env = S * sunColor;
-    vec3 lighting = (vec3(0.01 + D) + env) * albedo.rgb;
-    return lighting;
+    const vec3 L = sunDirection;
+    const float roughness = roughness_multiplier * (1.0 - albedo.a);
+    const float metalness = 0.1;
+    const vec3 radiance = sunColor;
+
+    vec3 light = pbr_lighting(V, L, N, albedo.rgb, radiance, roughness, metalness);
+
+    light = light / (light + vec3(1.0));
+
+    return light;
 }
 
 vec3 indirect_lighting(inout uint s){
@@ -134,6 +199,7 @@ vec3 indirect_lighting(inout uint s){
 
     const vec3 mask = albedo.rgb;
     const float roughness = roughness_multiplier * (1.0 - albedo.a);
+    const float metalness = 0.99;
     const vec3 I = normalize(P - eye);
     const vec3 R = reflect(I, N);
     const int samples = 16;
@@ -144,11 +210,14 @@ vec3 indirect_lighting(inout uint s){
     for(int i = 0; i < samples; ++i){
         const vec3 randomDir = cosHemi(N, u, v, s);
         const vec3 L = normalize(mix(R, randomDir, roughness));
-        light += texture(env_cm, L).rgb * max(0.0, dot(N, L));
+        const vec3 radiance = texture(env_cm, L).rgb;
+        light += pbr_lighting(-I, L, N, mask, radiance, roughness, metalness);
     }
 
     const float scaling = 1.0 / float(samples);
     light *= scaling * mask;
+
+    light = light / (light + vec3(1.0));
 
     return light;
 }
@@ -267,5 +336,4 @@ void main(){
     }
 
     outColor = vec4(lighting.rgb, 1.0);
-
 }

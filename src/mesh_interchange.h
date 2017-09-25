@@ -79,5 +79,8 @@ namespace mesh_interchange {
             }
             return val;
         }
+        bool operator==(const Model& other)const{
+            return hash() == other.hash();
+        }
     };
 };
