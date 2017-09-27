@@ -27,12 +27,6 @@ uniform int seed;
 uniform int draw_flags;
 uniform int object_flags;
 
-uniform float iorr;
-uniform float roughness_offset;
-uniform float metalness_offset;
-uniform float roughness_multiplier;
-uniform float metalness_multiplier;
-
 // ------------------------------------------------------------------------
 
 #define PREPASS_ENABLED     1
@@ -53,12 +47,72 @@ uniform float metalness_multiplier;
 
 // -----------------------------------------------------------------------
 
+struct MaterialParams {
+    float roughness_offset;
+    float roughness_multiplier;
+    float metalness_offset;
+    float metalness_multiplier;
+    float index_of_refraction;
+    float _pad1;
+    float _pad2;
+    float _pad3;
+};
+
 struct material {
     vec3 albedo;
     float roughness;
     vec3 normal;
     float metalness;
 };
+
+// ------------------------------------------------------------------------
+
+layout(std140) uniform materialparams_ubo
+{
+    MaterialParams material_params[4];
+};
+
+// ------------------------------------------------------------------------
+
+// COURTESY OF: Leonard Ritter (@paniq)
+// Filmic Reinhard, a simpler tonemapping 
+// operator with a single coefficient
+// regulating the toe size.
+
+// The operator ensures that f(0.5) = 0.5
+float filmic_reinhard_curve (float x) {
+    // T = 0: no toe, classic Reinhard
+    const float T = 0.01;
+    const float q = (T + 1.0)*x*x;    
+	return q / (q + x + T);
+}
+
+float inverse_filmic_reinhard_curve (float x) {
+    // T = 0: no toe, classic Reinhard
+    const float T = 0.01;
+    const float q = -2.0 * (T + 1.0) * (x - 1.0);
+    return (x + sqrt(x*(x + 2.0*T*q))) / q;
+}
+
+vec3 filmic_reinhard(vec3 x) {
+    // linear white point
+    const float W = 11.2;
+    const float w = filmic_reinhard_curve(W);
+    return vec3(
+        filmic_reinhard_curve(x.r),
+        filmic_reinhard_curve(x.g),
+        filmic_reinhard_curve(x.b)) / w;
+}
+
+vec3 inverse_filmic_reinhard(vec3 x) {
+    // linear white point
+    const float W = 11.2;
+    x *= filmic_reinhard_curve(W);
+    return vec3(
+        inverse_filmic_reinhard_curve(x.r),
+        inverse_filmic_reinhard_curve(x.g),
+        inverse_filmic_reinhard_curve(x.b));
+}
 
 // ------------------------------------------------------------------------
 
@@ -98,7 +152,7 @@ vec3 cosHemi(vec3 N, vec3 u, vec3 v, inout uint s){
 material getMaterial(){
     material mat;
     vec4 albedo, normal;
-    
+
     switch(MID){
         default:
         case 0:
@@ -126,6 +180,11 @@ material getMaterial(){
         }
         break;
     }
+    
+    const float roughness_offset = material_params[MID].roughness_offset;
+    const float roughness_multiplier = material_params[MID].roughness_multiplier;
+    const float metalness_offset = material_params[MID].metalness_offset;
+    const float metalness_multiplier = material_params[MID].metalness_multiplier;
 
     mat.albedo = pow(albedo.rgb, vec3(2.2));
     mat.roughness = clamp(albedo.a * roughness_multiplier + roughness_offset, 0.01, 0.99);
@@ -133,6 +192,10 @@ material getMaterial(){
     mat.metalness = clamp(normal.a * metalness_multiplier + metalness_offset, 0.01, 0.99);
 
     return mat;
+}
+
+vec3 environment_cubemap(vec3 dir){
+    return texture(env_cm, dir).rgb;
 }
 
 // ------------------------------------------------------------------------
@@ -204,16 +267,15 @@ vec3 direct_lighting(inout uint s){
     vec3 light = pbr_lighting(V, L, mat, radiance);
 
     light += vec3(0.01) * mat.albedo;
-    light = light / (light + vec3(1.0));
 
     return light;
 }
 
 vec3 indirect_lighting(inout uint s){
     const material mat = getMaterial();
-    const vec3 I = normalize(P - eye);
-    const vec3 R = reflect(I, mat.normal);
-    const int samples = 32;
+    const vec3 V = normalize(eye - P);
+    const vec3 R = reflect(-V, mat.normal);
+    const int samples = 64;
     const float scaling = 1.0 / float(samples);
     
     vec3 light = vec3(0.0);
@@ -221,12 +283,11 @@ vec3 indirect_lighting(inout uint s){
     cosHemiUV(mat.normal, u, v);
     for(int i = 0; i < samples; ++i){
         const vec3 L = cosHemi(mat.normal, u, v, s);
-        const vec3 radiance = texture(env_cm, L).rgb;
-        light += pbr_lighting(-I, L, mat, radiance);
+        const vec3 radiance = environment_cubemap(L);
+        light += pbr_lighting(V, L, mat, radiance);
     }
 
     light *= scaling;
-    light = light / (light + vec3(1.0));
 
     return light;
 }
@@ -235,7 +296,7 @@ vec3 visualizeReflections(){
     const material mat = getMaterial();
     const vec3 I = normalize(P - eye);
     const vec3 R = reflect(I, mat.normal);
-    return texture(env_cm, R).rgb * max(0.0, dot(mat.normal, R));
+    return environment_cubemap(R) * max(0.0, dot(mat.normal, R));
 }
 
 vec3 visualizeNormals(){
@@ -257,14 +318,14 @@ vec3 skymap_lighting(){
 
 vec3 visualizeCubemap(){
     vec3 I = normalize(P - eye);
-    return texture(env_cm, I).rgb;
+    return environment_cubemap(I);
 }
 
 vec3 visualizeDiffraction(){
     const vec3 I = normalize(P - eye);
     const material mat = getMaterial();
-    const vec3 R = refract(I, mat.normal, iorr);
-    return texture(env_cm, R).rgb;
+    const vec3 R = refract(I, mat.normal, material_params[MID].index_of_refraction);
+    return environment_cubemap(R);
 }
 
 vec3 visualizeRoughness(){
@@ -329,6 +390,7 @@ void main(){
     lighting.rgb.z += 0.0001 * randBi(s);
 
     if(draw_flags != DF_DIRECT_CUBEMAP){
+        lighting.rgb = filmic_reinhard(lighting.rgb);
         lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
     }
 

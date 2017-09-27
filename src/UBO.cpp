@@ -4,7 +4,7 @@
 
 static unsigned binding_tail = 0;
 
-void UBO::init(void* ptr, unsigned size, const char* name, unsigned* programs, int num_progs){
+void UBO::init(const void* ptr, unsigned size, const char* name, const unsigned* programs, int num_progs){
     glGenBuffers(1, &id);DebugGL();
     glBindBuffer(GL_UNIFORM_BUFFER, id);DebugGL();
     glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);DebugGL();
@@ -21,7 +21,7 @@ void UBO::init(void* ptr, unsigned size, const char* name, unsigned* programs, i
 void UBO::deinit(){
     glDeleteBuffers(1, &id);DebugGL();
 }
-void UBO::upload(void* ptr, unsigned size){
+void UBO::upload(const void* ptr, unsigned size){
     glBindBuffer(GL_UNIFORM_BUFFER, id);DebugGL();
     glBufferData(GL_UNIFORM_BUFFER, size, ptr, GL_STATIC_DRAW);DebugGL();
 }

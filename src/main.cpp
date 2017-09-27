@@ -55,25 +55,31 @@ int main(int argc, char* argv[]){
 
     HashString sky_xform;
     {
-        HashString mesh("suzanne.mesh");
-        Material mat = {"basic_diffuse.png", "basic_normal.png"};
+        HashString mesh("ball.mesh");
+        TextureChannels flat_channels = {"flat_red_diffuse.png", "flat_red_normal.png"};
 
-        for(float x = 0.0f; x <= 10.0f; x += 2.5f){
-            for(float y = 0.0f; y <= 10.0f; y += 2.5f){
-
+        for(float x = 0.0f; x <= 10.0f; x += 1.0f){
+            for(float y = 0.0f; y <= 10.0f; y += 1.0f){
                 glm::vec3 pos = glm::vec3(x, y, 0.0f);
                 auto& obj = g_Renderables.grow();
+
                 obj.mesh = mesh;
-                obj.addMaterial(mat);
+
+                obj.addTextureChannel() = flat_channels;
+                auto& mat = obj.addMaterialParams();
+                mat.roughness_offset = x / 10.0f;
+                mat.metalness_offset = y / 10.0f;
+
                 Transform* t = obj.transform;
-                *t = glm::translate(*t, pos);
+                *t = glm::translate(*t, pos) * glm::scale(*t, glm::vec3(0.5f));
             }
         }
         
 
         auto& obj = g_Renderables.grow();
         obj.mesh = "sphere.mesh";
-        obj.addMaterial({"sky_diffuse.png", "sky_normal.png"});
+        obj.addTextureChannel() = {"sky_diffuse.png", "sky_normal.png"};
+        obj.addMaterialParams();
         obj.set_flag(ODF_SKY);
         Transform* t = obj.transform;
         *t = glm::scale(*t, glm::vec3(4.0f));
@@ -120,77 +126,6 @@ int main(int argc, char* argv[]){
         }
         else if(input.getKey(GLFW_KEY_9)){
             flag = DF_VIS_METALNESS;
-        }
-
-        if(input.getKey(GLFW_KEY_UP)){
-            g_Renderables.iorr += 0.01f;
-        }
-        else if(input.getKey(GLFW_KEY_DOWN)){
-            g_Renderables.iorr -= 0.01f;
-        }
-
-        if(input.getKey(GLFW_KEY_KP_7)){
-            for(auto& res : g_Renderables.resources){
-                res.metalness_offset += 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_4)){
-            for(auto& res : g_Renderables.resources){
-                res.metalness_offset -= 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_1)){
-            for(auto& res : g_Renderables.resources){
-                res.metalness_offset = 0.0f;
-            }
-        }
-
-        if(input.getKey(GLFW_KEY_KP_8)){
-            for(auto& res : g_Renderables.resources){
-                res.roughness_offset += 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_5)){
-            for(auto& res : g_Renderables.resources){
-                res.roughness_offset -= 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_2)){
-            for(auto& res : g_Renderables.resources){
-                res.roughness_offset = 0.0f;
-            }
-        }
-
-        if(input.getKey(GLFW_KEY_KP_9)){
-            for(auto& res : g_Renderables.resources){
-                res.metalness_multiplier += 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_6)){
-            for(auto& res : g_Renderables.resources){
-                res.metalness_multiplier -= 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_3)){
-            for(auto& res : g_Renderables.resources){
-                res.metalness_multiplier = 1.0f;
-            }
-        }
-
-        if(input.getKey(GLFW_KEY_KP_ADD)){
-            for(auto& res : g_Renderables.resources){
-                res.roughness_multiplier += 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_ENTER)){
-            for(auto& res : g_Renderables.resources){
-                res.roughness_multiplier -= 0.01f;
-            }
-        }
-        else if(input.getKey(GLFW_KEY_KP_SUBTRACT)){
-            for(auto& res : g_Renderables.resources){
-                res.roughness_multiplier = 1.0f;
-            }
         }
 
         g_Renderables.mainDraw(camera, flag, WIDTH, HEIGHT);

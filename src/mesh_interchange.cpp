@@ -146,7 +146,7 @@ namespace mesh_interchange{
         const glm::mat4 localXform = getTransform(node) * xform;
         for(u32 i = 0; i < node->mNumMeshes; ++i){
             aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-            processMesh(mesh, scene, glm::scale(localXform, glm::vec3(0.01f)), meshes, mat_ids);
+            processMesh(mesh, scene, localXform, meshes, mat_ids);
         }
         for(u32 i = 0; i < node->mNumChildren; ++i){
             processNode(node->mChildren[i], scene, localXform, mat_ids);
@@ -161,6 +161,6 @@ namespace mesh_interchange{
     
         Vector<HashString> mat_ids;
 
-        processNode(scene->mRootNode, scene, {}, mat_ids);
+        processNode(scene->mRootNode, scene, glm::scale({}, glm::vec3(0.01f)), mat_ids);
     }
 };

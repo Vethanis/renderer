@@ -10,6 +10,7 @@
 #include "camera.h"
 #include "transform.h"
 #include "cubemap.h"
+#include "UBO.h"
 #include <random>
 
 // ------------------------------------------------------------------------
@@ -32,7 +33,7 @@
 
 // ------------------------------------------------------------------------
 
-struct Material{
+struct TextureChannels {
     HashString albedo;
     HashString normal;
     void bind(GLProgram& prog, int channel){
@@ -45,30 +46,39 @@ struct Material{
     }
 };
 
+struct MaterialParams {
+    float roughness_offset = 0.0f;
+    float roughness_multiplier = 1.0f;
+    float metalness_offset = 0.0f;
+    float metalness_multiplier = 1.0f;
+    float index_of_refraction = 1.0f;
+    float _pad1;
+    float _pad2;
+    float _pad3;
+};
+
 struct RenderResource{
-    Array<Material, 4> materials;
+    Array<TextureChannels, 4> texture_channels;
+    Array<MaterialParams, 4> material_params;
     HashString mesh;
     HashString transform;
-    u32 oflag = 0;
-    float roughness_offset = 0.0f;
-    float metalness_offset = 0.0f;
-    float roughness_multiplier = 1.0f;
-    float metalness_multiplier = 1.0f;
+    u32 object_flag = 0;
 
-    void bind(GLProgram& prog){
-        for(int i = 0; i < materials.count(); ++i){
-            materials[i].bind(prog, i);
+    void bind(GLProgram& prog, UBO& material_ubo){
+        prog.setUniformInt("object_flags", object_flag);
+        for(int i = 0; i < texture_channels.count(); ++i){
+            texture_channels[i].bind(prog, i);
         }
-        prog.setUniformFloat("roughness_offset", roughness_offset);
-        prog.setUniformFloat("metalness_offset", metalness_offset);
-        prog.setUniformFloat("roughness_multiplier", roughness_multiplier);
-        prog.setUniformFloat("metalness_multiplier", metalness_multiplier);
+        material_ubo.upload(material_params.begin(), material_params.bytes());
     }
-    void addMaterial(const Material& mat){
-        materials.grow() = mat;
+    TextureChannels& addTextureChannel(){
+        return texture_channels.grow();
+    }
+    MaterialParams& addMaterialParams(){
+        return material_params.grow();
     }
     unsigned bucket()const{
-        return materials.hash() << 16 | (0xffff & mesh);
+        return texture_channels.hash() << 16 | (0xffff & mesh);
     }
     bool operator < (const RenderResource& o)const{
         return bucket() < o.bucket();
@@ -81,24 +91,24 @@ struct RenderResource{
         m->draw();
     }
     u32 get_flag(u32 flag)const{
-        return oflag & flag;
+        return object_flag & flag;
     }
     void set_flag(u32 flag){
-        oflag |= flag;
+        object_flag |= flag;
     }
     void unset_flag(u32 flag){
-        oflag &= ~flag;
+        object_flag &= ~flag;
     }
 };
 
 struct Renderables{
     Array<RenderResource, 256> resources;
+    UBO materialparam_ubo;
     GLProgram fwdProg;
     GLProgram zProg;
     Cubemap cm;
     glm::vec3 sunDirection;
     glm::vec3 sunColor;
-    float iorr;
     void init(){
         glEnable(GL_DEPTH_TEST); DebugGL();
         glEnable(GL_CULL_FACE); DebugGL();
@@ -112,19 +122,22 @@ struct Renderables{
             "zvert.glsl",
             "zfrag.glsl"
         };
+
         fwdProg.setup(fwdFilenames, 2);
         zProg.setup(zFilenames, 2);
 
         sunDirection = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
         sunColor = glm::vec3(1.0f, 0.75f, 0.5f);
-        iorr = 0.9f;
 
         cm.init(1024);
+
+        materialparam_ubo.init(nullptr, sizeof(MaterialParams), "materialparams_ubo", &fwdProg.m_id, 1);
     }
     void deinit(){
         fwdProg.deinit();
         zProg.deinit();
         cm.deinit();
+        materialparam_ubo.deinit();
     }
     void prePass(const Transform& VP){
         glDepthFunc(GL_LESS); DebugGL();
@@ -153,24 +166,23 @@ struct Renderables{
         #endif
 
         fwdProg.bind();
+
         fwdProg.setUniform("sunDirection", sunDirection);
         fwdProg.setUniform("sunColor", sunColor);
-        fwdProg.setUniformInt("seed", rand());
+
         fwdProg.setUniform("eye", cam.getEye());
+        fwdProg.setUniformInt("seed", rand());
         fwdProg.setUniformInt("draw_flags", dflag);
-        fwdProg.setUniformFloat("iorr", iorr);
         
         for(RenderResource& res : resources){
-
             Transform* M = res.transform;
             glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
 
             fwdProg.setUniform("MVP", VP * *M);
             fwdProg.setUniform("M", *M);
             fwdProg.setUniform("IM", IM);
-            fwdProg.setUniformInt("object_flags", res.oflag);
 
-            res.bind(fwdProg);
+            res.bind(fwdProg, materialparam_ubo);
             res.draw();
         }
     }

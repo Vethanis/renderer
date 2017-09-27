@@ -4,9 +4,9 @@
 class UBO{
     unsigned id;
 public:
-    void init(void* ptr, unsigned size, const char* name, unsigned* programs, int num_progs);
+    void init(const void* ptr, unsigned size, const char* name, const unsigned* programs, int num_progs);
     void deinit();
-    void upload(void* ptr, unsigned size);
+    void upload(const void* ptr, unsigned size);
 };
 
 #endif
