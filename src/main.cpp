@@ -55,26 +55,30 @@ int main(int argc, char* argv[]){
 
     HashString sky_xform;
     {
-        HashString mesh("ball.mesh");
-        TextureChannels flat_channels = {"flat_red_diffuse.png", "flat_red_normal.png"};
+        const HashString mesh("ball.mesh");
+        const TextureChannels channels[] = {
+            {"flat_red_diffuse.png", "flat_red_normal.png"},
+            {"basic_diffuse.png", "basic_normal.png"}
+        };
 
-        for(float x = 0.0f; x <= 10.0f; x += 1.0f){
-            for(float y = 0.0f; y <= 10.0f; y += 1.0f){
-                glm::vec3 pos = glm::vec3(x, y, 0.0f);
-                auto& obj = g_Renderables.grow();
-
-                obj.mesh = mesh;
-
-                obj.addTextureChannel() = flat_channels;
-                auto& mat = obj.addMaterialParams();
-                mat.roughness_offset = x / 10.0f;
-                mat.metalness_offset = y / 10.0f;
-
-                Transform* t = obj.transform;
-                *t = glm::translate(*t, pos) * glm::scale(*t, glm::vec3(0.5f));
+        for(int i = 0; i < 2; ++i){
+            for(float x = 0.0f; x <= 10.0f; x += 1.0f){
+                for(float y = 0.0f; y <= 10.0f; y += 1.0f){
+                    glm::vec3 pos = glm::vec3(x + 10.0f * float(i), y, 0.0f);
+                    auto& obj = g_Renderables.grow();
+    
+                    obj.mesh = mesh;
+    
+                    obj.addTextureChannel() = channels[i];
+                    auto& mat = obj.addMaterialParams();
+                    mat.roughness_offset = x / 10.0f;
+                    mat.metalness_offset = y / 10.0f;
+    
+                    Transform* t = obj.transform;
+                    *t = glm::translate(*t, pos) * glm::scale(*t, glm::vec3(0.5f));
+                }
             }
         }
-        
 
         auto& obj = g_Renderables.grow();
         obj.mesh = "sphere.mesh";

@@ -74,48 +74,6 @@ layout(std140) uniform materialparams_ubo
 
 // ------------------------------------------------------------------------
 
-// COURTESY OF: Leonard Ritter (@paniq)
-// Filmic Reinhard, a simpler tonemapping 
-// operator with a single coefficient
-// regulating the toe size.
-
-// The operator ensures that f(0.5) = 0.5
-float filmic_reinhard_curve (float x) {
-    // T = 0: no toe, classic Reinhard
-    const float T = 0.01;
-    const float q = (T + 1.0)*x*x;    
-	return q / (q + x + T);
-}
-
-float inverse_filmic_reinhard_curve (float x) {
-    // T = 0: no toe, classic Reinhard
-    const float T = 0.01;
-    const float q = -2.0 * (T + 1.0) * (x - 1.0);
-    return (x + sqrt(x*(x + 2.0*T*q))) / q;
-}
-
-vec3 filmic_reinhard(vec3 x) {
-    // linear white point
-    const float W = 11.2;
-    const float w = filmic_reinhard_curve(W);
-    return vec3(
-        filmic_reinhard_curve(x.r),
-        filmic_reinhard_curve(x.g),
-        filmic_reinhard_curve(x.b)) / w;
-}
-
-vec3 inverse_filmic_reinhard(vec3 x) {
-    // linear white point
-    const float W = 11.2;
-    x *= filmic_reinhard_curve(W);
-    return vec3(
-        inverse_filmic_reinhard_curve(x.r),
-        inverse_filmic_reinhard_curve(x.g),
-        inverse_filmic_reinhard_curve(x.b));
-}
-
-// ------------------------------------------------------------------------
-
 float rand( inout uint f) {
     f = (f ^ 61) ^ (f >> 16);
     f *= 9;
@@ -266,7 +224,7 @@ vec3 direct_lighting(inout uint s){
 
     vec3 light = pbr_lighting(V, L, mat, radiance);
 
-    light += vec3(0.01) * mat.albedo;
+    light += vec3(0.03) * mat.albedo;
 
     return light;
 }
@@ -390,7 +348,7 @@ void main(){
     lighting.rgb.z += 0.0001 * randBi(s);
 
     if(draw_flags != DF_DIRECT_CUBEMAP){
-        lighting.rgb = filmic_reinhard(lighting.rgb);
+        lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
         lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
     }
 
