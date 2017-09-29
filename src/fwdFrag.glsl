@@ -87,25 +87,48 @@ float randBi(inout uint s){
     return rand(s) * 2.0 - 1.0;
 }
 
-void cosHemiUV(vec3 N, out vec3 u, out vec3 v){
-    if(abs(N.x) > 0.1)
-        u = cross(vec3(0.0, 1.0, 0.0), N);
-    else
-        u = cross(vec3(1.0, 0.0, 0.0), N);
-    u = normalize(u);
-    v = cross(N, u);
+float stratRand(float i, float inv_samples, inout uint s){
+    return i * inv_samples + rand(s) * inv_samples;
 }
 
-vec3 cosHemi(vec3 N, vec3 u, vec3 v, inout uint s){
-    float r1 = 3.141592 * 2.0 * rand(s);
-    float r2 = rand(s);
-    float r2s = sqrt(r2);
-    return normalize(
-        u * cos(r1) * r2s 
-        + v * sin(r1) * r2s 
-        + N * sqrt(1.0 - r2)
-        );
+// #9 in http://www-labs.iro.umontreal.ca/~mignotte/IFT2425/Documents/EfficientApproximationArctgFunction.pdf
+float fasterAtan(float x){
+    return 3.141592 * 0.25 * x 
+    - x * (abs(x) - 1.0) 
+        * (0.2447 + 0.0663 * abs(x));
 }
+
+void findBasis(vec3 N, out vec3 T, out vec3 B){
+    if(abs(N.x) > 0.1)
+        T = cross(vec3(0.0, 1.0, 0.0), N);
+    else
+        T = cross(vec3(1.0, 0.0, 0.0), N);
+    T = normalize(T);
+    B = cross(N, T);
+}
+
+// phi: [0, tau]
+// theta: [0, 1]
+vec3 toCartesian(vec3 T, vec3 B, vec3 N, float phi, float theta){
+    const float ts = sqrt(theta);
+    return normalize(T * cos(phi) * ts + B * sin(phi) * ts + N * sqrt(1.0 - theta));
+}
+
+vec3 cosHemi(vec3 T, vec3 B, vec3 N, vec2 X){
+    const float r1 = 3.141592 * 2.0 * X[0];
+    const float r2 = X[1];
+    return toCartesian(T, B, N, r1, r2);
+}
+
+// https://agraphicsguy.wordpress.com/2015/11/01/sampling-microfacet-brdf/
+vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, const vec3 N){
+    const float alpha = roughness * roughness;
+    const float theta = fasterAtan(alpha * sqrt(X[0] / (1.0 - X[0])));
+    const float phi = 2.0 * 3.141592 * X[1];
+    return toCartesian(T, B, N, phi, theta);
+}
+
+// -------------------------------------------------------------------------------------------
 
 material getMaterial(){
     material mat;
@@ -145,9 +168,11 @@ material getMaterial(){
     const float metalness_multiplier = material_params[MID].metalness_multiplier;
 
     mat.albedo = pow(albedo.rgb, vec3(2.2));
-    mat.roughness = clamp(albedo.a * roughness_multiplier + roughness_offset, 0.01, 0.99);
+    mat.roughness = albedo.a * roughness_multiplier + roughness_offset;
+    mat.roughness = clamp(mat.roughness, 0.05, 0.95);
     mat.normal = normalize(TBN * normalize(normal.xyz * 2.0 - 1.0));
-    mat.metalness = clamp(normal.a * metalness_multiplier + metalness_offset, 0.01, 0.99);
+    mat.metalness = normal.a * metalness_multiplier + metalness_offset;
+    mat.metalness = clamp(mat.metalness, 0.05, 0.95);
 
     return mat;
 }
@@ -232,20 +257,24 @@ vec3 direct_lighting(inout uint s){
 vec3 indirect_lighting(inout uint s){
     const material mat = getMaterial();
     const vec3 V = normalize(eye - P);
-    const vec3 R = reflect(-V, mat.normal);
-    const int samples = 64;
-    const float scaling = 1.0 / float(samples);
+    vec3 T, B;
+    findBasis(mat.normal, T, B);
     
+    const float samples = 6.0;
+    const float scaling = 1.0 / samples;
+
     vec3 light = vec3(0.0);
-    vec3 u, v;
-    cosHemiUV(mat.normal, u, v);
-    for(int i = 0; i < samples; ++i){
-        const vec3 L = cosHemi(mat.normal, u, v, s);
-        const vec3 radiance = environment_cubemap(L);
-        light += pbr_lighting(V, L, mat, radiance);
+    for(float x = 0.0; x < samples; ++x){
+        for(float y = 0.0; y < samples; ++y){
+            const vec2 X = vec2(stratRand(x, scaling, s), stratRand(y, scaling, s));
+            const vec3 N = GGXPDF(mat.roughness, X, T, B, mat.normal);
+            const vec3 L = reflect(-V, N);
+            const vec3 radiance = environment_cubemap(L);
+            light += pbr_lighting(V, L, mat, radiance);
+        }
     }
 
-    light *= scaling;
+    light *= (scaling * scaling);
 
     return light;
 }
@@ -270,7 +299,7 @@ vec3 skymap_lighting(){
     vec3 sky = vec3(0.0);
     const material mat = getMaterial();
     sky += max(0.0, pow(dot(mat.normal, -sunDirection), 200.0)) * sunColor * 1000000.0;
-    sky += mat.albedo * 0.5;
+    sky += mat.albedo;
     return sky;
 }
 
