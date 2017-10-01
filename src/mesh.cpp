@@ -59,8 +59,6 @@ void Mesh::init(){
     begin_mesh_layout<Vertex>();
     mesh_layout<glm::vec4>(0);
     mesh_layout<glm::vec4>(1);
-    mesh_layout<glm::vec3>(2);
-    mesh_layout<unsigned>(3);
 }
 
 void Mesh::deinit(){

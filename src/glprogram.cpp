@@ -89,26 +89,7 @@ void GLProgram::setUniformInt(int location, const int v){
 void GLProgram::setUniformFloat(int location, const float v){
     glUniform1f(location, v);  DebugGL();;
 }
-void GLProgram::bindAlbedo(int channel){
-    static const HashString albedo_names[] = {
-        HashString("albedoSampler0"),
-        HashString("albedoSampler1"),
-        HashString("albedoSampler2"),
-        HashString("albedoSampler3"),
-    };
-    unsigned loc = getUniformLocation(albedo_names[channel]);
-    setUniformInt(loc, channel * 2);
-}
-void GLProgram::bindNormal(int channel){
-    static const HashString normal_names[] = {
-        HashString("normalSampler0"),
-        HashString("normalSampler1"),
-        HashString("normalSampler2"),
-        HashString("normalSampler3"),
-    };
-    unsigned loc = getUniformLocation(normal_names[channel]);
-    setUniformInt(loc, channel * 2 + 1);
-}
+
 void GLProgram::computeCall(int x, int y, int z){
     glDispatchCompute(x, y, z);
 }

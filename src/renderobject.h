@@ -35,14 +35,15 @@
 
 struct TextureChannels {
     HashString albedo;
-    HashString normal;
+    HashString material;
+
     void bind(GLProgram& prog, int channel){
-        Texture* ta = albedo;
-        ta->bindAlbedo(channel);
-        prog.bindAlbedo(channel);
-        Texture* tn = normal;
-        tn->bindNormal(channel);
-        prog.bindNormal(channel);
+        Texture* t = albedo;
+        t->bind(0);
+        prog.setUniformInt("albedoSampler", 0);
+        t = material;
+        t->bind(1);
+        prog.setUniformInt("materialSampler", 1);
     }
 };
 
@@ -52,45 +53,44 @@ struct MaterialParams {
     float metalness_offset = 0.0f;
     float metalness_multiplier = 1.0f;
     float index_of_refraction = 1.0f;
-    float _pad1;
+    float bumpiness = 1.0f;
     float _pad2;
     float _pad3;
 };
 
 struct RenderResource{
-    Array<TextureChannels, 4> texture_channels;
-    Array<MaterialParams, 4> material_params;
+    TextureChannels texture_channels;
+    MaterialParams material_params;
     HashString mesh;
     HashString transform;
-    u32 object_flag = 0;
+    u32 object_flag;
+    u32 handle;
 
+    RenderResource(){
+        static u32 s_handle = 0;
+        object_flag = 0;
+        handle = s_handle++;
+    }
     void bind(GLProgram& prog, UBO& material_ubo){
         prog.setUniformInt("object_flags", object_flag);
-        for(int i = 0; i < texture_channels.count(); ++i){
-            texture_channels[i].bind(prog, i);
-        }
-        material_ubo.upload(material_params.begin(), material_params.bytes());
+        texture_channels.bind(prog, 0);
+        material_ubo.upload(&material_params, sizeof(MaterialParams));
     }
-    TextureChannels& addTextureChannel(){
-        return texture_channels.grow();
+    unsigned bucket() const {
+        const u32 thash = fnv(&texture_channels, sizeof(TextureChannels)) << 16;
+        return thash | (0xffff & mesh);
     }
-    MaterialParams& addMaterialParams(){
-        return material_params.grow();
-    }
-    unsigned bucket()const{
-        return texture_channels.hash() << 16 | (0xffff & mesh);
-    }
-    bool operator < (const RenderResource& o)const{
+    bool operator < (const RenderResource& o) const {
         return bucket() < o.bucket();
     }
-    bool operator > (const RenderResource& o)const{
+    bool operator > (const RenderResource& o) const {
         return bucket() > o.bucket();
     }
     void draw(){
         Mesh* m = mesh;
         m->draw();
     }
-    u32 get_flag(u32 flag)const{
+    u32 get_flag(u32 flag) const {
         return object_flag & flag;
     }
     void set_flag(u32 flag){
@@ -107,8 +107,10 @@ struct Renderables{
     GLProgram fwdProg;
     GLProgram zProg;
     Cubemap cm;
+
     glm::vec3 sunDirection;
     glm::vec3 sunColor;
+
     void init(){
         glEnable(GL_DEPTH_TEST); DebugGL();
         glEnable(GL_CULL_FACE); DebugGL();
@@ -190,6 +192,14 @@ struct Renderables{
         RenderResource& r = resources.grow();
         r.transform = g_TransformStore.grow();
         return r;
+    }
+    RenderResource* find(u32 handle){
+        for(auto& i : resources){
+            if(i.handle == handle){
+                return &i;
+            }
+        }
+        return nullptr;
     }
     void finishGrow(){
         resources.sort();

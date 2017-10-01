@@ -22,8 +22,6 @@ struct GLProgram{
     void setUniform(int loc, const glm::mat4& v);
     void setUniformInt(int loc, const int v);
     void setUniformFloat(int loc, const float v);
-    void bindAlbedo(int channel);
-    void bindNormal(int channel);
     void computeCall(int x=0, int y=0, int z=0);
     void setup(const char** filenames, int count);
     template<typename T>

@@ -52,12 +52,8 @@ struct Texture{
     void uploadPortion(int level, int x, int y, int w, int h, int format, int type, const void* p){
         glTextureSubImage2D(handle, level, x, y, w, h, format, type, p);
     }
-    void bindAlbedo(int channel){
-        glActiveTexture(GL_TEXTURE0 + 2 * channel);  DebugGL();
-        glBindTexture(GL_TEXTURE_2D, handle);  DebugGL();
-    }
-    void bindNormal(int channel){
-        glActiveTexture(GL_TEXTURE0 + 2 * channel + 1);  DebugGL();
+    void bind(int channel){
+        glActiveTexture(GL_TEXTURE0 + channel);  DebugGL();
         glBindTexture(GL_TEXTURE_2D, handle);  DebugGL();
     }
     void setCSBinding(int FullType, int binding){

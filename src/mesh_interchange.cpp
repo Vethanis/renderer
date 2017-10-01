@@ -98,7 +98,6 @@ namespace mesh_interchange{
             vert.normal.y = N.y;
             vert.normal.z = N.z;
             vert.normal.w = 0.0f;
-            vert.matid = (u32)mat_loc;
             
             if(mesh->mTextureCoords[0]){
                 const auto& inUv = mesh->mTextureCoords[0][i];
@@ -113,31 +112,6 @@ namespace mesh_interchange{
             for(u32 i = 0; i < inFace.mNumIndices; ++i){
                 out.indices.grow() = begin_vert + inFace.mIndices[i];
             }
-            const u32 ia = out.indices[out.indices.count() - 3];
-            const u32 ib = out.indices[out.indices.count() - 2];
-            const u32 ic = out.indices[out.indices.count() - 1];
-
-            Vertex& va = out.vertices[ia];
-            Vertex& vb = out.vertices[ib];
-            Vertex& vc = out.vertices[ic];
-
-            const glm::vec3 e1 = vb.position.xyz() - va.position.xyz();
-            const glm::vec3 e2 = vc.position.xyz() - va.position.xyz();
-            const glm::vec2 duv1 = glm::vec2(vb.position.w, vb.normal.w) - glm::vec2(va.position.w, va.normal.w);
-            const glm::vec2 duv2 = glm::vec2(vc.position.w, vc.normal.w) - glm::vec2(va.position.w, va.normal.w);
-
-
-            glm::vec3 t;
-            const float f = 1.0f / (duv1.x * duv2.y - duv2.x * duv1.y);
-
-            t.x = f * (duv2.y * e1.x - duv1.y * e2.x);
-            t.y = f * (duv2.y * e1.y - duv1.y * e2.y);
-            t.z = f * (duv2.y * e1.z - duv1.y * e2.z);
-            t = glm::normalize(t);
-
-            va.tangent = t;
-            vb.tangent = t;
-            vc.tangent = t;
         }
     }
     void Model::processNode(aiNode* node, const aiScene* scene, 

@@ -2,21 +2,14 @@
 
 out vec4 outColor;
 
-in mat3 TBN;
+in vec3 MacroNormal;
 in vec3 P;
 in vec2 UV;
-flat in uint MID;
 
 // ------------------------------------------------------------------------
 
-uniform sampler2D albedoSampler0;
-uniform sampler2D normalSampler0;
-uniform sampler2D albedoSampler1;
-uniform sampler2D normalSampler1;
-uniform sampler2D albedoSampler2;
-uniform sampler2D normalSampler2;
-uniform sampler2D albedoSampler3;
-uniform sampler2D normalSampler3;
+uniform sampler2D albedoSampler;
+uniform sampler2D materialSampler;
 
 uniform samplerCube env_cm;
 
@@ -53,7 +46,7 @@ struct MaterialParams {
     float metalness_offset;
     float metalness_multiplier;
     float index_of_refraction;
-    float _pad1;
+    float bumpiness;
     float _pad2;
     float _pad3;
 };
@@ -69,7 +62,7 @@ struct material {
 
 layout(std140) uniform materialparams_ubo
 {
-    MaterialParams material_params[4];
+    MaterialParams material_params;
 };
 
 // ------------------------------------------------------------------------
@@ -121,6 +114,7 @@ vec3 cosHemi(vec3 T, vec3 B, vec3 N, vec2 X){
 }
 
 // https://agraphicsguy.wordpress.com/2015/11/01/sampling-microfacet-brdf/
+// returns a microfacet normal. reflect across it to get a good light vector
 vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, const vec3 N){
     const float alpha = roughness * roughness;
     const float theta = fasterAtan(alpha * sqrt(X[0] / (1.0 - X[0])));
@@ -128,56 +122,51 @@ vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, con
     return toCartesian(T, B, N, phi, theta);
 }
 
+vec3 normalFromHeight(float h){
+    const float dhdx = dFdx(h);
+    const float dhdy = dFdy(h);
+
+    const vec3 dpdx = dFdx(P);
+    const vec3 dpdy = dFdy(P);
+
+    const vec3 r1 = cross(dpdy, MacroNormal);
+    const vec3 r2 = cross(MacroNormal, dpdx);
+
+    const vec3 g = (r1 * dhdx + r2 * dhdy) / dot(dpdx, r1);
+
+    return normalize(MacroNormal - g * 0.001 * material_params.bumpiness);
+}
+
 // -------------------------------------------------------------------------------------------
 
 material getMaterial(){
     material mat;
-    vec4 albedo, normal;
 
-    switch(MID){
-        default:
-        case 0:
-        {
-            albedo = texture(albedoSampler0, UV).rgba;
-            normal = texture(normalSampler0, UV).rgba;
-        }
-        break;
-        case 1:
-        {
-            albedo = texture(albedoSampler1, UV).rgba;
-            normal = texture(normalSampler1, UV).rgba;
-        }
-        break;
-        case 2:
-        {
-            albedo = texture(albedoSampler2, UV).rgba;
-            normal = texture(normalSampler2, UV).rgba;
-        }
-        break;
-        case 3:
-        {
-            albedo = texture(albedoSampler3, UV).rgba;
-            normal = texture(normalSampler3, UV).rgba;
-        }
-        break;
-    }
-    
-    const float roughness_offset = material_params[MID].roughness_offset;
-    const float roughness_multiplier = material_params[MID].roughness_multiplier;
-    const float metalness_offset = material_params[MID].metalness_offset;
-    const float metalness_multiplier = material_params[MID].metalness_multiplier;
+    const vec4 albedo = texture(albedoSampler, UV).rgba;
+    const vec4 hmr = texture(materialSampler, UV).rgba;
 
+    mat.normal = normalFromHeight(hmr.x);
     mat.albedo = pow(albedo.rgb, vec3(2.2));
-    mat.roughness = albedo.a * roughness_multiplier + roughness_offset;
-    mat.roughness = clamp(mat.roughness, 0.05, 0.95);
-    mat.normal = normalize(TBN * normalize(normal.xyz * 2.0 - 1.0));
-    mat.metalness = normal.a * metalness_multiplier + metalness_offset;
-    mat.metalness = clamp(mat.metalness, 0.05, 0.95);
+
+    mat.metalness = hmr.y * 
+        material_params.metalness_multiplier +
+        material_params.metalness_offset;
+    mat.metalness = clamp(mat.metalness, 0.0, 1.0);
+
+    mat.roughness = hmr.z * 
+        material_params.roughness_multiplier + 
+        material_params.roughness_offset;
+    mat.roughness = clamp(mat.roughness, 0.1, 1.0);
 
     return mat;
 }
 
-vec3 environment_cubemap(vec3 dir){
+vec3 environment_cubemap(vec3 dir, float roughness){
+    float mip = textureQueryLod(env_cm, dir).x;
+    return textureLod(env_cm, dir, mip + roughness * 5.0).rgb;
+}
+
+vec3 env_cubemap(vec3 dir){
     return texture(env_cm, dir).rgb;
 }
 
@@ -249,7 +238,7 @@ vec3 direct_lighting(inout uint s){
 
     vec3 light = pbr_lighting(V, L, mat, radiance);
 
-    light += vec3(0.03) * mat.albedo;
+    light += vec3(0.01) * mat.albedo;
 
     return light;
 }
@@ -260,7 +249,7 @@ vec3 indirect_lighting(inout uint s){
     vec3 T, B;
     findBasis(mat.normal, T, B);
     
-    const float samples = 6.0;
+    const float samples = 4.0;
     const float scaling = 1.0 / samples;
 
     vec3 light = vec3(0.0);
@@ -269,12 +258,21 @@ vec3 indirect_lighting(inout uint s){
             const vec2 X = vec2(stratRand(x, scaling, s), stratRand(y, scaling, s));
             const vec3 N = GGXPDF(mat.roughness, X, T, B, mat.normal);
             const vec3 L = reflect(-V, N);
-            const vec3 radiance = environment_cubemap(L);
+            const vec3 radiance = environment_cubemap(L, mat.roughness);
             light += pbr_lighting(V, L, mat, radiance);
         }
     }
+    {
+        // sometimes the macro normal has the most light. adding a bit of it can greatly reduce noise
+        const vec3 R = reflect(-V, mat.normal);
+        light += 0.1 * pbr_lighting(V, R, mat, environment_cubemap(R, mat.roughness));
+    }
 
-    light *= (scaling * scaling);
+    light *= scaling * scaling;
+    light = mix(light, 
+        pbr_lighting(V, sunDirection, mat, sunColor),
+        0.25);
+    light += vec3(0.01) * mat.albedo;
 
     return light;
 }
@@ -283,7 +281,7 @@ vec3 visualizeReflections(){
     const material mat = getMaterial();
     const vec3 I = normalize(P - eye);
     const vec3 R = reflect(I, mat.normal);
-    return environment_cubemap(R) * max(0.0, dot(mat.normal, R));
+    return environment_cubemap(R, mat.roughness);
 }
 
 vec3 visualizeNormals(){
@@ -305,14 +303,14 @@ vec3 skymap_lighting(){
 
 vec3 visualizeCubemap(){
     vec3 I = normalize(P - eye);
-    return environment_cubemap(I);
+    return env_cubemap(I);
 }
 
 vec3 visualizeDiffraction(){
     const vec3 I = normalize(P - eye);
     const material mat = getMaterial();
-    const vec3 R = refract(I, mat.normal, material_params[MID].index_of_refraction);
-    return environment_cubemap(R);
+    const vec3 R = refract(I, mat.normal, material_params.index_of_refraction);
+    return env_cubemap(R);
 }
 
 vec3 visualizeRoughness(){

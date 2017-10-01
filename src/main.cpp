@@ -52,13 +52,14 @@ int main(int argc, char* argv[]){
     Input input(window.getWindow());
 
     g_Renderables.init();
-
+    
     HashString sky_xform;
+    u32 wanted_handle = 0;
     {
         const HashString mesh("ball.mesh");
         const TextureChannels channels[] = {
-            {"flat_red_diffuse.png", "flat_red_normal.png"},
-            {"basic_diffuse.png", "basic_normal.png"}
+            {"flat_red_albedo.png", "flat_red_material.png"},
+            {"basic_albedo.png", "basic_material.png"}
         };
 
         for(int i = 0; i < 2; ++i){
@@ -69,8 +70,8 @@ int main(int argc, char* argv[]){
     
                     obj.mesh = mesh;
     
-                    obj.addTextureChannel() = channels[i];
-                    auto& mat = obj.addMaterialParams();
+                    obj.texture_channels = channels[i];
+                    auto& mat = obj.material_params;
                     mat.roughness_offset = x / 10.0f;
                     mat.metalness_offset = y / 10.0f;
     
@@ -80,17 +81,37 @@ int main(int argc, char* argv[]){
             }
         }
 
-        auto& obj = g_Renderables.grow();
-        obj.mesh = "sphere.mesh";
-        obj.addTextureChannel() = {"sky_diffuse.png", "sky_normal.png"};
-        obj.addMaterialParams();
-        obj.set_flag(ODF_SKY);
-        Transform* t = obj.transform;
-        *t = glm::scale(*t, glm::vec3(4.0f));
+        {        
+            auto& obj = g_Renderables.grow();
+            obj.mesh = "sphere.mesh";
+            obj.texture_channels = {"sky_diffuse.png", "flat_red_material.png"};
+            obj.set_flag(ODF_SKY);
+            Transform* t = obj.transform;
+            *t = glm::scale(*t, glm::vec3(4.0f));
 
-        sky_xform = obj.transform;
+            sky_xform = obj.transform;
+        }
+        
+        {
+            auto& obj = g_Renderables.grow();
+            obj.mesh = "suzanne.mesh";
+            obj.texture_channels = channels[0];
+            Transform* t = obj.transform;
+            *t = glm::translate(*t, glm::vec3(5.0f, 0.0f, 5.0f));
+        }
+
+        {
+            auto& obj = g_Renderables.grow();
+            obj.mesh = "suzanne.mesh";
+            obj.texture_channels = channels[1];
+            Transform* t = obj.transform;
+            *t = glm::translate(*t, glm::vec3(10.0f, 0.0f, 5.0f));
+            wanted_handle = obj.handle;
+        }
     }
     g_Renderables.finishGrow();
+
+    auto pRenderable = g_Renderables.find(wanted_handle);
 
     input.poll();
     unsigned i = 0;
@@ -132,10 +153,46 @@ int main(int argc, char* argv[]){
             flag = DF_VIS_METALNESS;
         }
 
+        if(input.getKey(GLFW_KEY_F1)){
+            float& x = pRenderable->material_params.roughness_offset;
+            x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
+        }
+        else if(input.getKey(GLFW_KEY_F2)){
+            float& x = pRenderable->material_params.roughness_offset;
+            x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
+        }
+        
+        if(input.getKey(GLFW_KEY_F3)){
+            float& x = pRenderable->material_params.metalness_offset;
+            x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
+        }
+        else if(input.getKey(GLFW_KEY_F4)){
+            float& x = pRenderable->material_params.metalness_offset;
+            x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
+        }
+
+        if(input.getKey(GLFW_KEY_F5)){
+            float& x = pRenderable->material_params.bumpiness;
+            x = glm::clamp(x + 0.01f, 0.0f, 4.0f);
+        }
+        else if(input.getKey(GLFW_KEY_F6)){
+            float& x = pRenderable->material_params.bumpiness;
+            x = glm::clamp(x - 0.01f, 0.0f, 4.0f);
+        }
+
+        if(input.getKey(GLFW_KEY_F7)){
+            float& x = pRenderable->material_params.index_of_refraction;
+            x = glm::clamp(x + 0.01f, 0.001f, 100.0f);
+        }
+        else if(input.getKey(GLFW_KEY_F8)){
+            float& x = pRenderable->material_params.index_of_refraction;
+            x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
+        }
+
         g_Renderables.mainDraw(camera, flag, WIDTH, HEIGHT);
         window.swap();
     }
-
+    
     g_Renderables.deinit();
 
     return 0;
