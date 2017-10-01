@@ -52,7 +52,7 @@ int main(int argc, char* argv[]){
     Input input(window.getWindow());
 
     g_Renderables.init();
-    
+
     HashString sky_xform;
     u32 wanted_handle = 0;
     {
@@ -107,6 +107,14 @@ int main(int argc, char* argv[]){
             Transform* t = obj.transform;
             *t = glm::translate(*t, glm::vec3(10.0f, 0.0f, 5.0f));
             wanted_handle = obj.handle;
+        }
+
+        {
+            auto& obj = g_Renderables.grow();
+            obj.mesh = "plane.mesh";
+            obj.texture_channels = {"wood_floor_albedo.png", "wood_floor_material.png"};
+            Transform* t = obj.transform;
+            *t = glm::scale(glm::translate(*t, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(4.0f));
         }
     }
     g_Renderables.finishGrow();
