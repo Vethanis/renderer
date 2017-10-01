@@ -134,7 +134,7 @@ vec3 normalFromHeight(float h){
 
     const vec3 g = (r1 * dhdx + r2 * dhdy) / dot(dpdx, r1);
 
-    return normalize(MacroNormal - g * 0.001 * material_params.bumpiness);
+    return normalize(MacroNormal - g * 0.002 * material_params.bumpiness);
 }
 
 // -------------------------------------------------------------------------------------------

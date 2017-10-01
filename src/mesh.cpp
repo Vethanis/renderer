@@ -89,28 +89,13 @@ void Mesh::draw(){
     glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0); DebugGL();
 }
 
-void MeshStore::load_mesh(Mesh& mesh, HashString name){
-    auto* vb = m_vbs[name.m_hash];
-
-    if(vb){
-        mesh.upload(*vb);
-        return;
-    }
-
-    if(m_vbs.full()){
-        vb = m_vbs.reuse_near(name.m_hash);
-    }
-    else{
-        m_vbs.insert(name.m_hash, {});
-        vb = m_vbs[name.m_hash];
-    }
-
-    const char* filename = name;
+void ModelStore::load_model(mesh_interchange::Model& model, unsigned name){
+    const char* filename = HashString(name).str();
     assert(filename);
     FILE* pFile = fopen(filename, "rb");
 
     if(pFile){
-        vb->load(pFile);
+        model.load(pFile);
         fclose(pFile);
     }
     else{        
@@ -121,19 +106,16 @@ void MeshStore::load_mesh(Mesh& mesh, HashString name){
         assert(extptr);
         sprintf(extptr, "%s", ".fbx");
 
-        vb->parse(buff);
+        model.parse(buff);
         
         pFile = fopen(filename, "wb");
         assert(pFile);
-        vb->serialize(pFile);
+        model.serialize(pFile);
         fclose(pFile);
     }
-
-    mesh.upload(*vb);
-
-    printf("[mesh] loaded %s\n", filename);
 }
 
+ModelStore g_ModelStore;
 MeshStore g_MeshStore;
 
 HashString::operator Mesh*() const{

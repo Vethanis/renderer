@@ -12,6 +12,9 @@ void ImageStore::load_image(Image& image, unsigned name){
     const char* filename = hstr.str();
     assert(filename);
     int channels = 0;
+    if(image.image){
+        free(image.image);
+    }
     image.image = stbi_load(filename, &image.width, &image.height, &channels, 4);
     assert(image.image);
 

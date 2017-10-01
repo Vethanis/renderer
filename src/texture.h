@@ -4,6 +4,10 @@
 #include "glm/glm.hpp"
 #include "debugmacro.h"
 #include "store.h"
+#include "circular_queue.h"
+#include <thread>
+#include <mutex>
+#include <chrono>
 
 struct Texture{
     unsigned handle;
@@ -99,23 +103,53 @@ struct Image{
 
 struct ImageStore{
     Store<Image, 256> m_store;
+    CircularQueue<unsigned, 256> m_queue;
+    std::thread m_thread;
+    std::mutex m_mutex;
+    bool m_shouldRun;
+
+    void processQueue(){
+        while(m_shouldRun){
+
+            if(!m_queue.empty() && m_mutex.try_lock())
+            {
+                while(m_shouldRun && !m_queue.empty()){
+                    unsigned name = m_queue.pop();
+                    Image* m = nullptr;
+                    if(m_store.full()){
+                        m = m_store.reuse_near(name);
+                    }
+                    else{
+                        m_store.insert(name, Image());
+                        m = m_store[name];
+                    }
+            
+                    load_image(*m, name);
+                }
+                m_mutex.unlock();
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        }
+    }
+
+    ImageStore(){
+        m_shouldRun = true;
+        m_thread = std::thread(&ImageStore::processQueue, this);
+    }
+    ~ImageStore(){
+        m_shouldRun = false;
+    }
 
     void load_image(Image& img, unsigned name);
     Image* get(unsigned name){
         Image* m = m_store[name];
         if(m){return m;}
 
-        if(m_store.full()){
-            m = m_store.reuse_near(name);
+        if(m_queue.full() == false){
+            m_queue.set_push(name);
         }
-        else{
-            m_store.insert(name, {});
-            m = m_store[name];
-        }
-
-        load_image(*m, name);
-
-        return m;
+        return nullptr;
     }
     Image* operator[](unsigned name){ return get(name); }
 };
@@ -129,17 +163,21 @@ struct TextureStore{
         Texture* m = m_store[name];
         if(m){return m;}
 
-        Image* img = g_ImageStore[name];
-        assert(img);
-
-        if(m_store.full()){
-            m = m_store.reuse_near(name);
-            m->upload4uc(img->width, img->height, img->mip, img->image);
-        }
-        else{
-            m_store.insert(name, {});
-            m = m_store[name];
-            m->init4uc(img->width, img->height, img->mip, img->image);
+        if(g_ImageStore.m_mutex.try_lock())
+        {
+            Image* img = g_ImageStore[name];
+            if(img){
+                if(m_store.full()){
+                    m = m_store.reuse_near(name);
+                    m->upload4uc(img->width, img->height, img->mip, img->image);
+                }
+                else{
+                    m_store.insert(name, {});
+                    m = m_store[name];
+                    m->init4uc(img->width, img->height, img->mip, img->image);
+                }
+            }
+            g_ImageStore.m_mutex.unlock();
         }
 
         return m;

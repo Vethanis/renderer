@@ -39,11 +39,15 @@ struct TextureChannels {
 
     void bind(GLProgram& prog, int channel){
         Texture* t = albedo;
-        t->bind(0);
-        prog.setUniformInt("albedoSampler", 0);
+        if(t){
+            t->bind(0);
+            prog.setUniformInt("albedoSampler", 0);
+        }
         t = material;
-        t->bind(1);
-        prog.setUniformInt("materialSampler", 1);
+        if(t){
+            t->bind(1);
+            prog.setUniformInt("materialSampler", 1);
+        }
     }
 };
 
@@ -64,31 +68,27 @@ struct RenderResource{
     HashString mesh;
     HashString transform;
     u32 object_flag;
-    u32 handle;
 
-    RenderResource(){
-        static u32 s_handle = 0;
+    bool operator==(const RenderResource& other)const{
+        return false;
+    }
+    void init(){
+        transform = g_TransformStore.grow();
         object_flag = 0;
-        handle = s_handle++;
+    }
+    void deinit(){
+        g_TransformStore.release(transform.m_hash);
     }
     void bind(GLProgram& prog, UBO& material_ubo){
         prog.setUniformInt("object_flags", object_flag);
         texture_channels.bind(prog, 0);
         material_ubo.upload(&material_params, sizeof(MaterialParams));
     }
-    unsigned bucket() const {
-        const u32 thash = fnv(&texture_channels, sizeof(TextureChannels)) << 16;
-        return thash | (0xffff & mesh);
-    }
-    bool operator < (const RenderResource& o) const {
-        return bucket() < o.bucket();
-    }
-    bool operator > (const RenderResource& o) const {
-        return bucket() > o.bucket();
-    }
     void draw(){
         Mesh* m = mesh;
-        m->draw();
+        if(m){
+            m->draw();
+        }
     }
     u32 get_flag(u32 flag) const {
         return object_flag & flag;
@@ -99,10 +99,14 @@ struct RenderResource{
     void unset_flag(u32 flag){
         object_flag &= ~flag;
     }
+    void setTransform(const Transform& xform){
+        Transform* pXform = transform;
+        *pXform = xform;
+    }
 };
 
 struct Renderables{
-    Array<RenderResource, 256> resources;
+    Store<RenderResource, 1024> resources;
     UBO materialparam_ubo;
     GLProgram fwdProg;
     GLProgram zProg;
@@ -148,7 +152,7 @@ struct Renderables{
         glColorMask(0,0,0,0); DebugGL();
 
         zProg.bind();
-        for(RenderResource& res : resources){
+        for(auto& res : resources){
             Transform* M = res.transform;
             zProg.setUniform("MVP", VP * *M);
             res.draw();
@@ -176,7 +180,7 @@ struct Renderables{
         fwdProg.setUniformInt("seed", rand());
         fwdProg.setUniformInt("draw_flags", dflag);
         
-        for(RenderResource& res : resources){
+        for(auto& res : resources){
             Transform* M = res.transform;
             glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
 
@@ -188,27 +192,40 @@ struct Renderables{
             res.draw();
         }
     }
-    RenderResource& grow(){
-        RenderResource& r = resources.grow();
-        r.transform = g_TransformStore.grow();
-        return r;
-    }
-    RenderResource* find(u32 handle){
-        for(auto& i : resources){
-            if(i.handle == handle){
-                return &i;
-            }
-        }
-        return nullptr;
-    }
-    void finishGrow(){
-        resources.sort();
-    }
     void mainDraw(const Camera& cam, u32 dflag, s32 width, s32 height){
         cm.drawInto(cam);
         cm.bind(20, fwdProg);
         glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();
         fwdDraw(cam, cam.getVP(), dflag, width, height);
+    }
+    HashString grow(){
+        HashString handle = resources.grow();
+        resources[handle.m_hash]->init();
+        return handle;
+    }
+    void release(HashString handle){
+        resources.remove(handle.m_hash)->deinit();
+    }
+    RenderResource* operator[](unsigned i){
+        return resources[i];
+    }
+    HashString create(HashString mesh, HashString albedo, 
+        HashString material, const Transform& xform = Transform(), 
+        float roughness = 0.0f, float metalness = 0.0f, 
+        unsigned flags = 0){
+
+        HashString handle = resources.grow();
+        RenderResource* pRes = resources[handle.m_hash];
+        pRes->init();
+        pRes->mesh = mesh;
+        pRes->texture_channels.albedo = albedo;
+        pRes->texture_channels.material = material;
+        pRes->material_params.roughness_offset = roughness;
+        pRes->material_params.metalness_offset = metalness;
+        pRes->object_flag = flags;
+        pRes->setTransform(xform);
+
+        return handle;
     }
 };
 

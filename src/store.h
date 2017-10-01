@@ -6,15 +6,17 @@
 #include <cstdio>
 
 template<typename T, const unsigned cap>
-class Store{
+struct Store{
     static constexpr unsigned invalid_val = 0xffffff;
     static constexpr unsigned MSB = 1 << 31;
-    unsigned names[cap];
+    
     T data[cap];
+    unsigned names[cap];
     unsigned count;
+    unsigned capacity;
 
     bool is_deleted(unsigned key){
-        return (key >> 31) != 0;
+        return key == MSB;
     }
     unsigned mask(unsigned key){
         return key & (cap - 1);
@@ -52,10 +54,42 @@ class Store{
         }
         return invalid_val;
     }
-public:
     Store(){
-        memset(this, 0, sizeof(*this));
+        memset(names, 0, sizeof(unsigned) * cap);
+        count = 0;
+        capacity = cap;
     }
+
+    struct iterator{
+        Store* m_pStore;
+        unsigned m_idx;
+
+        void iterate(){
+            for(; m_idx < m_pStore->capacity; ++m_idx){
+                unsigned key = m_pStore->names[m_idx];
+                if(key && key != MSB)
+                    break;
+            }
+        }
+        iterator(Store* pStore, unsigned idx = 0) : m_pStore(pStore), m_idx(idx){
+            iterate();
+        }
+        bool operator != (const iterator& o)const{
+            return m_idx != o.m_idx;
+        }
+        T& operator*(){
+            return m_pStore->data[m_idx];
+        }
+        iterator& operator++(){
+            ++m_idx;
+            iterate();
+            return *this;
+        }
+    };
+
+    iterator begin(){ return iterator(this); }
+    iterator end(){ return iterator(this, capacity); }
+
     void insert(unsigned key, const T& _val){
         assert(count < cap);
         unsigned pos = mask(key);
@@ -109,7 +143,10 @@ public:
     }
     T* get(unsigned key){
         unsigned loc = index_of(key);
-        return loc == invalid_val ? nullptr : data + loc;
+        if(loc == invalid_val){
+            return nullptr;
+        }
+        return data + loc;
     }
     T* get(const char* name){
         return get(fnv(name));
@@ -166,7 +203,8 @@ public:
         assert(full() == false);
         static unsigned key = 1;
         while(get(key)){
-            key = ((key + 1) & 0x7fffffff) | 1;
+            key = ((key + 1) & 0x7fffffff);
+            key = key ? key : 1;
         }
         insert(key, {});
         return key;

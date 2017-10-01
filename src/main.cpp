@@ -54,7 +54,7 @@ int main(int argc, char* argv[]){
     g_Renderables.init();
 
     HashString sky_xform;
-    u32 wanted_handle = 0;
+    HashString suzanne;
     {
         const HashString mesh("ball.mesh");
         const TextureChannels channels[] = {
@@ -66,60 +66,28 @@ int main(int argc, char* argv[]){
             for(float x = 0.0f; x <= 10.0f; x += 1.0f){
                 for(float y = 0.0f; y <= 10.0f; y += 1.0f){
                     glm::vec3 pos = glm::vec3(x + 10.0f * float(i), y, 0.0f);
-                    auto& obj = g_Renderables.grow();
-    
-                    obj.mesh = mesh;
-    
-                    obj.texture_channels = channels[i];
-                    auto& mat = obj.material_params;
-                    mat.roughness_offset = x / 10.0f;
-                    mat.metalness_offset = y / 10.0f;
-    
-                    Transform* t = obj.transform;
-                    *t = glm::translate(*t, pos) * glm::scale(*t, glm::vec3(0.5f));
+
+                    g_Renderables.create(mesh, channels[i].albedo, channels[i].material, 
+                        glm::translate({}, pos) * glm::scale({}, glm::vec3(0.5f)),
+                        x / 10.0f, y / 10.0f);
                 }
             }
         }
 
-        {        
-            auto& obj = g_Renderables.grow();
-            obj.mesh = "sphere.mesh";
-            obj.texture_channels = {"sky_diffuse.png", "flat_red_material.png"};
-            obj.set_flag(ODF_SKY);
-            Transform* t = obj.transform;
-            *t = glm::scale(*t, glm::vec3(4.0f));
-
-            sky_xform = obj.transform;
+        {
+            HashString handle = g_Renderables.create("sphere.mesh", "sky_diffuse.png", "flat_red_material.png",
+                glm::scale({}, glm::vec3(4.0f)), 0.0f, 0.0f, ODF_SKY);
+            RenderResource* obj = handle;
+            sky_xform = obj->transform;
         }
         
-        {
-            auto& obj = g_Renderables.grow();
-            obj.mesh = "suzanne.mesh";
-            obj.texture_channels = channels[0];
-            Transform* t = obj.transform;
-            *t = glm::translate(*t, glm::vec3(5.0f, 0.0f, 5.0f));
-        }
-
-        {
-            auto& obj = g_Renderables.grow();
-            obj.mesh = "suzanne.mesh";
-            obj.texture_channels = channels[1];
-            Transform* t = obj.transform;
-            *t = glm::translate(*t, glm::vec3(10.0f, 0.0f, 5.0f));
-            wanted_handle = obj.handle;
-        }
-
-        {
-            auto& obj = g_Renderables.grow();
-            obj.mesh = "plane.mesh";
-            obj.texture_channels = {"wood_floor_albedo.png", "wood_floor_material.png"};
-            Transform* t = obj.transform;
-            *t = glm::scale(glm::translate(*t, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(4.0f));
-        }
+        suzanne = g_Renderables.create("suzanne.mesh", channels[0].albedo, channels[0].material,
+            glm::translate({}, glm::vec3(5.0f, 0.0f, 5.0f)));
+        g_Renderables.create("suzanne.mesh", channels[1].albedo, channels[1].material,
+                glm::translate({}, glm::vec3(10.0f, 0.0f, 5.0f)));
+        g_Renderables.create("plane.mesh", "wood_floor_albedo.png", "wood_floor_material.png", 
+            glm::scale(glm::translate({}, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(4.0f)));
     }
-    g_Renderables.finishGrow();
-
-    auto pRenderable = g_Renderables.find(wanted_handle);
 
     input.poll();
     unsigned i = 0;
@@ -162,37 +130,45 @@ int main(int argc, char* argv[]){
         }
 
         if(input.getKey(GLFW_KEY_F1)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.roughness_offset;
             x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
         }
         else if(input.getKey(GLFW_KEY_F2)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.roughness_offset;
             x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
         }
         
         if(input.getKey(GLFW_KEY_F3)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.metalness_offset;
             x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
         }
         else if(input.getKey(GLFW_KEY_F4)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.metalness_offset;
             x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
         }
 
         if(input.getKey(GLFW_KEY_F5)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.bumpiness;
             x = glm::clamp(x + 0.01f, 0.0f, 4.0f);
         }
         else if(input.getKey(GLFW_KEY_F6)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.bumpiness;
             x = glm::clamp(x - 0.01f, 0.0f, 4.0f);
         }
 
         if(input.getKey(GLFW_KEY_F7)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.index_of_refraction;
             x = glm::clamp(x + 0.01f, 0.001f, 100.0f);
         }
         else if(input.getKey(GLFW_KEY_F8)){
+            RenderResource* pRenderable = suzanne;
             float& x = pRenderable->material_params.index_of_refraction;
             x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
         }
