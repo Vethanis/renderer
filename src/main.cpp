@@ -86,80 +86,119 @@ int main(int argc, char* argv[]){
     input.poll();
     unsigned i = 0;
     float t = (float)glfwGetTime();
-    u32 flag = DF_DIRECT;
+    u32 flag = DF_INDIRECT;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
 
-        if(input.getKey(GLFW_KEY_1)){
-            flag = DF_INDIRECT;
-        }
-        else if(input.getKey(GLFW_KEY_2)){
-            flag = DF_DIRECT;
-        }
-        else if(input.getKey(GLFW_KEY_3)){
-            flag = DF_REFLECT;
-        }
-        else if(input.getKey(GLFW_KEY_4)){
-            flag = DF_NORMALS;
-        }
-        else if(input.getKey(GLFW_KEY_5)){
-            flag = DF_UV;
-        }
-        else if(input.getKey(GLFW_KEY_6)){
-            flag = DF_VIS_CUBEMAP;
-        }
-        else if(input.getKey(GLFW_KEY_7)){
-            flag = DF_VIS_REFRACT;
-        }
-        else if(input.getKey(GLFW_KEY_8)){
-            flag = DF_VIS_ROUGHNESS;
-        }
-        else if(input.getKey(GLFW_KEY_9)){
-            flag = DF_VIS_METALNESS;
-        }
-
-        if(input.getKey(GLFW_KEY_F1)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.roughness_offset;
-            x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
-        }
-        else if(input.getKey(GLFW_KEY_F2)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.roughness_offset;
-            x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
-        }
-        
-        if(input.getKey(GLFW_KEY_F3)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.metalness_offset;
-            x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
-        }
-        else if(input.getKey(GLFW_KEY_F4)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.metalness_offset;
-            x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
-        }
-
-        if(input.getKey(GLFW_KEY_F5)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.bumpiness;
-            x = glm::clamp(x + 0.01f, 0.0f, 4.0f);
-        }
-        else if(input.getKey(GLFW_KEY_F6)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.bumpiness;
-            x = glm::clamp(x - 0.01f, 0.0f, 4.0f);
-        }
-
-        if(input.getKey(GLFW_KEY_F7)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.index_of_refraction;
-            x = glm::clamp(x + 0.01f, 0.001f, 100.0f);
-        }
-        else if(input.getKey(GLFW_KEY_F8)){
-            RenderResource* pRenderable = suzanne;
-            float& x = pRenderable->material_params.index_of_refraction;
-            x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
+        for(int key : input){
+            switch(key){
+                case GLFW_KEY_E:
+                {
+                    g_Renderables.sunDirection = -camera.getAxis();
+                }
+                break;
+                case GLFW_KEY_1:
+                {
+                    flag = DF_INDIRECT;
+                }
+                break;
+                case GLFW_KEY_2:
+                {
+                    flag = DF_DIRECT;
+                }
+                break;
+                case GLFW_KEY_3:
+                {
+                    flag = DF_REFLECT;
+                }
+                break;
+                case GLFW_KEY_4:
+                {
+                    flag = DF_NORMALS;
+                }
+                break;
+                case GLFW_KEY_5:
+                {
+                    flag = DF_UV;
+                }
+                break;
+                case GLFW_KEY_6:
+                {
+                    flag = DF_VIS_CUBEMAP;
+                }
+                break;
+                case GLFW_KEY_7:
+                {
+                    flag = DF_VIS_REFRACT;
+                }
+                break;
+                case GLFW_KEY_8:
+                {
+                    flag = DF_VIS_ROUGHNESS;
+                }
+                break;
+                case GLFW_KEY_9:
+                {
+                    flag = DF_VIS_METALNESS;
+                }
+                break;
+                case GLFW_KEY_F1:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.roughness_offset;
+                    x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
+                }
+                break;
+                case GLFW_KEY_F2:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.roughness_offset;
+                    x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
+                }
+                break;
+                case GLFW_KEY_F3:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.metalness_offset;
+                    x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
+                }
+                break;
+                case GLFW_KEY_F4:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.metalness_offset;
+                    x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
+                }
+                break;
+                case GLFW_KEY_F5:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.bumpiness;
+                    x = glm::clamp(x + 0.01f, 0.0f, 4.0f);
+                }
+                break;
+                case GLFW_KEY_F6:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.bumpiness;
+                    x = glm::clamp(x - 0.01f, 0.0f, 4.0f);
+                }
+                break;
+                case GLFW_KEY_F7:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.index_of_refraction;
+                    x = glm::clamp(x + 0.01f, 0.001f, 100.0f);
+                }
+                break;
+                case GLFW_KEY_F8:
+                {
+                    RenderResource* pRenderable = suzanne;
+                    float& x = pRenderable->material_params.index_of_refraction;
+                    x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
+                }
+                break;
+            }
         }
 
         g_gBuffer.draw(camera, flag);

@@ -3,6 +3,7 @@
 #include "myglheaders.h"
 #include "camera.h"
 #include "glm/glm.hpp"
+#include "array.h"
 
 bool Input::m_rightMouseDown = false;
 bool Input::m_leftMouseDown = false;
@@ -13,6 +14,9 @@ float Input::m_cursorY = 0.0f;
 float Input::m_relCursorX = 0.0f;
 float Input::m_relCursorY = 0.0f;
 
+Array<int, 1024> g_downKeys;
+Array<int, 1024> g_upKeys;
+
 Input::Input(GLFWwindow* window) : m_glwindow(window){
     glfwSetInputMode(m_glwindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetKeyCallback(m_glwindow, key_callback);
@@ -22,10 +26,14 @@ Input::Input(GLFWwindow* window) : m_glwindow(window){
 }
 
 void Input::poll(){
+    g_downKeys.clear();
+    g_upKeys.clear();
     glfwPollEvents();
 }
 
 void Input::poll(float dt, Camera& cam){
+    g_downKeys.clear();
+    g_upKeys.clear();
     glfwPollEvents();
     glm::vec3 v(0.0f);
     v.z -= glfwGetKey(m_glwindow, GLFW_KEY_W) ? dt : 0.0f;
@@ -76,6 +84,12 @@ float Input::relCursorY(){
 
 void Input::mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
     if(action == GLFW_PRESS){
+        g_downKeys.grow() = button;
+    }
+    else if(action == GLFW_RELEASE){
+        g_upKeys.grow() = button;
+    }
+    if(action == GLFW_PRESS){
         if(button == GLFW_MOUSE_BUTTON_RIGHT)
             Input::m_rightMouseDown = true;
         else if(button == GLFW_MOUSE_BUTTON_LEFT)
@@ -102,10 +116,29 @@ void Input::scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
 }
 
 void Input::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
+    if(action == GLFW_PRESS){
+        g_downKeys.grow() = key;
+    }
+    else if(action == GLFW_RELEASE){
+        g_upKeys.grow() = key;
+    }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
 bool Input::getKey(int key){
     return glfwGetKey(m_glwindow, key);
+}
+
+const int* Input::begin(){
+    return g_downKeys.begin();
+}
+const int* Input::end(){
+    return g_downKeys.end();
+}
+const int* Input::upBegin(){
+    return g_upKeys.begin();
+}
+const int* Input::downEnd(){
+    return g_upKeys.end();
 }

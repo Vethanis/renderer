@@ -156,7 +156,7 @@ material getMaterial(){
     mat.roughness = hmr.z * 
         material_params.roughness_multiplier + 
         material_params.roughness_offset;
-    mat.roughness = clamp(mat.roughness, 0.22, 1.0);
+    mat.roughness = clamp(0.22 + 0.78 * mat.roughness, 0.22, 1.0);
 
     return mat;
 }
@@ -271,7 +271,7 @@ vec3 indirect_lighting(inout uint s){
     light *= scaling * scaling;
     light = mix(light, 
         pbr_lighting(V, sunDirection, mat, sunColor),
-        0.25);
+        0.2);
     light += vec3(0.01) * mat.albedo;
 
     return light;
@@ -291,11 +291,6 @@ vec3 visualizeNormals(){
 
 vec3 visualizeUVs(){
     return vec3(fract(UV.xy), 0.0);
-}
-
-vec3 skymap_lighting(){
-    vec3 sky = vec3(0.0);
-    return sky;
 }
 
 vec3 visualizeCubemap(){

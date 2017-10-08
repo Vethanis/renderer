@@ -80,7 +80,7 @@ material getMaterial(){
     mat.roughness = hmr.z * 
         material_params.roughness_multiplier + 
         material_params.roughness_offset;
-    mat.roughness = clamp(mat.roughness, 0.22, 1.0);
+    mat.roughness = clamp(0.22 + 0.78 * mat.roughness, 0.22, 1.0);
 
     return mat;
 }

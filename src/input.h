@@ -28,5 +28,9 @@ public:
     static float relCursorX();
     static float relCursorY();
     bool getKey(int key);
+    const int* begin();
+    const int* end();
+    static const int* upBegin();
+    static const int* downEnd();
 };
 #endif

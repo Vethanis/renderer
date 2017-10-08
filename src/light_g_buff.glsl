@@ -235,7 +235,7 @@ vec3 indirect_lighting(inout uint s){
     light *= scaling * scaling;
     light = mix(light, 
         pbr_lighting(V, sunDirection, mat, sunColor),
-        0.25);
+        0.2);
     light += vec3(0.01) * mat_albedo(mat);
 
     return light;
@@ -294,8 +294,8 @@ vec2 rsi(vec3 r0, vec3 rd, float sr) {
 
 // https://github.com/wwwtyro/glsl-atmosphere
 vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, float kMie, float shRlh, float shMie, float g) {
-    const int iSteps = 16;
-    const int jSteps = 8;
+    const int iSteps = 32;
+    const int jSteps = 16;
     const float PI = 3.141592;
 
     const vec3 pSun = sunDirection;
