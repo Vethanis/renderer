@@ -5,12 +5,11 @@
 #include "mesh.h"
 #include "texture.h"
 #include "glprogram.h"
-#include "glscreen.h"
-#include "light.h"
 #include "camera.h"
 #include "transform.h"
-#include "cubemap.h"
 #include "UBO.h"
+#include "glscreen.h"
+#include "depthstate.h"
 #include <random>
 
 // ------------------------------------------------------------------------
@@ -27,6 +26,7 @@
 #define DF_VIS_REFRACT      7
 #define DF_VIS_ROUGHNESS    8
 #define DF_VIS_METALNESS    9
+#define DF_GBUFF            10
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -62,25 +62,22 @@ struct MaterialParams {
     float _pad3;
 };
 
-struct RenderResource{
+struct RenderResource {
     TextureChannels texture_channels;
     MaterialParams material_params;
     HashString mesh;
     HashString transform;
-    u32 object_flag;
 
     bool operator==(const RenderResource& other)const{
         return false;
     }
     void init(){
         transform = g_TransformStore.grow();
-        object_flag = 0;
     }
     void deinit(){
         g_TransformStore.release(transform.m_hash);
     }
     void bind(GLProgram& prog, UBO& material_ubo){
-        prog.setUniformInt("object_flags", object_flag);
         texture_channels.bind(prog, 0);
         material_ubo.upload(&material_params, sizeof(MaterialParams));
     }
@@ -90,27 +87,19 @@ struct RenderResource{
             m->draw();
         }
     }
-    u32 get_flag(u32 flag) const {
-        return object_flag & flag;
-    }
-    void set_flag(u32 flag){
-        object_flag |= flag;
-    }
-    void unset_flag(u32 flag){
-        object_flag &= ~flag;
-    }
     void setTransform(const Transform& xform){
         Transform* pXform = transform;
         *pXform = xform;
     }
 };
 
-struct Renderables{
+struct Renderables {
     Store<RenderResource, 1024> resources;
     UBO materialparam_ubo;
     GLProgram fwdProg;
     GLProgram zProg;
-    Cubemap cm;
+    GLProgram defProg;
+    GLProgram skyProg;
 
     glm::vec3 sunDirection;
     glm::vec3 sunColor;
@@ -120,6 +109,8 @@ struct Renderables{
         glEnable(GL_CULL_FACE); DebugGL();
         glCullFace(GL_BACK); DebugGL();
 
+        DrawMode::init();
+
         const char* fwdFilenames[] = {
             "vert.glsl",
             "fwdFrag.glsl"
@@ -128,28 +119,48 @@ struct Renderables{
             "zvert.glsl",
             "zfrag.glsl"
         };
+        const char* defFilenames[] = {
+            "vert.glsl",
+            "write_to_gbuff.glsl"
+        };
 
         fwdProg.setup(fwdFilenames, 2);
         zProg.setup(zFilenames, 2);
+        defProg.setup(defFilenames, 2);
+
+        skyProg.init(); 
+        skyProg.addShader(GLScreen::vertexShader());
+        int shader = skyProg.addShader("skyfrag.glsl", GL_FRAGMENT_SHADER);
+        skyProg.link();
+        skyProg.freeShader(shader);
 
         sunDirection = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
         sunColor = glm::vec3(1.0f, 0.75f, 0.5f);
-
-        cm.init(1024);
 
         materialparam_ubo.init(nullptr, sizeof(MaterialParams), "materialparams_ubo", &fwdProg.m_id, 1);
     }
     void deinit(){
         fwdProg.deinit();
         zProg.deinit();
-        cm.deinit();
+        defProg.deinit();
+        skyProg.deinit();
         materialparam_ubo.deinit();
     }
+    void drawSky(const glm::vec3& eye, const Transform& IVP){
+        DrawModeContext ctx(GL_LEQUAL, GL_TRUE, 1);
+        skyProg.bind();
+        
+        skyProg.setUniform("IVP", IVP);
+        skyProg.setUniform("sunDirection", sunDirection);
+        skyProg.setUniform("eye", eye);
+
+        GLScreen::draw();
+    }
     void prePass(const Transform& VP){
-        glDepthFunc(GL_LESS); DebugGL();
-        glDepthMask(GL_TRUE); DebugGL();
+        DepthContext less(GL_LESS);
+        DepthMaskContext dmask(GL_TRUE);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
-        glColorMask(0,0,0,0); DebugGL();
+        ColorMaskContext nocolor(0);
 
         zProg.bind();
         for(auto& res : resources){
@@ -157,19 +168,13 @@ struct Renderables{
             zProg.setUniform("MVP", VP * *M);
             res.draw();
         }
-
-        glDepthFunc(GL_LEQUAL); DebugGL();
-        glColorMask(1,1,1,1); DebugGL();
-        glDepthMask(GL_FALSE); DebugGL();
     }
     void fwdDraw(const Camera& cam, const Transform& VP, u32 dflag, s32 width, s32 height){
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, width, height); DebugGL();
 
-        #if PREPASS_ENABLED
-            prePass(VP);
-        #else
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
-        #endif
+        prePass(VP);
+
+        DrawModeContext ctx(GL_LEQUAL, GL_FALSE, 1);
 
         fwdProg.bind();
 
@@ -182,7 +187,7 @@ struct Renderables{
         
         for(auto& res : resources){
             Transform* M = res.transform;
-            glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
+            const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
 
             fwdProg.setUniform("MVP", VP * *M);
             fwdProg.setUniform("M", *M);
@@ -191,12 +196,29 @@ struct Renderables{
             res.bind(fwdProg, materialparam_ubo);
             res.draw();
         }
+
+        drawSky(cam.getEye(), glm::inverse(VP));
     }
-    void mainDraw(const Camera& cam, u32 dflag, s32 width, s32 height){
-        cm.drawInto(cam);
-        cm.bind(20, fwdProg);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();
-        fwdDraw(cam, cam.getVP(), dflag, width, height);
+    void defDraw(const Camera& cam, const Transform& VP, s32 width, s32 height){
+        glViewport(0, 0, width, height); DebugGL();
+        
+        prePass(VP);
+
+        DrawModeContext ctx(GL_LEQUAL, GL_FALSE, 1);
+
+        defProg.bind();
+
+        for(auto& res : resources){
+            Transform* M = res.transform;
+            const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
+
+            defProg.setUniform("MVP", VP * *M);
+            defProg.setUniform("M", *M);
+            defProg.setUniform("IM", IM);
+
+            res.bind(defProg, materialparam_ubo);
+            res.draw();
+        }
     }
     HashString grow(){
         HashString handle = resources.grow();
@@ -222,7 +244,6 @@ struct Renderables{
         pRes->texture_channels.material = material;
         pRes->material_params.roughness_offset = roughness;
         pRes->material_params.metalness_offset = metalness;
-        pRes->object_flag = flags;
         pRes->setTransform(xform);
 
         return handle;

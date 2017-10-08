@@ -62,7 +62,7 @@ int GLProgram::getUniformLocation(HashString hash){
         pLoc = locations[hash.m_hash];
         if(*pLoc == -1){
             printf("[GLProgram] Invalid uniform detected: %s\n", loc_str);
-            //assert(false);
+            assert(false);
         }
     }
     return *pLoc;

@@ -16,9 +16,13 @@ inline glm::vec3 getForward(const glm::mat4& m){
 }
 
 class Camera{
-    glm::mat4 P, V;
+    glm::mat4 P, V, VP, IVP;
     glm::vec3 m_eye, m_at;
     float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
+    inline void calculateMatrices(){
+        VP = P * V;
+        IVP = glm::inverse(VP);
+    }
 public:
     Camera(float fov=glm::radians(90.0f), float ratio=16.0f/9.0f, float near=0.1f, 
         float far=100.0f, const glm::vec3& eye=glm::vec3(0.0f), 
@@ -35,14 +39,17 @@ public:
         m_at.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
         m_at += m_eye;
         V = glm::lookAt(m_eye, m_at, up_vec);
+        calculateMatrices();
     }
     inline void resize(int width, int height){
         m_whratio = (float)width / (float)height;
         P = glm::perspective(m_fov, m_whratio, m_near, m_far);
+        calculateMatrices();
     }
     inline void setFov(float fov){
         m_fov = glm::radians(fov);
         P = glm::perspective(m_fov, m_whratio, m_near, m_far);
+        calculateMatrices();
     }
     inline const glm::vec3& getEye()const {return m_eye;}
     inline const glm::vec3& getAt()const {return m_at;}
@@ -63,11 +70,13 @@ public:
     }
     inline const glm::mat4& getV()const{return V;}
     inline const glm::mat4& getP()const{return P;}
-    inline glm::mat4 getVP()const{return P * V;}
+    inline const glm::mat4& getVP()const{return VP;}
+    inline const glm::mat4& getIVP()const{ return IVP; }
     inline const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
     inline void setPlanes(float near, float far){
         m_near = near; m_far = far;
         P = glm::perspective(m_fov, m_whratio, m_near, m_far);
+        calculateMatrices();
     }
     inline float getAR(){return m_whratio;}
 };

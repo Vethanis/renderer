@@ -129,7 +129,7 @@ struct ImageStore{
                 m_mutex.unlock();
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
 
@@ -139,6 +139,7 @@ struct ImageStore{
     }
     ~ImageStore(){
         m_shouldRun = false;
+        m_thread.join();
     }
 
     void load_image(Image& img, unsigned name);

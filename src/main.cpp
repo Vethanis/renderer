@@ -5,6 +5,7 @@
 #include "window.h"
 #include "input.h"
 #include "renderobject.h"
+#include "gbuffer.h"
 
 #include <random>
 #include <ctime>
@@ -52,8 +53,8 @@ int main(int argc, char* argv[]){
     Input input(window.getWindow());
 
     g_Renderables.init();
+    g_gBuffer.init(WIDTH, HEIGHT);
 
-    HashString sky_xform;
     HashString suzanne;
     {
         const HashString mesh("ball.mesh");
@@ -63,8 +64,8 @@ int main(int argc, char* argv[]){
         };
 
         for(int i = 0; i < 2; ++i){
-            for(float x = 0.0f; x <= 10.0f; x += 1.0f){
-                for(float y = 0.0f; y <= 10.0f; y += 1.0f){
+            for(float x = 0.0f; x < 10.0f; x += 1.0f){
+                for(float y = 0.0f; y < 10.0f; y += 1.0f){
                     glm::vec3 pos = glm::vec3(x + 10.0f * float(i), y, 0.0f);
 
                     g_Renderables.create(mesh, channels[i].albedo, channels[i].material, 
@@ -72,13 +73,6 @@ int main(int argc, char* argv[]){
                         x / 10.0f, y / 10.0f);
                 }
             }
-        }
-
-        {
-            HashString handle = g_Renderables.create("sphere.mesh", "sky_diffuse.png", "flat_red_material.png",
-                glm::scale({}, glm::vec3(4.0f)), 0.0f, 0.0f, ODF_SKY);
-            RenderResource* obj = handle;
-            sky_xform = obj->transform;
         }
         
         suzanne = g_Renderables.create("suzanne.mesh", channels[0].albedo, channels[0].material,
@@ -95,11 +89,6 @@ int main(int argc, char* argv[]){
     u32 flag = DF_DIRECT;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
-
-        {
-            Transform* t = sky_xform;
-            (*t)[3] = glm::vec4(camera.getEye().x, camera.getEye().y, camera.getEye().z, 1.0f);
-        }
 
         if(input.getKey(GLFW_KEY_1)){
             flag = DF_INDIRECT;
@@ -173,11 +162,12 @@ int main(int argc, char* argv[]){
             x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
         }
 
-        g_Renderables.mainDraw(camera, flag, WIDTH, HEIGHT);
+        g_gBuffer.draw(camera, flag);
         window.swap();
     }
     
     g_Renderables.deinit();
+    g_gBuffer.deinit();
 
     return 0;
 }

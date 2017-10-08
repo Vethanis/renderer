@@ -14,6 +14,10 @@ struct Array{
         assert(_tail < _capacity);
         return _data[_tail++];
     }
+    T& pop(){
+        assert(_tail > 0);
+        return _data[_tail--];
+    }
     T* begin(){
         return _data;
     }
@@ -25,6 +29,14 @@ struct Array{
     }
     const T* end()const{
         return _data + _tail;
+    }
+    T& back(){ 
+        assert(_tail > 0);
+        return _data[_tail - 1]; 
+    }
+    const T& back()const{ 
+        assert(_tail > 0);
+        return _data[_tail - 1];
     }
     T& operator[](int idx){
         return _data[idx];

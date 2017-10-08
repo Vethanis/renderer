@@ -51,7 +51,7 @@ struct ModelStore {
                 m_mutex.unlock();
             }
             
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
     
@@ -61,6 +61,7 @@ struct ModelStore {
     }
     ~ModelStore(){
         m_shouldRun = false;
+        m_thread.join();
     }
     void load_model(mesh_interchange::Model& model, unsigned name);
     mesh_interchange::Model* get(unsigned name){

@@ -10,7 +10,7 @@ namespace GLScreen {
     layout(location = 0) in vec2 uv;\n\
     out vec2 fragUv;\n\
     void main(){\n\
-        gl_Position = vec4(uv, 0.0, 1.0);\n\
+        gl_Position = vec4(uv, 1.0, 1.0);\n\
         fragUv = uv * 0.5 + 0.5;\n\
     }\n\
     ";

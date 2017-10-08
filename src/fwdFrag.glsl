@@ -18,11 +18,10 @@ uniform vec3 sunColor;
 uniform vec3 eye;
 uniform int seed;
 uniform int draw_flags;
-uniform int object_flags;
 
 // ------------------------------------------------------------------------
 
-#define PREPASS_ENABLED     1
+#define PREPASS_ENABLED     0
 
 #define DF_DIRECT           0
 #define DF_INDIRECT         1
@@ -34,6 +33,7 @@ uniform int object_flags;
 #define DF_VIS_REFRACT      7
 #define DF_VIS_ROUGHNESS    8
 #define DF_VIS_METALNESS    9
+#define DF_GBUFF            10
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -116,7 +116,7 @@ vec3 cosHemi(vec3 T, vec3 B, vec3 N, vec2 X){
 // https://agraphicsguy.wordpress.com/2015/11/01/sampling-microfacet-brdf/
 // returns a microfacet normal. reflect across it to get a good light vector
 vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, const vec3 N){
-    const float alpha = roughness * roughness;
+    const float alpha = roughness; //roughness * roughness;
     const float theta = fasterAtan(alpha * sqrt(X[0] / (1.0 - X[0])));
     const float phi = 2.0 * 3.141592 * X[1];
     return toCartesian(T, B, N, phi, theta);
@@ -134,7 +134,7 @@ vec3 normalFromHeight(float h){
 
     const vec3 g = (r1 * dhdx + r2 * dhdy) / dot(dpdx, r1);
 
-    return normalize(MacroNormal - g * 0.002 * material_params.bumpiness);
+    return normalize(MacroNormal + g * 0.0015 * material_params.bumpiness);
 }
 
 // -------------------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ material getMaterial(){
     const vec4 hmr = texture(materialSampler, UV).rgba;
 
     mat.normal = normalFromHeight(hmr.x);
-    mat.albedo = pow(albedo.rgb, vec3(2.2));
+    mat.albedo = albedo.rgb;
 
     mat.metalness = hmr.y * 
         material_params.metalness_multiplier +
@@ -156,7 +156,7 @@ material getMaterial(){
     mat.roughness = hmr.z * 
         material_params.roughness_multiplier + 
         material_params.roughness_offset;
-    mat.roughness = clamp(mat.roughness, 0.1, 1.0);
+    mat.roughness = clamp(mat.roughness, 0.22, 1.0);
 
     return mat;
 }
@@ -286,7 +286,7 @@ vec3 visualizeReflections(){
 
 vec3 visualizeNormals(){
     const material mat = getMaterial();
-    return mat.normal;
+    return mat.normal * 0.5 + vec3(0.5);
 }
 
 vec3 visualizeUVs(){
@@ -295,9 +295,6 @@ vec3 visualizeUVs(){
 
 vec3 skymap_lighting(){
     vec3 sky = vec3(0.0);
-    const material mat = getMaterial();
-    sky += max(0.0, pow(dot(mat.normal, -sunDirection), 200.0)) * sunColor * 1000000.0;
-    sky += mat.albedo;
     return sky;
 }
 
@@ -327,47 +324,41 @@ vec3 visualizeMetalness(){
 
 void main(){
     uint s = uint(seed) 
-        ^ uint(gl_FragCoord.x * 10.0) 
-        ^ uint(gl_FragCoord.y * 1000.0);
+        ^ uint(gl_FragCoord.x * 39163.0) 
+        ^ uint(gl_FragCoord.y * 64601.0);
 
     vec3 lighting;
-    if(object_flags == ODF_SKY){
-        lighting = skymap_lighting();
-    }
-    else {
-        switch(draw_flags){
-            default:
-            case DF_DIRECT:
-                lighting = direct_lighting(s);
-                break;
-            case DF_INDIRECT:
-                lighting = indirect_lighting(s);
-                break;
-            case DF_NORMALS:
-                lighting = visualizeNormals();
-                break;
-            case DF_REFLECT:
-                lighting = visualizeReflections();
-                break;
-            case DF_UV:
-                lighting = visualizeUVs();
-                break;
-            case DF_DIRECT_CUBEMAP:
-                lighting = direct_lighting(s);
-                break;
-            case DF_VIS_CUBEMAP:
-                lighting = visualizeCubemap();
-                break;
-            case DF_VIS_REFRACT:
-                lighting = visualizeDiffraction();
-                break;
-            case DF_VIS_ROUGHNESS:
-                lighting = visualizeRoughness();
-                break;
-            case DF_VIS_METALNESS:
-                lighting = visualizeMetalness();
-                break;
-        }
+    switch(draw_flags)
+    {
+        default:
+        case DF_DIRECT:
+        case DF_DIRECT_CUBEMAP:
+            lighting = direct_lighting(s);
+            break;
+        case DF_INDIRECT:
+            lighting = indirect_lighting(s);
+            break;
+        case DF_NORMALS:
+            lighting = visualizeNormals();
+            break;
+        case DF_REFLECT:
+            lighting = visualizeReflections();
+            break;
+        case DF_UV:
+            lighting = visualizeUVs();
+            break;
+        case DF_VIS_CUBEMAP:
+            lighting = visualizeCubemap();
+            break;
+        case DF_VIS_REFRACT:
+            lighting = visualizeDiffraction();
+            break;
+        case DF_VIS_ROUGHNESS:
+            lighting = visualizeRoughness();
+            break;
+        case DF_VIS_METALNESS:
+            lighting = visualizeMetalness();
+            break;
     }
 
     lighting.rgb.x += 0.0001 * randBi(s);

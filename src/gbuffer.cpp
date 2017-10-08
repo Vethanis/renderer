@@ -9,27 +9,25 @@ void GBuffer::init(int w, int h){
     width = w;
     height = h;
 
-    lightbuff.init(9);
-
     glGenFramebuffers(1, &buff);
     glBindFramebuffer(GL_FRAMEBUFFER, buff);
 
     glGenTextures(3, &posbuff);
 
     glBindTexture(GL_TEXTURE_2D, posbuff); DebugGL();;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, NULL); DebugGL();;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL); DebugGL();;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); DebugGL();;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); DebugGL();;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, posbuff, 0); DebugGL();;
 
     glBindTexture(GL_TEXTURE_2D, normbuff); DebugGL();;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, NULL); DebugGL();;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL); DebugGL();;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); DebugGL();;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); DebugGL();;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, normbuff, 0); DebugGL();;
 
     glBindTexture(GL_TEXTURE_2D, matbuff); DebugGL();;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL); DebugGL();;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL); DebugGL();;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); DebugGL();;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); DebugGL();;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, matbuff, 0); DebugGL();;
@@ -54,11 +52,10 @@ void GBuffer::init(int w, int h){
     prog.link();
     prog.freeShader(shader);
 
-    //cmap.init(w, h);
+    cmap.init(512);
 }
 void GBuffer::deinit(){
     prog.deinit();
-    lightbuff.deinit();
     cmap.deinit();
 
     glDeleteRenderbuffers(1, &rboDepth);
@@ -66,44 +63,56 @@ void GBuffer::deinit(){
     glDeleteFramebuffers(1, &buff);
 }
 
-void GBuffer::updateLights(const LightSet& lights){
-    lightbuff.upload(lights.begin(), lights.bytes());
-}
-
 GBuffer g_gBuffer;
 
-void GBuffer::draw(const Camera& cam){
-    static const int mat_name = prog.getUniformLocation("materialSampler");
-    static const int seed_name = prog.getUniformLocation("seed");
-    static const int eye_name = prog.getUniformLocation("eye");
-    static const int pos_name = prog.getUniformLocation("positionSampler");
-    static const int norm_name = prog.getUniformLocation("normalSampler");
-    static const int sundir_name = prog.getUniformLocation("sunDirection");
+void GBuffer::draw(const Camera& cam, u32 dflag){
+    static const int pos_loc = prog.getUniformLocation("positionSampler");
+    static const int norm_loc = prog.getUniformLocation("normalSampler");
+    static const int albedo_loc = prog.getUniformLocation("albedoSampler");
 
+    static const int sundir_loc = prog.getUniformLocation("sunDirection");
+    static const int suncolor_loc = prog.getUniformLocation("sunColor");
+    static const int seed_loc = prog.getUniformLocation("seed");
+    static const int eye_loc = prog.getUniformLocation("eye");
+    static const int draw_flag_loc = prog.getUniformLocation("draw_flags");
+
+    // draw into cubemap
     cmap.drawInto(cam);
 
     // draw into gbuffer
     glBindFramebuffer(GL_FRAMEBUFFER, buff); DebugGL();;
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();;
-    //g_Renderables.draw(cam.getVP());
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
+    g_Renderables.defDraw(cam, cam.getVP(), width, height);
 
     // calculate lighting using gbuffer
+    // replace this framebuffer with the post process buffer later
     glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();;
+    DepthContext dfctx(GL_ALWAYS);
 
     prog.bind();
+
     glActiveTexture(GL_TEXTURE0); DebugGL();;
     glBindTexture(GL_TEXTURE_2D, posbuff); DebugGL();;
-    prog.setUniformInt(pos_name, 0);
+    prog.setUniformInt(pos_loc, 0);
+
     glActiveTexture(GL_TEXTURE1); DebugGL();;
     glBindTexture(GL_TEXTURE_2D, normbuff); DebugGL();;
-    prog.setUniformInt(norm_name, 1);
+    prog.setUniformInt(norm_loc, 1);
+    
     glActiveTexture(GL_TEXTURE2); DebugGL();;
     glBindTexture(GL_TEXTURE_2D, matbuff); DebugGL();;
-    prog.setUniformInt(mat_name, 2);
-    prog.setUniformInt(seed_name, rand());
-    prog.setUniform(eye_name, cam.getEye());
-    prog.setUniform(sundir_name, g_Renderables.sunDirection);
-    cmap.bind(3, prog);
+    prog.setUniformInt(albedo_loc, 2);
+
+    cmap.bind(20, prog);
+
+    prog.setUniform(sundir_loc, g_Renderables.sunDirection);
+    prog.setUniform(suncolor_loc, g_Renderables.sunColor);
+    prog.setUniformInt(seed_loc, rand());
+    prog.setUniform(eye_loc, cam.getEye());
+    prog.setUniformInt(draw_flag_loc, dflag);
+    prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
+    prog.setUniform("IVP", cam.getIVP());
+
     GLScreen::draw();
 }
