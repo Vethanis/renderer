@@ -5,6 +5,7 @@ in vec2 fragUv;
 
 uniform vec3 sunDirection;
 uniform vec3 eye;
+uniform float sunIntensity;
 
 uniform mat4 IVP;
 
@@ -29,7 +30,7 @@ vec2 rsi(vec3 r0, vec3 rd, float sr) {
 // https://github.com/wwwtyro/glsl-atmosphere
 vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, float kMie, float shRlh, float shMie, float g) {
     const int iSteps = 8;
-    const int jSteps = 4;
+    const int jSteps = 8;
     const float PI = 3.141592;
 
     const vec3 pSun = sunDirection;
@@ -89,16 +90,12 @@ vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, floa
 vec3 skylight(){
     const vec2 uv = fragUv * 2.0 - vec2(1.0);
     const vec3 rd = normalize(toWorld(uv.x, uv.y, 0.0) - eye);
-    return atmosphere(rd, 
-        22.0, 6371e3, 6471e3, 
+    return atmosphere(rd, sunIntensity, 6371e3, 6471e3, 
         vec3(5.5e-6, 13.0e-6, 22.4e-6), 
         21e-6, 8e3, 1.2e3, 0.758);
 }
 
 void main(){
     vec3 lighting = skylight();
-
-    // no gamma correction or tonemapping, this is going in a cubemap for sampling later
-
     outColor = vec4(lighting, 1.0);
 }

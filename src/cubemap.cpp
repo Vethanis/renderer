@@ -48,6 +48,7 @@ void Cubemap::deinit(){
 }
 
 void Cubemap::bind(u32 channel, GLProgram& prog){
+    glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT); DebugGL();
     glActiveTexture(GL_TEXTURE0 + channel); DebugGL();
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     prog.setUniformInt("env_cm", channel);

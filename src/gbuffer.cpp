@@ -108,6 +108,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag){
 
     prog.setUniform(sundir_loc, g_Renderables.sunDirection);
     prog.setUniform(suncolor_loc, g_Renderables.sunColor);
+    prog.setUniformFloat("sunIntensity", g_Renderables.sunIntensity);
     prog.setUniformInt(seed_loc, rand());
     prog.setUniform(eye_loc, cam.getEye());
     prog.setUniformInt(draw_flag_loc, dflag);

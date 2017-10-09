@@ -27,6 +27,7 @@
 #define DF_VIS_ROUGHNESS    8
 #define DF_VIS_METALNESS    9
 #define DF_GBUFF            10
+#define DF_SKY              11
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -103,6 +104,7 @@ struct Renderables {
 
     glm::vec3 sunDirection;
     glm::vec3 sunColor;
+    float sunIntensity = 25.0f;
 
     void init(){
         glEnable(GL_DEPTH_TEST); DebugGL();
@@ -153,6 +155,7 @@ struct Renderables {
         skyProg.setUniform("IVP", IVP);
         skyProg.setUniform("sunDirection", sunDirection);
         skyProg.setUniform("eye", eye);
+        skyProg.setUniformFloat("sunIntensity", sunIntensity);
 
         GLScreen::draw();
     }
@@ -180,6 +183,7 @@ struct Renderables {
 
         fwdProg.setUniform("sunDirection", sunDirection);
         fwdProg.setUniform("sunColor", sunColor);
+        fwdProg.setUniformFloat("sunIntensity", sunIntensity);
 
         fwdProg.setUniform("eye", cam.getEye());
         fwdProg.setUniformInt("seed", rand());

@@ -16,12 +16,13 @@ uniform vec3 sunDirection;
 uniform vec3 sunColor;
 uniform vec3 eye;
 uniform vec2 render_resolution;
+uniform float sunIntensity;
 uniform int seed;
 uniform int draw_flags;
 
 // ------------------------------------------------------------------------
 
-#define PREPASS_ENABLED     0
+#define PREPASS_ENABLED     1
 
 #define DF_DIRECT           0
 #define DF_INDIRECT         1
@@ -34,6 +35,7 @@ uniform int draw_flags;
 #define DF_VIS_ROUGHNESS    8
 #define DF_VIS_METALNESS    9
 #define DF_GBUFF            10
+#define DF_SKY              11
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -99,7 +101,7 @@ vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, con
 
 vec3 environment_cubemap(vec3 dir, float roughness){
     float mip = textureQueryLod(env_cm, dir).x;
-    return textureLod(env_cm, dir, mip + roughness * 5.0).rgb;
+    return textureLod(env_cm, dir, mip + roughness * 4.0).rgb;
 }
 
 vec3 env_cubemap(vec3 dir){
@@ -198,7 +200,7 @@ vec3 direct_lighting(inout uint s){
     const material mat = getMaterial();
     const vec3 V = normalize(eye - mat_position(mat));
     const vec3 L = sunDirection;
-    const vec3 radiance = sunColor;
+    const vec3 radiance = sunColor * sunIntensity;
 
     vec3 light = pbr_lighting(V, L, mat, radiance);
 
@@ -230,12 +232,10 @@ vec3 indirect_lighting(inout uint s){
         // sometimes the macro normal has the most light. adding a bit of it can greatly reduce noise
         const vec3 R = reflect(-V, mat_normal(mat));
         light += 0.1 * pbr_lighting(V, R, mat, environment_cubemap(R, mat_roughness(mat)));
+        light += pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
     }
 
-    light *= scaling * scaling;
-    light = mix(light, 
-        pbr_lighting(V, sunDirection, mat, sunColor),
-        0.2);
+    light *= 1.0 / (samples * samples + 1.1);
     light += vec3(0.01) * mat_albedo(mat);
 
     return light;
@@ -294,7 +294,7 @@ vec2 rsi(vec3 r0, vec3 rd, float sr) {
 
 // https://github.com/wwwtyro/glsl-atmosphere
 vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, float kMie, float shRlh, float shMie, float g) {
-    const int iSteps = 32;
+    const int iSteps = 16;
     const int jSteps = 16;
     const float PI = 3.141592;
 
@@ -355,8 +355,7 @@ vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, floa
 vec3 skylight(){
     const vec2 uv = (gl_FragCoord.xy  / render_resolution) * 2.0 - vec2(1.0);
     const vec3 rd = normalize(toWorld(uv.x, uv.y, 0.0) - eye);
-    return atmosphere(rd, 
-        22.0, 6371e3, 6471e3, 
+    return atmosphere(rd, sunIntensity, 6371e3, 6471e3, 
         vec3(5.5e-6, 13.0e-6, 22.4e-6), 
         21e-6, 8e3, 1.2e3, 0.758);
 }
