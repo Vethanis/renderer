@@ -28,6 +28,8 @@
 #define DF_VIS_METALNESS    9
 #define DF_GBUFF            10
 #define DF_SKY              11
+#define DF_VIS_TANGENTS     12
+#define DF_VIS_BITANGENTS   13
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -203,7 +205,7 @@ struct Renderables {
 
         drawSky(cam.getEye(), glm::inverse(VP));
     }
-    void defDraw(const Camera& cam, const Transform& VP, s32 width, s32 height){
+    void defDraw(const Camera& cam, const Transform& VP, u32 dflag, s32 width, s32 height){
         glViewport(0, 0, width, height); DebugGL();
         
         prePass(VP);
@@ -211,6 +213,8 @@ struct Renderables {
         DrawModeContext ctx(GL_LEQUAL, GL_FALSE, 1);
 
         defProg.bind();
+        defProg.setUniform("eye", cam.getEye());
+        defProg.setUniformInt("draw_flags", dflag);
 
         for(auto& res : resources){
             Transform* M = res.transform;

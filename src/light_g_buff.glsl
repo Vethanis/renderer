@@ -36,9 +36,12 @@ uniform int draw_flags;
 #define DF_VIS_METALNESS    9
 #define DF_GBUFF            10
 #define DF_SKY              11
+#define DF_VIS_TANGENTS     12
+#define DF_VIS_BITANGENTS   13
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
+
 
 // ------------------------------------------------------------------------
 
@@ -67,7 +70,7 @@ float fasterAtan(float x){
 }
 
 void findBasis(vec3 N, out vec3 T, out vec3 B){
-    if(abs(N.x) > 0.1)
+    if(abs(N.x) > 0.001)
         T = cross(vec3(0.0, 1.0, 0.0), N);
     else
         T = cross(vec3(1.0, 0.0, 0.0), N);
@@ -214,7 +217,7 @@ vec3 indirect_lighting(inout uint s){
     const vec3 V = normalize(eye - mat_position(mat));
     vec3 T, B;
     findBasis(mat_normal(mat), T, B);
-    
+
     const float samples = 4.0;
     const float scaling = 1.0 / samples;
 
@@ -250,11 +253,26 @@ vec3 visualizeReflections(){
 
 vec3 visualizeNormals(){
     const material mat = getMaterial();
-    return mat_normal(mat) * 0.5 + vec3(0.5);
+    return mat_normal(mat);
+}
+
+vec3 visualizeTangents(){
+    const material mat = getMaterial();
+    vec3 T, B;
+    findBasis(mat_normal(mat), T, B);
+    return T;
+}
+
+vec3 visualizeBitangents(){
+    const material mat = getMaterial();
+    vec3 T, B;
+    findBasis(mat_normal(mat), T, B);
+    return B;
 }
 
 vec3 visualizeUVs(){
-    return vec3(fract(fragUv.xy), 0.0);
+    return vec3(mat_albedo(getMaterial()).xy, 0.0);
+    //return vec3(fract(fragUv.xy), 0.0);
 }
 
 vec3 visualizeCubemap(){
@@ -406,6 +424,12 @@ void main(){
                 break;
             case DF_VIS_METALNESS:
                 lighting = visualizeMetalness();
+                break;
+            case DF_VIS_TANGENTS:
+                lighting = visualizeTangents();
+                break;
+            case DF_VIS_BITANGENTS:
+                lighting = visualizeBitangents();
                 break;
         }
     }

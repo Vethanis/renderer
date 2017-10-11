@@ -142,6 +142,16 @@ int main(int argc, char* argv[]){
                     flag = DF_VIS_METALNESS;
                 }
                 break;
+                case GLFW_KEY_T:
+                {
+                    flag = DF_VIS_TANGENTS;
+                }
+                break;
+                case GLFW_KEY_B:
+                {
+                    flag = DF_VIS_BITANGENTS;
+                }
+                break;
                 case GLFW_KEY_F1:
                 {
                     RenderResource* pRenderable = suzanne;

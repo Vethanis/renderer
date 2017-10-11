@@ -82,7 +82,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag){
     // draw into gbuffer
     glBindFramebuffer(GL_FRAMEBUFFER, buff); DebugGL();;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
-    g_Renderables.defDraw(cam, cam.getVP(), width, height);
+    g_Renderables.defDraw(cam, cam.getVP(), dflag, width, height);
 
     // calculate lighting using gbuffer
     // replace this framebuffer with the post process buffer later
