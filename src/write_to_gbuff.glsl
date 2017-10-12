@@ -18,6 +18,7 @@ uniform sampler2D materialSampler;
 uniform vec3 eye;
 uniform int object_flags;
 uniform int draw_flags;
+uniform int seed;
 
 // -----------------------------------------------------------------------
 
@@ -111,6 +112,23 @@ material getMaterial(vec2 newUv){
 
 // ------------------------------------------------------------------------
 
+float rand( inout uint f) {
+    f = (f ^ 61) ^ (f >> 16);
+    f *= 9;
+    f = f ^ (f >> 4);
+    f *= 0x27d4eb2d;
+    f = f ^ (f >> 15);
+    return fract(float(f) * 2.3283064e-10);
+}
+
+float randBi(inout uint s){
+    return rand(s) * 2.0 - 1.0;
+}
+
+float stratRand(float i, float inv_samples, inout uint s){
+    return i * inv_samples + rand(s) * inv_samples;
+}
+
 mat3 GetBasis(vec3 N)
 {
     mat3 TBN;
@@ -139,7 +157,7 @@ vec2 POM(vec2 uv, vec3 view_dir)
 
     float depth_from_tex = getHeight(cur_uv);
 
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < 32; i++) {
         cur_layer_depth += layer_depth;
         cur_uv -= delta_uv;
         depth_from_tex = getHeight(cur_uv);
@@ -155,17 +173,39 @@ vec2 POM(vec2 uv, vec3 view_dir)
     return mix(cur_uv, prev_uv, weight);
 }
 
+float POMOcclusion(vec2 uv, inout uint s){
+    const float height = getHeight(uv);
+    const float variance = 0.0015;
+    const int samples = 8;
+    const float inv_samples = 1.0 / float(samples);
+
+    float occlusion = 0.0;
+    for(int i = 0; i < samples; ++i){
+        const vec2 p = uv + vec2(randBi(s), randBi(s)) * variance;
+        const float h = getHeight(p);
+        if(h < height){
+            occlusion += inv_samples;
+        }
+    }
+
+    return occlusion;
+}
+
 void main(){
+    uint s = uint(seed) 
+        ^ uint(gl_FragCoord.x * 39163.0) 
+        ^ uint(gl_FragCoord.y * 64601.0);
+
     const vec3 tanV = transpose(GetBasis(MacroNormal)) * normalize(eye - P);
 
     vec2 newUv = POM(UV, tanV);
-    float height = getHeight(newUv);
-    vec3 newP = P - depth_scale * (1.0 - height) * tanV;
+    vec3 newP = P + distance(UV, newUv) * normalize(P - eye);
+    float occlusion = POMOcclusion(newUv, s);
 
     const material mat = getMaterial(newUv);
 
     gPosition = vec4(newP.xyz, mat.roughness);
-    gAlbedo = vec4(mat.albedo, gl_FragCoord.z);
+    gAlbedo = vec4(mat.albedo * (1.0 - occlusion * 0.666), gl_FragCoord.z);
     gNormal = vec4(mat.normal, mat.metalness);
 
     if(draw_flags == DF_UV)

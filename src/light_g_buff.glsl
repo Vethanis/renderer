@@ -120,7 +120,7 @@ struct material
 
 #define mat_metalness(x) x.normal.w
 #define mat_roughness(x) x.position.w
-#define mat_ior(x) x.albedo.w
+#define mat_depth(x) x.albedo.w
 #define mat_position(x) x.position.xyz
 #define mat_normal(x) x.normal.xyz
 #define mat_albedo(x) x.albedo.xyz
@@ -131,6 +131,10 @@ material getMaterial(){
         texture(normalSampler, fragUv),
         texture(albedoSampler, fragUv)
     );
+}
+
+float getDepth(vec2 uv){
+    return texture(albedoSampler, uv).w;
 }
 
 vec3 toWorld(float x, float y, float z){
@@ -272,7 +276,6 @@ vec3 visualizeBitangents(){
 
 vec3 visualizeUVs(){
     return vec3(mat_albedo(getMaterial()).xy, 0.0);
-    //return vec3(fract(fragUv.xy), 0.0);
 }
 
 vec3 visualizeCubemap(){
@@ -284,7 +287,7 @@ vec3 visualizeCubemap(){
 vec3 visualizeDiffraction(){
     const material mat = getMaterial();
     const vec3 I = normalize(mat_position(mat) - eye);
-    const vec3 R = refract(I, mat_normal(mat), mat_ior(mat));
+    const vec3 R = refract(I, mat_normal(mat), 1.000293 / 1.33);
     return env_cubemap(R);
 }
 

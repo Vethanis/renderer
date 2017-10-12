@@ -94,7 +94,7 @@ int main(int argc, char* argv[]){
             switch(key){
                 case GLFW_KEY_E:
                 {
-                    g_Renderables.sunDirection = -camera.getAxis();
+                    g_Renderables.sunDirection = camera.getAxis();
                 }
                 break;
                 case GLFW_KEY_1:
