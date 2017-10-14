@@ -29,8 +29,8 @@ vec2 rsi(vec3 r0, vec3 rd, float sr) {
 
 // https://github.com/wwwtyro/glsl-atmosphere
 vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, float kMie, float shRlh, float shMie, float g) {
-    const int iSteps = 8;
-    const int jSteps = 8;
+    const int iSteps = 16;
+    const int jSteps = 16;
     const float PI = 3.141592;
 
     const vec3 pSun = sunDirection;

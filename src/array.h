@@ -70,6 +70,21 @@ struct Array{
         }
         return -1;
     }
+    void uniquePush(const T& t){
+        if(find(t) == -1){
+            grow() = t;
+        }
+    }
+    void remove(int idx){
+        --_tail;
+        _data[idx] = _data[_tail];
+    }
+    void findRemove(const T& t){
+        int idx = find(t);
+        if(idx != -1){
+            remove(idx);
+        }
+    }
     void sort(int a, int b){
         if(a - b < 2)
             return;
@@ -171,18 +186,29 @@ struct Vector{
         assert(_tail > 0);
         return _data[_tail--];
     }
+    void clear(){ _tail = 0; }
     void remove(int idx){
         assert(idx <= _tail);
-        _data[idx] = back();
-        --_tail;
+        --tail;
+        _data[idx] = _data[tail];
     }
-    void clear(){ _tail = 0; }
     int find(const T& t){
         for(int i = 0; i < _tail; ++i){
             if(_data[i] == t)
                 return i;
         }
         return -1;
+    }
+    void uniquePush(const T& t){
+        if(find(t) == -1){
+            grow() = t;
+        }
+    }
+    void findRemove(const T& t){
+        int idx = find(t);
+        if(idx != -1){
+            remove(idx);
+        }
     }
     void sort(int a, int b){
         if(a - b < 2)

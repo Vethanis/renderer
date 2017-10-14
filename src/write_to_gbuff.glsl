@@ -146,7 +146,7 @@ float getHeight(vec2 uv){
     return texture(materialSampler, uv).x;
 }
 
-const float depth_scale = 0.007;
+const float depth_scale = 0.005;
 const float num_layers = 32.0;
 vec2 POM(vec2 uv, vec3 view_dir)
 {

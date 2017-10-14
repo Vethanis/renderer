@@ -62,13 +62,6 @@ float stratRand(float i, float inv_samples, inout uint s){
     return i * inv_samples + rand(s) * inv_samples;
 }
 
-// #9 in http://www-labs.iro.umontreal.ca/~mignotte/IFT2425/Documents/EfficientApproximationArctgFunction.pdf
-float fasterAtan(float x){
-    return 3.141592 * 0.25 * x 
-    - x * (abs(x) - 1.0) 
-        * (0.2447 + 0.0663 * abs(x));
-}
-
 void findBasis(vec3 N, out vec3 T, out vec3 B){
     if(abs(N.x) > 0.001)
         T = cross(vec3(0.0, 1.0, 0.0), N);
@@ -78,33 +71,11 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
     B = cross(N, T);
 }
 
-// phi: [0, tau]
-// theta: [0, 1]
-vec3 toCartesian(vec3 T, vec3 B, vec3 N, float phi, float theta){
-    const float ts = sqrt(theta);
-    return normalize(T * cos(phi) * ts + B * sin(phi) * ts + N * sqrt(1.0 - theta));
-}
-
-vec3 cosHemi(vec3 T, vec3 B, vec3 N, vec2 X){
-    const float r1 = 3.141592 * 2.0 * X[0];
-    const float r2 = X[1];
-    return toCartesian(T, B, N, r1, r2);
-}
-
-// https://agraphicsguy.wordpress.com/2015/11/01/sampling-microfacet-brdf/
-// returns a microfacet normal. reflect across it to get a good light vector
-vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, const vec3 N){
-    const float alpha = roughness * roughness;
-    const float theta = fasterAtan(alpha * sqrt(X[0] / (1.0 - X[0])));
-    const float phi = 2.0 * 3.141592 * X[1];
-    return toCartesian(T, B, N, phi, theta);
-}
-
 // -------------------------------------------------------------------------------------------
 
 vec3 environment_cubemap(vec3 dir, float roughness){
     float mip = textureQueryLod(env_cm, dir).x;
-    return textureLod(env_cm, dir, mip + roughness * 4.0).rgb;
+    return textureLod(env_cm, dir, mip + roughness * 8.0).rgb;
 }
 
 vec3 env_cubemap(vec3 dir){
@@ -222,28 +193,26 @@ vec3 indirect_lighting(inout uint s){
     vec3 T, B;
     findBasis(mat_normal(mat), T, B);
 
-    const float samples = 4.0;
-    const float scaling = 1.0 / samples;
-
     vec3 light = vec3(0.0);
-    for(float x = 0.0; x < samples; ++x){
-        for(float y = 0.0; y < samples; ++y){
-            const vec2 X = vec2(stratRand(x, scaling, s), stratRand(y, scaling, s));
-            const vec3 N = GGXPDF(mat_roughness(mat), X, T, B, mat_normal(mat));
-            const vec3 L = reflect(-V, N);
-            const vec3 radiance = environment_cubemap(L, mat_roughness(mat));
-            light += pbr_lighting(V, L, mat, radiance);
-        }
-    }
     {
-        // sometimes the macro normal has the most light. adding a bit of it can greatly reduce noise
         const vec3 R = reflect(-V, mat_normal(mat));
-        light += 0.1 * pbr_lighting(V, R, mat, environment_cubemap(R, mat_roughness(mat)));
-        light += pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
+        light += pbr_lighting(V, R, mat, environment_cubemap(R, mat_roughness(mat)));
+    }
+    light += pbr_lighting(V, sunDirection, mat, environment_cubemap(sunDirection, mat_roughness(mat)));
+
+    for(int i = 0; i < 14; ++i){
+        vec3 r = vec3(randBi(s), randBi(s), randBi(s));
+        if(dot(r, mat_normal(mat)) < 0.001){
+            r = -r;
+        }
+        r = normalize(r);
+        light += pbr_lighting(V, r, mat, environment_cubemap(r, mat_roughness(mat)));
     }
 
-    light *= 1.0 / (samples * samples + 1.1);
-    light += vec3(0.01) * mat_albedo(mat);
+    light *= 3.141592 / (16.0);
+    light *= 1.0 + 2.0 * mat_roughness(mat); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
+    
+    light += pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
 
     return light;
 }

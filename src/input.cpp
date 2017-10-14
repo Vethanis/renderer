@@ -14,6 +14,7 @@ float Input::m_cursorY = 0.0f;
 float Input::m_relCursorX = 0.0f;
 float Input::m_relCursorY = 0.0f;
 
+Array<int, 1024> g_activeKeys;
 Array<int, 1024> g_downKeys;
 Array<int, 1024> g_upKeys;
 
@@ -85,9 +86,11 @@ float Input::relCursorY(){
 void Input::mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
     if(action == GLFW_PRESS){
         g_downKeys.grow() = button;
+        g_activeKeys.uniquePush(button);
     }
     else if(action == GLFW_RELEASE){
         g_upKeys.grow() = button;
+        g_activeKeys.findRemove(button);
     }
     if(action == GLFW_PRESS){
         if(button == GLFW_MOUSE_BUTTON_RIGHT)
@@ -118,9 +121,11 @@ void Input::scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
 void Input::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
     if(action == GLFW_PRESS){
         g_downKeys.grow() = key;
+        g_activeKeys.uniquePush(key);
     }
     else if(action == GLFW_RELEASE){
         g_upKeys.grow() = key;
+        g_activeKeys.findRemove(key);
     }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
@@ -131,14 +136,20 @@ bool Input::getKey(int key){
 }
 
 const int* Input::begin(){
-    return g_downKeys.begin();
+    return g_activeKeys.begin();
 }
 const int* Input::end(){
+    return g_activeKeys.end();
+}
+const int* Input::downBegin(){
+    return g_downKeys.begin();
+}
+const int* Input::downEnd(){
     return g_downKeys.end();
 }
 const int* Input::upBegin(){
     return g_upKeys.begin();
 }
-const int* Input::downEnd(){
+const int* Input::upEnd(){
     return g_upKeys.end();
 }

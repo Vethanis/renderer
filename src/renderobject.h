@@ -106,7 +106,7 @@ struct Renderables {
 
     glm::vec3 sunDirection;
     glm::vec3 sunColor;
-    float sunIntensity = 25.0f;
+    float sunIntensity = 10.0f;
 
     void init(){
         glEnable(GL_DEPTH_TEST); DebugGL();

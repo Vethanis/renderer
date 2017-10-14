@@ -4,7 +4,8 @@
 class Camera;
 struct GLFWwindow;
 
-class Input{
+class Input
+{
     GLFWwindow* m_glwindow;
 
     static bool m_rightMouseDown, m_leftMouseDown;
@@ -14,7 +15,6 @@ class Input{
     static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
     static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
     static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
-
 public:
     Input(GLFWwindow* window);
     void poll();
@@ -30,7 +30,9 @@ public:
     bool getKey(int key);
     const int* begin();
     const int* end();
-    static const int* upBegin();
+    static const int* downBegin();
     static const int* downEnd();
+    static const int* upBegin();
+    static const int* upEnd();
 };
 #endif
