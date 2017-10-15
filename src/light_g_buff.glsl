@@ -113,7 +113,7 @@ float sunShadowing(vec3 p, inout uint s){
             light_depth += texture(sunDepth, projCoords.xy + p).r;
         }
     }
-    light_depth /= (samples * samples);
+    light_depth *= inv_samples * inv_samples;
 
     
     return point_depth < light_depth ? 1.0 : 0.0;

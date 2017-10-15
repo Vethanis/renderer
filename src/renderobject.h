@@ -172,7 +172,8 @@ struct Renderables {
         
         skyProg.setUniform("IVP", IVP);
         skyProg.setUniform("eye", eye);
-        bindSun(m_light, skyProg);
+        skyProg.setUniform("sunDirection", m_light.m_direction);
+        skyProg.setUniformFloat("sunIntensity", m_light.m_intensity);
 
         GLScreen::draw();
     }
@@ -201,7 +202,9 @@ struct Renderables {
 
         fwdProg.bind();
 
-        bindSun(m_light, fwdProg);
+        fwdProg.setUniform("sunDirection", m_light.m_direction);
+        fwdProg.setUniform("sunColor", m_light.m_color);
+        fwdProg.setUniformFloat("sunIntensity", m_light.m_intensity);
 
         fwdProg.setUniform("eye", cam.getEye());
         fwdProg.setUniformInt("seed", rand());
