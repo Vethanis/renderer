@@ -78,7 +78,7 @@ int main(int argc, char* argv[]){
         suzanne = g_Renderables.create("suzanne.mesh", channels[0].albedo, channels[0].material,
             glm::translate({}, glm::vec3(5.0f, 0.0f, 5.0f)));
         g_Renderables.create("suzanne.mesh", channels[1].albedo, channels[1].material,
-                glm::translate({}, glm::vec3(10.0f, 0.0f, 5.0f)));
+                glm::translate({}, glm::vec3(10.0f, -2.1f, 5.0f)));
         g_Renderables.create("plane.mesh", "wood_floor_albedo.png", "wood_floor_material.png", 
             glm::scale(glm::translate({}, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(4.0f)));
     }
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]){
             switch(key){
                 case GLFW_KEY_E:
                 {
-                    g_Renderables.sunDirection = camera.getAxis();
+                    g_Renderables.m_light.m_direction = camera.getAxis();
                 }
                 break;
                 case GLFW_KEY_1:
@@ -152,6 +152,7 @@ int main(int argc, char* argv[]){
                     flag = DF_VIS_BITANGENTS;
                 }
                 break;
+                case GLFW_KEY_V: flag = DF_VIS_SUN_SHADOW_DEPTH; break;
                 case GLFW_KEY_F1:
                 {
                     RenderResource* pRenderable = suzanne;

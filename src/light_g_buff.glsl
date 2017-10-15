@@ -9,9 +9,12 @@ uniform sampler2D positionSampler;
 uniform sampler2D normalSampler;
 uniform sampler2D albedoSampler;
 
+uniform sampler2D sunDepth;
+
 uniform samplerCube env_cm;
 
 uniform mat4 IVP;
+uniform mat4 sunMatrix;
 uniform vec3 sunDirection;
 uniform vec3 sunColor;
 uniform vec3 eye;
@@ -38,10 +41,17 @@ uniform int draw_flags;
 #define DF_SKY              11
 #define DF_VIS_TANGENTS     12
 #define DF_VIS_BITANGENTS   13
+#define DF_VIS_SUN_SHADOW_DEPTH 14
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
 
+#define TX_ALBEDO_CHANNEL   0
+#define TX_MATERIAL_CHANNEL 1
+#define TX_SUN_CHANNEL      2
+#define TX_CUBEMAP_CHANNEL  3
+#define TX_POSITION_CHANNEL 4
+#define TX_NORMAL_CHANNEL   5
 
 // ------------------------------------------------------------------------
 
@@ -62,6 +72,10 @@ float stratRand(float i, float inv_samples, inout uint s){
     return i * inv_samples + rand(s) * inv_samples;
 }
 
+float stratRandBi(float i, float inv_samples, inout uint s){
+    return 2.0 * (inv_samples + rand(s) * inv_samples) - 1.0;
+}
+
 void findBasis(vec3 N, out vec3 T, out vec3 B){
     if(abs(N.x) > 0.001)
         T = cross(vec3(0.0, 1.0, 0.0), N);
@@ -75,11 +89,34 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 
 vec3 environment_cubemap(vec3 dir, float roughness){
     float mip = textureQueryLod(env_cm, dir).x;
-    return textureLod(env_cm, dir, mip + roughness * 8.0).rgb;
+    return textureLod(env_cm, dir, mip + roughness * 10.0).rgb;
 }
 
 vec3 env_cubemap(vec3 dir){
     return texture(env_cm, dir).rgb;
+}
+
+float sunShadowing(vec3 p, inout uint s){
+    const int samples = 4;
+    const float inv_samples = 1.0 / float(samples);
+    const float variance = 0.005;
+
+    const vec4 projCoords = (sunMatrix * vec4(p.xyz, 1.0)) * 0.5 + 0.5;
+    float point_depth = projCoords.z;
+    if(point_depth > 1.0)
+        return 1.0;
+
+    float light_depth = 0.0;
+    for(float x = 0.0f; x < samples; ++x){
+        for(float y = 0.0f; y < samples; ++y){
+            const vec2 p = vec2(stratRandBi(x, inv_samples, s), stratRandBi(y, inv_samples, s)) * variance;
+            light_depth += texture(sunDepth, projCoords.xy + p).r;
+        }
+    }
+    light_depth /= (samples * samples);
+
+    
+    return point_depth < light_depth ? 1.0 : 0.0;
 }
 
 struct material
@@ -180,7 +217,7 @@ vec3 direct_lighting(inout uint s){
     const vec3 L = sunDirection;
     const vec3 radiance = sunColor * sunIntensity;
 
-    vec3 light = pbr_lighting(V, L, mat, radiance);
+    vec3 light = sunShadowing(mat_position(mat), s) * pbr_lighting(V, L, mat, radiance);
 
     light += vec3(0.01) * mat_albedo(mat);
 
@@ -210,9 +247,9 @@ vec3 indirect_lighting(inout uint s){
     }
 
     light *= 3.141592 / (16.0);
-    light *= 1.0 + 2.0 * mat_roughness(mat); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
+    light *= 1.0 + (2.0 * mat_roughness(mat) - 1.0); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
     
-    light += pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
+    light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
 
     return light;
 }
@@ -268,6 +305,15 @@ vec3 visualizeRoughness(){
 vec3 visualizeMetalness(){
     const material mat = getMaterial();
     return vec3(mat_metalness(mat));
+}
+
+vec3 visualizeShadow(){
+    const material mat = getMaterial();
+    vec3 p = mat_position(mat);
+    vec4 projCoords = sunMatrix * vec4(p.xyz, 1.0);
+    projCoords = projCoords * 0.5 + 0.5;
+    float light_depth = texture(sunDepth, projCoords.xy).r;
+    return vec3(light_depth);
 }
 
 vec2 rsi(vec3 r0, vec3 rd, float sr) {
@@ -403,12 +449,15 @@ void main(){
             case DF_VIS_BITANGENTS:
                 lighting = visualizeBitangents();
                 break;
+            case DF_VIS_SUN_SHADOW_DEPTH:
+                lighting = visualizeShadow();
+                break;
         }
     }
 
-    lighting.rgb.x += 0.0001 * randBi(s);
-    lighting.rgb.y += 0.0001 * randBi(s);
-    lighting.rgb.z += 0.0001 * randBi(s);
+    lighting.rgb.x += 0.0005 * randBi(s);
+    lighting.rgb.y += 0.0005 * randBi(s);
+    lighting.rgb.z += 0.0005 * randBi(s);
 
     if(draw_flags != DF_DIRECT_CUBEMAP){
         lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));

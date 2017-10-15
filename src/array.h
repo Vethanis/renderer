@@ -89,18 +89,19 @@ struct Array{
         if(a - b < 2)
             return;
 
-        T& pivot = _data[(a + b) >> 1];
-
         int i, j;
-        for(i = a, j = b - 1; ; ++i, --j){
-            while(_data[i] < pivot) ++i;
-            while(_data[j] > pivot) --j;
-
-            if(i >= j) break;
-
-            T temp = _data[i];
-            _data[i] = _data[j];
-            _data[j] = temp;
+        {
+            T& pivot = _data[(a + b) >> 1];
+            for(i = a, j = b - 1; ; ++i, --j){
+                while(_data[i] < pivot) ++i;
+                while(_data[j] > pivot) --j;
+    
+                if(i >= j) break;
+    
+                T temp = _data[i];
+                _data[i] = _data[j];
+                _data[j] = temp;
+            }
         }
 
         sort(a, i);
@@ -110,7 +111,7 @@ struct Array{
         sort(0, _tail);
     }
     bool operator==(const Array& other)const{
-        return begin() == other.begin();
+        return hash() == other.hash();
     }
     void serialize(FILE* pFile){
         fwrite(&_tail, sizeof(u32), 1, pFile);
@@ -214,18 +215,19 @@ struct Vector{
         if(a - b < 2)
             return;
 
-        T& pivot = _data[(a + b) >> 1];
-
         int i, j;
-        for(i = a, j = b - 1; ; ++i, --j){
-            while(_data[i] < pivot) ++i;
-            while(_data[j] > pivot) --j;
+        {
+            T& pivot = _data[(a + b) >> 1];
+            for(i = a, j = b - 1; ; ++i, --j){
+                while(_data[i] < pivot) ++i;
+                while(_data[j] > pivot) --j;
 
-            if(i >= j) break;
+                if(i >= j) break;
 
-            T temp = _data[i];
-            _data[i] = _data[j];
-            _data[j] = temp;
+                T temp = _data[i];
+                _data[i] = _data[j];
+                _data[j] = temp;
+            }
         }
 
         sort(a, i);
@@ -249,28 +251,38 @@ struct Vector{
     ~Vector(){
         if(_data){
             delete[] _data;
+            _data = nullptr;
         }
     }
     void copy(const Vector& other){
-        resize(other.count());
-        memcpy(_data, other._data, bytes());
+        if(_data){
+            delete[] _data;
+            _data = nullptr;
+        }
+        _tail = other._tail;
+        _capacity = _tail;
+        if(_tail){
+            _data = new T[_tail];
+            memcpy(_data, other._data, sizeof(T) * _tail);
+        }
     }
-    void shallow_copy(Vector& other){
-        resize(0);
-        memcpy(this, &other, sizeof(*this));
-        other._data = nullptr;
-        other.resize(0);
+    void swap(Vector& other){
+        std::swap(_data, other._data);
+        std::swap(_capacity, other._capacity);
+        std::swap(_tail, other._tail);
     }
     Vector& operator=(const Vector& other){
         copy(other);
         return *this;
     }
     bool operator==(const Vector& other)const{
-        return begin() == other.begin();
+        return hash() == other.hash();
     }
     void serialize(FILE* pFile){
         fwrite(&_tail, sizeof(s32), 1, pFile);
-        fwrite(_data, sizeof(T), _tail, pFile);
+        if(_tail){
+            fwrite(_data, sizeof(T), _tail, pFile);
+        }
     }
     // does NOT work on nested vectors
     void serialize_composite(FILE* pFile){
@@ -280,22 +292,34 @@ struct Vector{
         }
     }
     void load(FILE* pFile){
-        resize(0);
+        if(_data){
+            delete[] _data;
+            _data = nullptr;
+        }
         s32 count = 0;
         fread(&count, sizeof(s32), 1, pFile);
-        resize(count);
         _tail = count;
-        fread(_data, sizeof(T), count, pFile);
+        _capacity = count;
+        if(count){
+            _data = new T[count];
+            fread(_data, sizeof(T), count, pFile);
+        }
     }
     // does NOT work on nested vectors
-    void load_composite(FILE* pFile){        
-        resize(0);
+    void load_composite(FILE* pFile){
+        if(_data){
+            delete[] _data;
+            _data = nullptr;
+        }
         s32 count = 0;
         fread(&count, sizeof(s32), 1, pFile);
-        resize(count);
         _tail = count;
-        for(s32 i = 0; i < _tail; ++i){
-            _data[i].load(pFile);
+        _capacity = count;
+        if(count){
+            _data = new T[count];
+            for(s32 i = 0; i < _tail; ++i){
+                _data[i].load(pFile);
+            }
         }
     }
 };

@@ -2,12 +2,9 @@
 
 #include "common.h"
 #include "store.h"
+#include "assetloader.h"
 #include "vertexbuffer.h"
 #include "mesh_interchange.h"
-#include "circular_queue.h"
-#include <thread>
-#include <mutex>
-#include <chrono>
 
 // just some vertices on the GPU, nothing more
 struct Mesh {
@@ -21,62 +18,9 @@ struct Mesh {
     }
 };
 
-struct ModelStore {
-    Store<mesh_interchange::Model, 256> m_store;
-    CircularQueue<unsigned, 256> m_queue;
-    std::thread m_thread;
-    std::mutex m_mutex;
-    bool m_shouldRun;
+void load_model(mesh_interchange::Model* model, unsigned name);
 
-    void processQueue(){
-        while(m_shouldRun){
-
-            if(!m_queue.empty() && m_mutex.try_lock())
-            {
-                while(m_shouldRun && !m_queue.empty())
-                {
-                    unsigned name = m_queue.pop();
-                    mesh_interchange::Model* m = nullptr;
-                
-                    if(m_store.full()){
-                        m = m_store.reuse_near(name);
-                    }
-                    else{
-                        m_store.insert(name, {});
-                        m = m_store[name];
-                    }
-    
-                    load_model(*m, name);
-                }
-                m_mutex.unlock();
-            }
-            
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-    }
-    
-    ModelStore(){
-        m_shouldRun = true;
-        m_thread = std::thread(&ModelStore::processQueue, this);
-    }
-    ~ModelStore(){
-        m_shouldRun = false;
-        m_thread.join();
-    }
-    void load_model(mesh_interchange::Model& model, unsigned name);
-    mesh_interchange::Model* get(unsigned name){
-        auto* m = m_store[name];
-        if(m){ return m;}
-
-        if(m_queue.full() == false){
-            m_queue.set_push(name);
-        }
-        return nullptr;
-    }
-    mesh_interchange::Model* operator[](unsigned name){ return get(name); }
-};
-
-extern ModelStore g_ModelStore;
+extern AssetStore<true, mesh_interchange::Model, 256> g_ModelStore;
 
 struct MeshStore {
     Store<Mesh, 128> m_store;

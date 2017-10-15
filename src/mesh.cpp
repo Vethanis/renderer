@@ -72,13 +72,13 @@ void Mesh::upload(const mesh_interchange::Model& vb){
     glBindVertexArray(vao); DebugGL();
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();
-    glBufferData(GL_ARRAY_BUFFER, vb.meshes.vertices.bytes(), 
-        vb.meshes.vertices.begin(), GL_STATIC_DRAW); DebugGL();
+    glBufferData(GL_ARRAY_BUFFER, vb.vertices.bytes(), 
+        vb.vertices.begin(), GL_STATIC_DRAW); DebugGL();
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo); DebugGL();
-    num_indices = vb.meshes.indices.count();
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, vb.meshes.indices.bytes(), 
-        vb.meshes.indices.begin(), GL_STATIC_DRAW); DebugGL();
+    num_indices = vb.indices.count();
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, vb.indices.bytes(), 
+        vb.indices.begin(), GL_STATIC_DRAW); DebugGL();
 }
 
 void Mesh::draw(){
@@ -89,16 +89,19 @@ void Mesh::draw(){
     glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0); DebugGL();
 }
 
-void ModelStore::load_model(mesh_interchange::Model& model, unsigned name){
+void load_model(mesh_interchange::Model* model, unsigned name)
+{
     const char* filename = HashString(name).str();
     assert(filename);
     FILE* pFile = fopen(filename, "rb");
 
-    if(pFile){
-        model.load(pFile);
+    if(pFile)
+    {
+        model->load(pFile);
         fclose(pFile);
     }
-    else{        
+    else
+    {
         char buff[256] = {0};
     
         sprintf(buff, "%s", filename);
@@ -106,16 +109,16 @@ void ModelStore::load_model(mesh_interchange::Model& model, unsigned name){
         assert(extptr);
         sprintf(extptr, "%s", ".fbx");
 
-        model.parse(buff);
+        model->parse(buff);
         
         pFile = fopen(filename, "wb");
         assert(pFile);
-        model.serialize(pFile);
+        model->serialize(pFile);
         fclose(pFile);
     }
 }
 
-ModelStore g_ModelStore;
+AssetStore<true, mesh_interchange::Model, 256> g_ModelStore(load_model, [](mesh_interchange::Model* m){ m->clear(); });
 MeshStore g_MeshStore;
 
 HashString::operator Mesh*() const{

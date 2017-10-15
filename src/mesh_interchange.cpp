@@ -9,9 +9,10 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-namespace mesh_interchange{
-
-    glm::mat4 getTransform(aiNode* node){
+namespace mesh_interchange
+{
+    glm::mat4 getTransform(aiNode* node)
+    {
         glm::mat4 SRT;
         aiVector3D scale, translation;
         aiQuaternion rotation;
@@ -29,59 +30,22 @@ namespace mesh_interchange{
         return SRT;
     }
 
-    void Model::processMesh(aiMesh* mesh, const aiScene* scene, const glm::mat4& xform, 
-        Geometry& out, Vector<HashString>& mat_ids){
-
-        s32 begin_vert = out.vertices.count();
+    void Model::processMesh(aiMesh* mesh, const aiScene* scene, const glm::mat4& xform)
+    {
+        s32 begin_vert = vertices.count();
         if(begin_vert){
             --begin_vert;
         }
 
-        HashString matid;
-        if(mesh->mMaterialIndex >= 0 && mesh->mMaterialIndex < scene->mNumMaterials){
-            aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            const u32 numDiffuseTextures = material->GetTextureCount(aiTextureType_DIFFUSE);
-            const u32 numNormalTextures = material->GetTextureCount(aiTextureType_NORMALS);
-    
-            Material mat;
-
-            mat.albedo.resize((s32)numDiffuseTextures);
-            mat.normal.resize((s32)numNormalTextures);
-    
-            for(u32 i = 0; i < numDiffuseTextures; ++i){
-                aiString str;
-                material->GetTexture(aiTextureType_DIFFUSE, i, &str);
-                if(str.C_Str()){
-                    mat.albedo.grow() = str.C_Str();
-                }
-            }
-    
-            for(u32 i = 0; i < numNormalTextures; ++i){
-                aiString str;
-                material->GetTexture(aiTextureType_NORMALS, i, &str);
-                if(str.C_Str()){
-                    mat.normal.grow() = str.C_Str();
-                }
-            }
-    
-            matid = mat.id();
-    
-            if(mat_ids.find(matid) == -1){
-                mat_ids.grow() = matid;
-                materials.grow() = mat;
-            }
-        }
-        s32 mat_loc = mat_ids.find(matid);
-        mat_loc = glm::clamp(mat_loc, 0, MAX_MATERIALS_PER_MESH - 1);
-
         const glm::mat3 norm_xform = glm::inverse(glm::transpose(glm::mat3(xform)));
 
-        out.vertices.resize(out.vertices.count() + (s32)mesh->mNumVertices);
-        for(u32 i = 0; i < mesh->mNumVertices; ++i){
+        vertices.resize(vertices.count() + (s32)mesh->mNumVertices);
+        for(u32 i = 0; i < mesh->mNumVertices; ++i)
+        {
             const auto& inPos = mesh->mVertices[i];
             const auto& inNorm = mesh->mNormals[i];
     
-            Vertex& vert = out.vertices.grow();
+            Vertex& vert = vertices.grow();
             vert.position.x = inPos.x;
             vert.position.y = inPos.y;
             vert.position.z = inPos.z;
@@ -106,35 +70,35 @@ namespace mesh_interchange{
             }
         }
     
-        out.indices.resize(out.indices.count() + 3 * (s32)mesh->mNumFaces);
-        for(u32 face = 0; face < mesh->mNumFaces; ++face){
+        indices.resize(indices.count() + 3 * (s32)mesh->mNumFaces);
+        for(u32 face = 0; face < mesh->mNumFaces; ++face)
+        {
             const auto& inFace = mesh->mFaces[face];
             for(u32 i = 0; i < inFace.mNumIndices; ++i){
-                out.indices.grow() = begin_vert + inFace.mIndices[i];
+                indices.grow() = begin_vert + inFace.mIndices[i];
             }
         }
     }
-    void Model::processNode(aiNode* node, const aiScene* scene, 
-        const glm::mat4& xform, Vector<HashString>& mat_ids){
-
+    void Model::processNode(aiNode* node, const aiScene* scene, const glm::mat4& xform)
+    {
         const glm::mat4 localXform = getTransform(node) * xform;
-        for(u32 i = 0; i < node->mNumMeshes; ++i){
+        for(u32 i = 0; i < node->mNumMeshes; ++i)
+        {
             aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-            processMesh(mesh, scene, localXform, meshes, mat_ids);
+            processMesh(mesh, scene, localXform);
         }
-        for(u32 i = 0; i < node->mNumChildren; ++i){
-            processNode(node->mChildren[i], scene, localXform, mat_ids);
+        for(u32 i = 0; i < node->mNumChildren; ++i)
+        {
+            processNode(node->mChildren[i], scene, localXform);
         }
     }
-    void Model::parse(const char* dir){
+    void Model::parse(const char* dir)
+    {
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(dir, aiProcessPreset_TargetRealtime_Quality | aiProcess_FlipUVs);
         assert(scene);
         assert((scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) == 0);
         assert(scene->mRootNode);
-    
-        Vector<HashString> mat_ids;
-
-        processNode(scene->mRootNode, scene, glm::scale({}, glm::vec3(0.01f)), mat_ids);
+        processNode(scene->mRootNode, scene, glm::scale({}, glm::vec3(0.01f)));
     }
 };

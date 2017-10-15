@@ -11,6 +11,8 @@ in vec2 UV;
 uniform sampler2D albedoSampler;
 uniform sampler2D materialSampler;
 
+uniform sampler2D sunDepth;
+
 uniform samplerCube env_cm;
 
 uniform vec3 sunDirection;

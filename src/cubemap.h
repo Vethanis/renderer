@@ -14,6 +14,5 @@ struct Cubemap{
     s32 m_size;
     void init(s32 size);
     void deinit();
-    void bind(u32 channel, GLProgram& prog);
     void drawInto(const Camera& cam);
 };

@@ -47,13 +47,6 @@ void Cubemap::deinit(){
     glDeleteTextures(1, &color_cubemap);
 }
 
-void Cubemap::bind(u32 channel, GLProgram& prog){
-    glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT); DebugGL();
-    glActiveTexture(GL_TEXTURE0 + channel); DebugGL();
-    glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
-    prog.setUniformInt("env_cm", channel);
-}
-
 void Cubemap::drawInto(const Camera& cam){
     static const Transform Vs[num_faces] = {
         glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),

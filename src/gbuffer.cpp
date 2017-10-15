@@ -76,6 +76,8 @@ void GBuffer::draw(const Camera& cam, u32 dflag){
     static const int eye_loc = prog.getUniformLocation("eye");
     static const int draw_flag_loc = prog.getUniformLocation("draw_flags");
 
+    g_Renderables.shadowPass();
+
     // draw into cubemap
     cmap.drawInto(cam);
 
@@ -92,23 +94,12 @@ void GBuffer::draw(const Camera& cam, u32 dflag){
 
     prog.bind();
 
-    glActiveTexture(GL_TEXTURE0); DebugGL();;
-    glBindTexture(GL_TEXTURE_2D, posbuff); DebugGL();;
-    prog.setUniformInt(pos_loc, 0);
-
-    glActiveTexture(GL_TEXTURE1); DebugGL();;
-    glBindTexture(GL_TEXTURE_2D, normbuff); DebugGL();;
-    prog.setUniformInt(norm_loc, 1);
+    prog.bindTexture(TX_ALBEDO_CHANNEL, posbuff, "positionSampler");
+    prog.bindTexture(TX_NORMAL_CHANNEL, normbuff, "normalSampler");
+    prog.bindTexture(TX_MATERIAL_CHANNEL, matbuff, "albedoSampler");
+    prog.bindCubemap(TX_CUBEMAP_CHANNEL, cmap.color_cubemap, "env_cm");
     
-    glActiveTexture(GL_TEXTURE2); DebugGL();;
-    glBindTexture(GL_TEXTURE_2D, matbuff); DebugGL();;
-    prog.setUniformInt(albedo_loc, 2);
-
-    cmap.bind(20, prog);
-
-    prog.setUniform(sundir_loc, g_Renderables.sunDirection);
-    prog.setUniform(suncolor_loc, g_Renderables.sunColor);
-    prog.setUniformFloat("sunIntensity", g_Renderables.sunIntensity);
+    g_Renderables.bindSun(g_Renderables.m_light, prog);
     prog.setUniformInt(seed_loc, rand());
     prog.setUniform(eye_loc, cam.getEye());
     prog.setUniformInt(draw_flag_loc, dflag);

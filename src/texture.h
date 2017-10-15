@@ -4,10 +4,7 @@
 #include "glm/glm.hpp"
 #include "debugmacro.h"
 #include "store.h"
-#include "circular_queue.h"
-#include <thread>
-#include <mutex>
-#include <chrono>
+#include "assetloader.h"
 
 struct Texture{
     unsigned handle;
@@ -91,73 +88,24 @@ struct Texture{
     TEX_TYPE_MACRO(4us, GL_RGBA16, GL_RGBA, GL_UNSIGNED_SHORT);
 };
 
-struct Image{
+struct Image
+{
     unsigned char* image;
+    unsigned id;
     int width, height;
     bool mip;
     Image() : image(nullptr), width(0), height(0), mip(true){}
     bool operator==(const Image& other)const{
-        return image == other.image;
+        return id == other.id;
     }
 };
 
-struct ImageStore{
-    Store<Image, 256> m_store;
-    CircularQueue<unsigned, 256> m_queue;
-    std::thread m_thread;
-    std::mutex m_mutex;
-    bool m_shouldRun;
+void load_image(Image* img, unsigned name);
 
-    void processQueue(){
-        while(m_shouldRun){
+extern AssetStore<false, Image, 256> g_ImageStore;
 
-            if(!m_queue.empty() && m_mutex.try_lock())
-            {
-                while(m_shouldRun && !m_queue.empty()){
-                    unsigned name = m_queue.pop();
-                    Image* m = nullptr;
-                    if(m_store.full()){
-                        m = m_store.reuse_near(name);
-                    }
-                    else{
-                        m_store.insert(name, Image());
-                        m = m_store[name];
-                    }
-            
-                    load_image(*m, name);
-                }
-                m_mutex.unlock();
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-    }
-
-    ImageStore(){
-        m_shouldRun = true;
-        m_thread = std::thread(&ImageStore::processQueue, this);
-    }
-    ~ImageStore(){
-        m_shouldRun = false;
-        m_thread.join();
-    }
-
-    void load_image(Image& img, unsigned name);
-    Image* get(unsigned name){
-        Image* m = m_store[name];
-        if(m){return m;}
-
-        if(m_queue.full() == false){
-            m_queue.set_push(name);
-        }
-        return nullptr;
-    }
-    Image* operator[](unsigned name){ return get(name); }
-};
-
-extern ImageStore g_ImageStore;
-
-struct TextureStore{
+struct TextureStore
+{
     Store<Texture, 32> m_store;
 
     Texture* get(unsigned name){
@@ -167,12 +115,15 @@ struct TextureStore{
         if(g_ImageStore.m_mutex.try_lock())
         {
             Image* img = g_ImageStore[name];
-            if(img){
-                if(m_store.full()){
+            if(img)
+            {
+                if(m_store.full())
+                {
                     m = m_store.reuse_near(name);
                     m->upload4uc(img->width, img->height, img->mip, img->image);
                 }
-                else{
+                else
+                {
                     m_store.insert(name, {});
                     m = m_store[name];
                     m->init4uc(img->width, img->height, img->mip, img->image);
@@ -183,9 +134,7 @@ struct TextureStore{
 
         return m;
     }
-    Texture* operator[](unsigned name){
-        return get(name);
-    }
+    Texture* operator[](unsigned name){ return get(name); }
 };
 
 extern TextureStore g_TextureStore;

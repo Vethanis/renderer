@@ -62,7 +62,7 @@ int GLProgram::getUniformLocation(HashString hash){
         pLoc = locations[hash.m_hash];
         if(*pLoc == -1){
             printf("[GLProgram] Invalid uniform detected: %s\n", loc_str);
-            assert(false);
+            //assert(false);
         }
     }
     return *pLoc;
@@ -83,10 +83,10 @@ void GLProgram::setUniform(int location, const glm::mat3& v){
 void GLProgram::setUniform(int location, const glm::mat4& v){
     glUniformMatrix4fv(location, 1, false, glm::value_ptr(v));  DebugGL();;
 }
-void GLProgram::setUniformInt(int location, const int v){
+void GLProgram::setUniformInt(int location, int v){
     glUniform1i(location, v);  DebugGL();;
 }
-void GLProgram::setUniformFloat(int location, const float v){
+void GLProgram::setUniformFloat(int location, float v){
     glUniform1f(location, v);  DebugGL();;
 }
 
@@ -120,4 +120,19 @@ void GLProgram::setup(const char** filenames, int count){
     for(int i = 0; i < count; ++i){
         freeShader(names[i]);
     }
+}
+
+
+void GLProgram::bindTexture(int channel, int texture, const char* name)
+{
+    glActiveTexture(GL_TEXTURE0 + channel);  DebugGL();
+    glBindTexture(GL_TEXTURE_2D, texture);  DebugGL();
+    setUniformInt(name, channel);
+}
+
+void GLProgram::bindCubemap(int channel, int texture, const char* name)
+{
+    glActiveTexture(GL_TEXTURE0 + channel);  DebugGL();
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texture);  DebugGL();
+    setUniformInt(name, channel);
 }

@@ -10,6 +10,7 @@
 #include "UBO.h"
 #include "glscreen.h"
 #include "depthstate.h"
+#include "directional_light.h"
 #include <random>
 
 // ------------------------------------------------------------------------
@@ -30,9 +31,17 @@
 #define DF_SKY              11
 #define DF_VIS_TANGENTS     12
 #define DF_VIS_BITANGENTS   13
+#define DF_VIS_SUN_SHADOW_DEPTH 14
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
+
+#define TX_ALBEDO_CHANNEL   0
+#define TX_MATERIAL_CHANNEL 1
+#define TX_SUN_CHANNEL      2
+#define TX_CUBEMAP_CHANNEL  3
+#define TX_POSITION_CHANNEL 4
+#define TX_NORMAL_CHANNEL   5
 
 // ------------------------------------------------------------------------
 
@@ -43,13 +52,11 @@ struct TextureChannels {
     void bind(GLProgram& prog, int channel){
         Texture* t = albedo;
         if(t){
-            t->bind(0);
-            prog.setUniformInt("albedoSampler", 0);
+            prog.bindTexture(TX_ALBEDO_CHANNEL, t->handle, "albedoSampler");
         }
         t = material;
         if(t){
-            t->bind(1);
-            prog.setUniformInt("materialSampler", 1);
+            prog.bindTexture(TX_MATERIAL_CHANNEL, t->handle, "materialSampler");
         }
     }
 };
@@ -71,9 +78,7 @@ struct RenderResource {
     HashString mesh;
     HashString transform;
 
-    bool operator==(const RenderResource& other)const{
-        return false;
-    }
+    bool operator==(const RenderResource& other)const{return false;}
     void init(){
         transform = g_TransformStore.grow();
     }
@@ -104,9 +109,7 @@ struct Renderables {
     GLProgram defProg;
     GLProgram skyProg;
 
-    glm::vec3 sunDirection;
-    glm::vec3 sunColor;
-    float sunIntensity = 10.0f;
+    DirectionalLight m_light;
 
     void init(){
         glEnable(GL_DEPTH_TEST); DebugGL();
@@ -138,8 +141,13 @@ struct Renderables {
         skyProg.link();
         skyProg.freeShader(shader);
 
-        sunDirection = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
-        sunColor = glm::vec3(1.0f, 0.75f, 0.5f);
+        m_light.init(2048);
+        m_light.m_direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
+        m_light.m_color = glm::vec3(1.0f, 0.75f, 0.5f);
+        m_light.m_position = m_light.m_direction * 25.0f;
+        m_light.m_intensity = 10.0f;
+        m_light.m_near = 0.1f;
+        m_light.m_far = 50.0f;
 
         materialparam_ubo.init(nullptr, sizeof(MaterialParams), "materialparams_ubo", &fwdProg.m_id, 1);
     }
@@ -149,17 +157,27 @@ struct Renderables {
         defProg.deinit();
         skyProg.deinit();
         materialparam_ubo.deinit();
+        m_light.deinit();
+    }
+    void bindSun(DirectionalLight& light, GLProgram& prog){
+        prog.setUniform("sunDirection", light.m_direction);
+        prog.setUniform("sunColor", light.m_color);
+        prog.setUniformFloat("sunIntensity", light.m_intensity);
+        prog.setUniform("sunMatrix", light.m_matrix);
+        prog.bindTexture(TX_SUN_CHANNEL, light.m_tex, "sunDepth");
     }
     void drawSky(const glm::vec3& eye, const Transform& IVP){
         DrawModeContext ctx(GL_LEQUAL, GL_TRUE, 1);
         skyProg.bind();
         
         skyProg.setUniform("IVP", IVP);
-        skyProg.setUniform("sunDirection", sunDirection);
         skyProg.setUniform("eye", eye);
-        skyProg.setUniformFloat("sunIntensity", sunIntensity);
+        bindSun(m_light, skyProg);
 
         GLScreen::draw();
+    }
+    void shadowPass(){
+        m_light.drawInto();
     }
     void prePass(const Transform& VP){
         DepthContext less(GL_LESS);
@@ -183,9 +201,7 @@ struct Renderables {
 
         fwdProg.bind();
 
-        fwdProg.setUniform("sunDirection", sunDirection);
-        fwdProg.setUniform("sunColor", sunColor);
-        fwdProg.setUniformFloat("sunIntensity", sunIntensity);
+        bindSun(m_light, fwdProg);
 
         fwdProg.setUniform("eye", cam.getEye());
         fwdProg.setUniformInt("seed", rand());
