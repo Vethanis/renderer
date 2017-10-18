@@ -1,30 +1,5 @@
 #version 450 core
 
-out vec4 outColor;
-in vec2 fragUv;
-
-// ------------------------- samplers ---------------------------------
-
-uniform sampler2D positionSampler;
-uniform sampler2D normalSampler;
-uniform sampler2D albedoSampler;
-
-uniform sampler2D sunDepth;
-
-uniform samplerCube env_cm;
-
-uniform mat4 IVP;
-uniform mat4 sunMatrix;
-uniform vec3 sunDirection;
-uniform vec3 sunColor;
-uniform vec3 eye;
-uniform vec2 render_resolution;
-uniform float sunIntensity;
-uniform int seed;
-uniform int draw_flags;
-
-// ------------------------------------------------------------------------
-
 #define PREPASS_ENABLED     1
 
 #define DF_DIRECT           0
@@ -52,6 +27,66 @@ uniform int draw_flags;
 #define TX_CUBEMAP_CHANNEL  3
 #define TX_POSITION_CHANNEL 4
 #define TX_NORMAL_CHANNEL   5
+
+// ------------------------------------------------------------------------
+
+out vec4 outColor;
+in vec2 fragUv;
+
+// ------------------------- samplers ---------------------------------
+
+uniform sampler2D positionSampler;
+uniform sampler2D normalSampler;
+uniform sampler2D albedoSampler;
+
+uniform sampler2D sunDepth;
+
+uniform samplerCube env_cm;
+
+uniform mat4 IVP;
+uniform mat4 sunMatrix;
+uniform vec3 sunDirection;
+uniform vec3 sunColor;
+uniform vec3 eye;
+uniform vec2 render_resolution;
+uniform float sunIntensity;
+uniform int seed;
+uniform int draw_flags;
+
+struct material
+{
+    vec4 position;
+    vec4 normal;
+    vec4 albedo;
+};
+
+#define mat_metalness(x) x.normal.w
+#define mat_roughness(x) x.position.w
+#define mat_depth(x) x.albedo.w
+#define mat_position(x) x.position.xyz
+#define mat_normal(x) x.normal.xyz
+#define mat_albedo(x) x.albedo.xyz
+
+material getMaterial(){
+    return material(
+        texture(positionSampler, fragUv),
+        texture(normalSampler, fragUv),
+        texture(albedoSampler, fragUv)
+    );
+}
+
+vec3 environment_cubemap(vec3 dir, float roughness){
+    float mip = textureQueryLod(env_cm, dir).x;
+    return textureLod(env_cm, dir, mip + roughness * 10.0).rgb;
+}
+
+vec3 env_cubemap(vec3 dir){
+    return texture(env_cm, dir).rgb;
+}
+
+float getDepth(vec2 uv){
+    return texture(albedoSampler, uv).w;
+}
 
 // ------------------------------------------------------------------------
 
@@ -87,68 +122,54 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 
 // -------------------------------------------------------------------------------------------
 
-vec3 environment_cubemap(vec3 dir, float roughness){
-    float mip = textureQueryLod(env_cm, dir).x;
-    return textureLod(env_cm, dir, mip + roughness * 10.0).rgb;
-}
-
-vec3 env_cubemap(vec3 dir){
-    return texture(env_cm, dir).rgb;
-}
-
 float sunShadowing(vec3 p, inout uint s){
     const int samples = 4;
     const float inv_samples = 1.0 / float(samples);
-    const float variance = 0.005;
+    const float variance = 0.01;
+    const float bias = 0.005;
 
     const vec4 projCoords = (sunMatrix * vec4(p.xyz, 1.0)) * 0.5 + 0.5;
     float point_depth = projCoords.z;
     if(point_depth > 1.0)
         return 1.0;
 
-    float light_depth = 0.0;
+    float occlusion = 0.0;
     for(float x = 0.0f; x < samples; ++x){
         for(float y = 0.0f; y < samples; ++y){
             const vec2 p = vec2(stratRandBi(x, inv_samples, s), stratRandBi(y, inv_samples, s)) * variance;
-            light_depth += texture(sunDepth, projCoords.xy + p).r;
+            const float d = texture(sunDepth, projCoords.xy + p).r;
+            occlusion += point_depth > d ? 0.0 : 1.0;
         }
     }
-    light_depth *= inv_samples * inv_samples;
+    occlusion *= inv_samples * inv_samples;
 
-    
-    return point_depth < light_depth ? 1.0 : 0.0;
-}
-
-struct material
-{
-    vec4 position;
-    vec4 normal;
-    vec4 albedo;
-};
-
-#define mat_metalness(x) x.normal.w
-#define mat_roughness(x) x.position.w
-#define mat_depth(x) x.albedo.w
-#define mat_position(x) x.position.xyz
-#define mat_normal(x) x.normal.xyz
-#define mat_albedo(x) x.albedo.xyz
-
-material getMaterial(){
-    return material(
-        texture(positionSampler, fragUv),
-        texture(normalSampler, fragUv),
-        texture(albedoSampler, fragUv)
-    );
-}
-
-float getDepth(vec2 uv){
-    return texture(albedoSampler, uv).w;
+    return occlusion;
 }
 
 vec3 toWorld(float x, float y, float z){
     vec4 t = vec4(x, y, z, 1.0);
     t = IVP * t;
     return vec3(t/t.w);
+}
+
+float HeightOcclusion(vec3 N, inout uint s){
+    const int samples = 8;
+    const float bias = 0.1;
+    const float base = getDepth(fragUv);
+    if(base == 0.0)
+        return 0.0;
+        
+    float radius = 0.005;
+
+    float occlusion = 0.0;
+    for(int i = 0; i < samples; ++i)
+    {
+        const vec2 offset = radius * vec2(randBi(s), randBi(s));
+        const float p = getDepth(fragUv + offset);
+        occlusion += p + bias < base ? 1.0 : 0.0;
+        radius *= 1.333;
+    }
+    return occlusion / float(samples);
 }
 
 // ------------------------------------------------------------------------
@@ -250,6 +271,8 @@ vec3 indirect_lighting(inout uint s){
     light *= 1.0 + (2.0 * mat_roughness(mat) - 1.0); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
+
+    light *= (1.0 - HeightOcclusion(mat_normal(mat), s) * 0.95);
 
     return light;
 }

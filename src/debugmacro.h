@@ -4,7 +4,7 @@
 
 #define PLM() printf("%s :: %d\n", __FILE__, __LINE__)
 
-#define DEBUG_OPENGL_CALLS 1
+#define DEBUG_OPENGL_CALLS 0
 
 #if DEBUG_OPENGL_CALLS
 

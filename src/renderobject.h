@@ -68,7 +68,7 @@ struct MaterialParams {
     float metalness_multiplier = 1.0f;
     float index_of_refraction = 1.0f;
     float bumpiness = 1.0f;
-    float _pad2;
+    float heightScale = 0.0075f;
     float _pad3;
 };
 
@@ -195,10 +195,7 @@ struct Renderables {
     }
     void fwdDraw(const Camera& cam, const Transform& VP, u32 dflag, s32 width, s32 height){
         glViewport(0, 0, width, height); DebugGL();
-
-        prePass(VP);
-
-        DrawModeContext ctx(GL_LEQUAL, GL_FALSE, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
 
         fwdProg.bind();
 
@@ -226,14 +223,12 @@ struct Renderables {
     }
     void defDraw(const Camera& cam, const Transform& VP, u32 dflag, s32 width, s32 height){
         glViewport(0, 0, width, height); DebugGL();
-        
-        prePass(VP);
-
-        DrawModeContext ctx(GL_LEQUAL, GL_FALSE, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
 
         defProg.bind();
         defProg.setUniform("eye", cam.getEye());
         defProg.setUniformInt("draw_flags", dflag);
+        defProg.setUniform("nearfar", glm::vec2(cam.getNear(), cam.getFar()));
 
         for(auto& res : resources){
             Transform* M = res.transform;

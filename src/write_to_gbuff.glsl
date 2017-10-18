@@ -19,6 +19,7 @@ uniform vec3 eye;
 uniform int object_flags;
 uniform int draw_flags;
 uniform int seed;
+uniform vec2 nearfar;
 
 // -----------------------------------------------------------------------
 
@@ -29,7 +30,7 @@ struct MaterialParams {
     float metalness_multiplier;
     float index_of_refraction;
     float bumpiness;
-    float _pad2;
+    float heightScale;
     float _pad3;
 };
 
@@ -146,49 +147,34 @@ float getHeight(vec2 uv){
     return texture(materialSampler, uv).x;
 }
 
-const float depth_scale = 0.005;
-const float num_layers = 32.0;
-vec2 POM(vec2 uv, vec3 view_dir)
-{
-    float layer_depth = 1.0 / num_layers;
-    float cur_layer_depth = 0.0;
-    vec2 delta_uv = view_dir.xy * depth_scale / (view_dir.z * num_layers);
-    vec2 cur_uv = uv;
-
-    float depth_from_tex = getHeight(cur_uv);
-
-    for (int i = 0; i < 32; i++) {
-        cur_layer_depth += layer_depth;
-        cur_uv -= delta_uv;
-        depth_from_tex = getHeight(cur_uv);
-        if (depth_from_tex < cur_layer_depth) {
-            break;
-        }
+vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){ 
+    const float minLayers = 8;
+    const float maxLayers = 32;
+    const float heightScale = material_params.heightScale;
+    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
+    float layerDepth = 1.0 / numLayers;
+    float currentLayerDepth = 0.0;
+    vec2 P = viewDir.xy / viewDir.z * heightScale; 
+    vec2 deltaTexCoords = P / numLayers;
+  
+    vec2  currentTexCoords     = texCoords;
+    float currentDepthMapValue = getHeight(currentTexCoords);
+      
+    for(int i = 0; i < 16 && currentLayerDepth < currentDepthMapValue; ++i){
+        currentTexCoords -= deltaTexCoords;
+        currentDepthMapValue = getHeight(currentTexCoords);
+        currentLayerDepth += layerDepth;  
     }
+    
+    vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
 
-    vec2 prev_uv = cur_uv + delta_uv;
-    float next = depth_from_tex - cur_layer_depth;
-    float prev = getHeight(prev_uv) - cur_layer_depth + layer_depth;
-    float weight = next / (next - prev);
-    return mix(cur_uv, prev_uv, weight);
-}
+    float afterDepth  = currentDepthMapValue - currentLayerDepth;
+    float beforeDepth = getHeight(prevTexCoords) - currentLayerDepth + layerDepth;
+ 
+    float weight = afterDepth / (afterDepth - beforeDepth);
+    vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 
-float POMOcclusion(vec2 uv, inout uint s){
-    const float height = getHeight(uv);
-    const float variance = 0.0015;
-    const int samples = 8;
-    const float inv_samples = 1.0 / float(samples);
-
-    float occlusion = 0.0;
-    for(int i = 0; i < samples; ++i){
-        const vec2 p = uv + vec2(randBi(s), randBi(s)) * variance;
-        const float h = getHeight(p);
-        if(h < height){
-            occlusion += inv_samples;
-        }
-    }
-
-    return occlusion;
+    return finalTexCoords;
 }
 
 void main(){
@@ -198,14 +184,11 @@ void main(){
 
     const vec3 tanV = transpose(GetBasis(MacroNormal)) * normalize(eye - P);
 
-    vec2 newUv = POM(UV, tanV);
-    vec3 newP = P + distance(UV, newUv) * normalize(P - eye);
-    float occlusion = POMOcclusion(newUv, s);
-
+    vec2 newUv = ParallaxMapping(UV, tanV);
     const material mat = getMaterial(newUv);
 
-    gPosition = vec4(newP.xyz, mat.roughness);
-    gAlbedo = vec4(mat.albedo * (1.0 - occlusion * 0.666), gl_FragCoord.z);
+    gPosition = vec4(P.xyz, mat.roughness);
+    gAlbedo = vec4(mat.albedo, getHeight(newUv));
     gNormal = vec4(mat.normal, mat.metalness);
 
     if(draw_flags == DF_UV)

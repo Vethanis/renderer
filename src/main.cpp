@@ -6,6 +6,7 @@
 #include "input.h"
 #include "renderobject.h"
 #include "gbuffer.h"
+#include "timer.h"
 
 #include <random>
 #include <ctime>
@@ -87,11 +88,23 @@ int main(int argc, char* argv[]){
     unsigned i = 0;
     float t = (float)glfwGetTime();
     u32 flag = DF_INDIRECT;
+
+    Timer timer;
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
 
         for(int key : input){
             switch(key){
+                case GLFW_KEY_KP_ADD:
+                {
+
+                }
+                break;
+                case GLFW_KEY_KP_SUBTRACT:
+                {
+                    
+                }
+                break;
                 case GLFW_KEY_E:
                 {
                     g_Renderables.m_light.m_direction = camera.getAxis();
@@ -212,7 +225,10 @@ int main(int argc, char* argv[]){
             }
         }
 
+        //timer.begin();
         g_gBuffer.draw(camera, flag);
+        //timer.endPrint();
+
         window.swap();
     }
     
