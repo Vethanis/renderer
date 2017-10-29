@@ -64,7 +64,7 @@ void Cubemap::drawInto(const Camera& cam){
         GL_TEXTURE_CUBE_MAP_POSITIVE_X + current_face, color_cubemap, 0); DebugGL();
 
     const Transform VP = P * glm::translate(Vs[current_face], -cam.getEye());
-    g_Renderables.fwdDraw(cam, VP, DF_DIRECT_CUBEMAP, m_size, m_size);
+    g_Renderables.fwdDraw(cam.getEye(), VP, DF_DIRECT_CUBEMAP, m_size, m_size);
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP); DebugGL();

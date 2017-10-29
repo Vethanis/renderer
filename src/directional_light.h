@@ -17,6 +17,5 @@ struct DirectionalLight
 
     void init(int size = 1024);
     void deinit();
-    void bindTexture(int channel);
     void drawInto();
 };

@@ -11,15 +11,6 @@
 #include <random>
 #include <ctime>
 
-float randf(void){
-    constexpr float inv = 1.0f / float(RAND_MAX);
-    return rand() * inv;
-}
-
-float randf(float range){
-    return randf() * range - (range * 0.5f);
-}
-
 float frameBegin(unsigned& i, float& t){
     float dt = (float)glfwGetTime() - t;
     t += dt;
@@ -220,6 +211,11 @@ int main(int argc, char* argv[]){
                     RenderResource* pRenderable = suzanne;
                     float& x = pRenderable->material_params.index_of_refraction;
                     x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
+                }
+                break;
+                case GLFW_KEY_F12:
+                {
+                    g_gBuffer.screenshot();
                 }
                 break;
             }

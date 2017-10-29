@@ -15,13 +15,14 @@ inline glm::vec3 getForward(const glm::mat4& m){
     return glm::vec3(-m[0][2], -m[1][2], -m[2][2]);
 }
 
-class Camera{
-    glm::mat4 P, V, VP, IVP;
+class Camera
+{
+    glm::mat4 P, V, VP, prevVP;
     glm::vec3 m_eye, m_at;
     float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
-    inline void calculateMatrices(){
+    void calculateMatrices(){
+        prevVP = VP;
         VP = P * V;
-        IVP = glm::inverse(VP);
     }
 public:
     Camera(float fov=glm::radians(90.0f), float ratio=16.0f/9.0f, float near=0.1f, 
@@ -33,7 +34,7 @@ public:
         m_pitch = 0.0f;
         update();
     }
-    inline void update(){
+    void update(){
         m_at.x = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
         m_at.y = sin(glm::radians(m_pitch));
         m_at.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
@@ -41,23 +42,23 @@ public:
         V = glm::lookAt(m_eye, m_at, up_vec);
         calculateMatrices();
     }
-    inline void resize(int width, int height){
+    void resize(int width, int height){
         m_whratio = (float)width / (float)height;
         P = glm::perspective(m_fov, m_whratio, m_near, m_far);
         calculateMatrices();
     }
-    inline void setFov(float fov){
+    void setFov(float fov){
         m_fov = glm::radians(fov);
         P = glm::perspective(m_fov, m_whratio, m_near, m_far);
         calculateMatrices();
     }
-    inline const glm::vec3& getEye()const {return m_eye;}
-    inline const glm::vec3& getAt()const {return m_at;}
-    inline float getNear()const{return m_near;}
-    inline float getFar()const{return m_far;}
-    inline float getFov()const{return m_fov;}
-    inline void setEye(const glm::vec3& eye){m_eye = eye;}
-    inline void move(const glm::vec3& v){
+    const glm::vec3& getEye()const {return m_eye;}
+    const glm::vec3& getAt()const {return m_at;}
+    float getNear()const{return m_near;}
+    float getFar()const{return m_far;}
+    float getFov()const{return m_fov;}
+    void setEye(const glm::vec3& eye){m_eye = eye;}
+    void move(const glm::vec3& v){
         m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
     }
     void pitch(float amt){
@@ -68,15 +69,15 @@ public:
         m_yaw -= amt;
         m_yaw = fmod(m_yaw, 360.0f);
     }
-    inline const glm::mat4& getV()const{return V;}
-    inline const glm::mat4& getP()const{return P;}
-    inline const glm::mat4& getVP()const{return VP;}
-    inline const glm::mat4& getIVP()const{ return IVP; }
-    inline const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
-    inline void setPlanes(float near, float far){
+    const glm::mat4& getV()const{return V;}
+    const glm::mat4& getP()const{return P;}
+    const glm::mat4& getVP()const{return VP;}
+    const glm::mat4& getPrevVP()const{ return prevVP; }
+    const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
+    void setPlanes(float near, float far){
         m_near = near; m_far = far;
         P = glm::perspective(m_fov, m_whratio, m_near, m_far);
         calculateMatrices();
     }
-    inline float getAR(){return m_whratio;}
+    float getAR(){return m_whratio;}
 };

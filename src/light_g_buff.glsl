@@ -30,7 +30,7 @@
 
 // ------------------------------------------------------------------------
 
-out vec4 outColor;
+layout (location = 0) out vec4 outColor;
 in vec2 fragUv;
 
 // ------------------------- samplers ---------------------------------
@@ -39,11 +39,14 @@ uniform sampler2D positionSampler;
 uniform sampler2D normalSampler;
 uniform sampler2D albedoSampler;
 
-uniform sampler2D sunDepth;
+uniform sampler2D prevColor;
 
 uniform samplerCube env_cm;
 
+uniform sampler2D sunDepth;
+
 uniform mat4 IVP;
+uniform mat4 prevVP;
 uniform mat4 sunMatrix;
 uniform vec3 sunDirection;
 uniform vec3 sunColor;
@@ -123,10 +126,9 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 // -------------------------------------------------------------------------------------------
 
 float sunShadowing(vec3 p, inout uint s){
-    const int samples = 4;
+    const int samples = 8;
     const float inv_samples = 1.0 / float(samples);
-    const float variance = 0.01;
-    const float bias = 0.005;
+    const float bias = 0.0;
 
     const vec4 projCoords = (sunMatrix * vec4(p.xyz, 1.0)) * 0.5 + 0.5;
     float point_depth = projCoords.z;
@@ -134,14 +136,13 @@ float sunShadowing(vec3 p, inout uint s){
         return 1.0;
 
     float occlusion = 0.0;
-    for(float x = 0.0f; x < samples; ++x){
-        for(float y = 0.0f; y < samples; ++y){
-            const vec2 p = vec2(stratRandBi(x, inv_samples, s), stratRandBi(y, inv_samples, s)) * variance;
-            const float d = texture(sunDepth, projCoords.xy + p).r;
-            occlusion += point_depth > d ? 0.0 : 1.0;
-        }
+    const float variance = 0.001;
+    for(int i = 0; i < samples; ++i){
+        const vec2 p = vec2(randBi(s), randBi(s)) * variance;
+        const float d = texture(sunDepth, projCoords.xy + p).r;
+        occlusion += point_depth > d ? 0.0 : 1.0;
     }
-    occlusion *= inv_samples * inv_samples;
+    occlusion *= inv_samples;
 
     return occlusion;
 }
@@ -431,6 +432,7 @@ void main(){
     if(albedo.x == 0.0 && albedo.y == 0.0 && albedo.z == 0.0)
     {
         lighting = skylight();
+        lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
     }
     else
     {
@@ -476,15 +478,21 @@ void main(){
                 lighting = visualizeShadow();
                 break;
         }
-    }
 
-    lighting.rgb.x += 0.0005 * randBi(s);
-    lighting.rgb.y += 0.0005 * randBi(s);
-    lighting.rgb.z += 0.0005 * randBi(s);
-
-    if(draw_flags != DF_DIRECT_CUBEMAP){
         lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
-        lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
+
+        vec4 P = texture(positionSampler, fragUv);
+        P.w = 1.0;
+        P = prevVP * P;
+        P /= P.w;
+        P.xy = P.xy * 0.5 + 0.5;
+        if(P.x <= 1.0 && P.x >= 0.0)
+        {
+            if(P.y <= 1.0 && P.y >= 0.0)
+            {
+                lighting.rgb = mix(lighting.rgb, texture(prevColor, P.xy).rgb, 0.5);
+            }
+        }
     }
 
     outColor = vec4(lighting.rgb, 1.0);

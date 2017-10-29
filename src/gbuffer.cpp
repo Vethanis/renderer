@@ -4,107 +4,117 @@
 #include "light.h"
 #include "glscreen.h"
 #include "renderobject.h"
+#include "depthstate.h"
+#include "randf.h"
+
+unsigned draw_call = 0;
+
+const char* progFilenames[2] = {
+    "screenVert.glsl",
+    "light_g_buff.glsl"
+};
+const char* postFilenames[2] = {
+    "screenVert.glsl",
+    "postFrag.glsl"
+};
 
 void GBuffer::init(int w, int h){
     width = w;
     height = h;
 
-    glGenFramebuffers(1, &buff);
-    glBindFramebuffer(GL_FRAMEBUFFER, buff);
+    m_framebuffer.init(w, h, 3);
+    m_postbuffs[0].init(w, h, 1);
+    m_postbuffs[1].init(w, h, 1);
 
-    glGenTextures(3, &posbuff);
-
-    glBindTexture(GL_TEXTURE_2D, posbuff); DebugGL();;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL); DebugGL();;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); DebugGL();;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); DebugGL();;
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, posbuff, 0); DebugGL();;
-
-    glBindTexture(GL_TEXTURE_2D, normbuff); DebugGL();;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL); DebugGL();;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); DebugGL();;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); DebugGL();;
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, normbuff, 0); DebugGL();;
-
-    glBindTexture(GL_TEXTURE_2D, matbuff); DebugGL();;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, NULL); DebugGL();;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); DebugGL();;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); DebugGL();;
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, matbuff, 0); DebugGL();;
-    
-    unsigned attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-    glDrawBuffers(3, attachments); DebugGL();;
-
-    glGenRenderbuffers(1, &rboDepth); DebugGL();;
-    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth); DebugGL();;
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h); DebugGL();;
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth); DebugGL();;
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-        puts("Framebuffer not complete!");
-        assert(false);
-    }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();;
-
-    prog.init();
-    prog.addShader(GLScreen::vertexShader());
-    int shader = prog.addShader("light_g_buff.glsl", GL_FRAGMENT_SHADER);
-    prog.link();
-    prog.freeShader(shader);
+    prog.setup(progFilenames, 2);
+    postProg.setup(postFilenames, 2);
 
     cmap.init(512);
 }
 void GBuffer::deinit(){
     prog.deinit();
+    postProg.deinit();
     cmap.deinit();
 
-    glDeleteRenderbuffers(1, &rboDepth);
-    glDeleteTextures(3, &posbuff);
-    glDeleteFramebuffers(1, &buff);
+    m_framebuffer.deinit();
+    m_postbuffs[0].deinit();
+    m_postbuffs[1].deinit();
 }
 
 GBuffer g_gBuffer;
 
-void GBuffer::draw(const Camera& cam, u32 dflag){
-    static const int pos_loc = prog.getUniformLocation("positionSampler");
-    static const int norm_loc = prog.getUniformLocation("normalSampler");
-    static const int albedo_loc = prog.getUniformLocation("albedoSampler");
-
-    static const int sundir_loc = prog.getUniformLocation("sunDirection");
-    static const int suncolor_loc = prog.getUniformLocation("sunColor");
+void GBuffer::draw(const Camera& cam, u32 dflag)
+{
     static const int seed_loc = prog.getUniformLocation("seed");
     static const int eye_loc = prog.getUniformLocation("eye");
     static const int draw_flag_loc = prog.getUniformLocation("draw_flags");
 
+    const float jitter_magnitude = 0.00005f;
+    Transform VP = cam.getVP();
+    Transform IVP = glm::inverse(VP);
+    glm::vec3 jitter = randf(jitter_magnitude) * getRight(VP) + randf(jitter_magnitude) * getUp(VP);
+    glm::vec3 eye = cam.getEye();
+    eye += jitter;
+    VP[3][0] += jitter.x;
+    VP[3][1] += jitter.y;
+    VP[3][2] += jitter.z;
+
+    // SHADOWS pass
     g_Renderables.shadowPass();
 
-    // draw into cubemap
+    // CUBEMAP pass
     cmap.drawInto(cam);
 
-    // draw into gbuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, buff); DebugGL();;
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
-    g_Renderables.defDraw(cam, cam.getVP(), dflag, width, height);
+    // WRITE pass
+    m_framebuffer.bind();
+    Framebuffer::clear();
+    glTextureBarrier(); DebugGL();
+    g_Renderables.defDraw(eye, VP, dflag, width, height);
 
-    // calculate lighting using gbuffer
-    // replace this framebuffer with the post process buffer later
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();;
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();;
+    // LIGHTING pass
+    Framebuffer& curBuf = m_postbuffs[draw_call & 1];
+    Framebuffer& prevBuf = m_postbuffs[(draw_call - 1) & 1];
+
+    curBuf.bind();
+    Framebuffer::clear();
     DepthContext dfctx(GL_ALWAYS);
 
     prog.bind();
 
-    prog.bindTexture(TX_ALBEDO_CHANNEL, posbuff, "positionSampler");
-    prog.bindTexture(TX_NORMAL_CHANNEL, normbuff, "normalSampler");
-    prog.bindTexture(TX_MATERIAL_CHANNEL, matbuff, "albedoSampler");
-    prog.bindCubemap(TX_CUBEMAP_CHANNEL, cmap.color_cubemap, "env_cm");
+    prog.bindTexture(0, m_framebuffer.m_attachments[0], "positionSampler");
+    prog.bindTexture(1, m_framebuffer.m_attachments[1], "normalSampler");
+    prog.bindTexture(2, m_framebuffer.m_attachments[2], "albedoSampler");
+    prog.bindTexture(3, prevBuf.m_attachments[0], "prevColor");
+    prog.bindCubemap(4, cmap.color_cubemap, "env_cm");
     
-    g_Renderables.bindSun(g_Renderables.m_light, prog);
+    g_Renderables.bindSun(g_Renderables.m_light, prog, 5);
     prog.setUniformInt(seed_loc, rand());
-    prog.setUniform(eye_loc, cam.getEye());
+    prog.setUniform(eye_loc, eye);
     prog.setUniformInt(draw_flag_loc, dflag);
     prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
-    prog.setUniform("IVP", cam.getIVP());
+    prog.setUniform("IVP", IVP);
+    prog.setUniform("prevVP", cam.getPrevVP());
 
+    glTextureBarrier(); DebugGL();
     GLScreen::draw();
+
+    // POST pass
+    Framebuffer::bindDefault();
+    Framebuffer::clear();
+
+    postProg.bind();
+    postProg.bindTexture(0, curBuf.m_attachments[0], "curColor");
+    postProg.setUniformInt("seed", rand());
+
+    glTextureBarrier(); DebugGL();
+    GLScreen::draw();
+    
+    draw_call++;
+}
+
+void GBuffer::screenshot()
+{
+    char buff[64];
+    snprintf(buff, sizeof(buff), "screenshots/Screenshot_%i.png", draw_call);
+    m_postbuffs[draw_call & 1].saveToFile(buff, 0);
 }

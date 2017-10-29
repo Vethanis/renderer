@@ -19,7 +19,6 @@ uniform vec3 eye;
 uniform int object_flags;
 uniform int draw_flags;
 uniform int seed;
-uniform vec2 nearfar;
 
 // -----------------------------------------------------------------------
 

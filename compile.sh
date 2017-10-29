@@ -32,6 +32,7 @@ ASSETS="assets/*"
 
 mkdir -p bin/Release
 mkdir -p bin/Debug
+mkdir -p bin/Release/screenshots
 
 cp $GLSL bin/Release
 cp $GLSL bin/Debug
