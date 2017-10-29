@@ -126,7 +126,7 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 // -------------------------------------------------------------------------------------------
 
 float sunShadowing(vec3 p, inout uint s){
-    const int samples = 8;
+    const int samples = 16;
     const float inv_samples = 1.0 / float(samples);
     const float bias = 0.0;
 
@@ -427,12 +427,13 @@ void main(){
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
 
-    vec3 lighting;
     const vec3 albedo = texture(albedoSampler, fragUv).rgb;
-    if(albedo.x == 0.0 && albedo.y == 0.0 && albedo.z == 0.0)
+    const bool shouldSkylight = albedo.x == 0.0 && albedo.y == 0.0 && albedo.z == 0.0;
+    
+    vec3 lighting;
+    if(shouldSkylight)
     {
         lighting = skylight();
-        lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
     }
     else
     {
@@ -478,9 +479,12 @@ void main(){
                 lighting = visualizeShadow();
                 break;
         }
+    }
 
-        lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
+    lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
 
+    if(!shouldSkylight)
+    {
         vec4 P = texture(positionSampler, fragUv);
         P.w = 1.0;
         P = prevVP * P;

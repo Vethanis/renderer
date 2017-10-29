@@ -24,12 +24,13 @@ void main()
     uint s = uint(seed) 
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
+
     vec3 lighting = texture(curColor, fragUv).rgb;
+    lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
 
     lighting.rgb.x += 0.0005 * randBi(s);
     lighting.rgb.y += 0.0005 * randBi(s);
     lighting.rgb.z += 0.0005 * randBi(s);
-    lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
 
     outColor = vec4(lighting.rgb, 1.0);
 }

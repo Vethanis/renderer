@@ -49,7 +49,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     static const int eye_loc = prog.getUniformLocation("eye");
     static const int draw_flag_loc = prog.getUniformLocation("draw_flags");
 
-    const float jitter_magnitude = 0.00005f;
+    const float jitter_magnitude = 0.0001f;
     Transform VP = cam.getVP();
     Transform IVP = glm::inverse(VP);
     glm::vec3 jitter = randf(jitter_magnitude) * getRight(VP) + randf(jitter_magnitude) * getUp(VP);
