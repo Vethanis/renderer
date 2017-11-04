@@ -29,6 +29,7 @@ void TextureChannels::bind(GLProgram& prog, int channel)
 void RenderResource::init()
 {
     transform = g_TransformStore.grow();
+    m_uv_scale = glm::vec2(1.0f);
 }
 
 void RenderResource::deinit()
@@ -54,6 +55,12 @@ void RenderResource::setTransform(const Transform& xform)
 {
     Transform* pXform = transform;
     *pXform = xform;
+}
+
+void RenderResource::setVelocity(const glm::vec3& dv)
+{
+    m_prevVelocity = m_velocity;
+    m_velocity = dv;
 }
 
 void Renderables::init()
@@ -87,13 +94,13 @@ void Renderables::init()
     skyProg.link();
     skyProg.freeShader(shader);
 
-    m_light.init(2048);
+    m_light.init(1024);
     m_light.m_direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
     m_light.m_color = glm::vec3(1.0f, 0.75f, 0.5f);
-    m_light.m_position = m_light.m_direction * 50.0f;
+    m_light.m_position = m_light.m_direction * 20.0f;
     m_light.m_intensity = 10.0f;
-    m_light.m_near = 1.0f;
-    m_light.m_far = 100.0f;
+    m_light.m_near = 5.0f;
+    m_light.m_far = 50.0f;
 
     materialparam_ubo.init(nullptr, sizeof(MaterialParams), "materialparams_ubo", &fwdProg.m_id, 1);
 }
@@ -196,6 +203,9 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
         defProg.setUniform("MVP", VP * *M);
         defProg.setUniform("M", *M);
         defProg.setUniform("IM", IM);
+        defProg.setUniform("velocity", res.m_prevVelocity);
+        defProg.setUniform("uv_scale", res.m_uv_scale);
+        defProg.setUniform("uv_offset", res.m_uv_offset);
 
         res.bind(defProg, materialparam_ubo);
         res.draw();

@@ -27,6 +27,7 @@
 #define DF_VIS_TANGENTS     12
 #define DF_VIS_BITANGENTS   13
 #define DF_VIS_SUN_SHADOW_DEPTH 14
+#define DF_VIS_VELOCITY     15
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -66,6 +67,10 @@ struct RenderResource
     MaterialParams material_params;
     HashString mesh;
     HashString transform;
+    glm::vec3 m_velocity;
+    glm::vec3 m_prevVelocity;
+    glm::vec2 m_uv_scale;
+    glm::vec2 m_uv_offset;
 
     bool operator==(const RenderResource& other)const{ return false; };
     void init();
@@ -73,6 +78,7 @@ struct RenderResource
     void bind(GLProgram& prog, UBO& material_ubo);
     void draw();
     void setTransform(const Transform& xform);
+    void setVelocity(const glm::vec3& dv);
 };
 
 struct Renderables 

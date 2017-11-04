@@ -34,7 +34,7 @@ void DirectionalLight::drawInto()
     glViewport(0, 0, m_size, m_size);  DebugGL();
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);  DebugGL();
     glCullFace(GL_FRONT);  DebugGL();
-    m_matrix = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, m_near, m_far) * glm::lookAt(m_position + m_direction, m_position, glm::vec3(0.0f, 1.0f, 0.0f));
+    m_matrix = glm::ortho(-25.0f, 25.0f, -25.0f, 25.0f, m_near, m_far) * glm::lookAt(m_position + m_direction, m_position, glm::vec3(0.0f, 1.0f, 0.0f));
     g_Renderables.prePass(m_matrix);
     glCullFace(GL_BACK);  DebugGL();
 }

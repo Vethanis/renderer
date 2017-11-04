@@ -22,7 +22,7 @@ void GBuffer::init(int w, int h){
     width = w;
     height = h;
 
-    m_framebuffer.init(w, h, 3);
+    m_framebuffer.init(w, h, 4);
     m_postbuffs[0].init(w, h, 1);
     m_postbuffs[1].init(w, h, 1);
 
@@ -59,21 +59,20 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     VP[3][1] += jitter.y;
     VP[3][2] += jitter.z;
 
-    // SHADOWS pass
+    // SHADOWS pass ---------------------------------------------------------------------------
     g_Renderables.shadowPass();
 
-    // CUBEMAP pass
+    // CUBEMAP pass ---------------------------------------------------------------------------
     cmap.drawInto(cam);
 
-    // WRITE pass
+    // WRITE pass -----------------------------------------------------------------------------
     m_framebuffer.bind();
     Framebuffer::clear();
-    glTextureBarrier(); DebugGL();
     g_Renderables.defDraw(eye, VP, dflag, width, height);
 
-    // LIGHTING pass
+    // LIGHTING pass ---------------------------------------------------------------------------
     Framebuffer& curBuf = m_postbuffs[draw_call & 1];
-    Framebuffer& prevBuf = m_postbuffs[(draw_call - 1) & 1];
+    Framebuffer& prevBuf = m_postbuffs[(draw_call + 1) & 1];
 
     curBuf.bind();
     Framebuffer::clear();
@@ -84,10 +83,11 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     prog.bindTexture(0, m_framebuffer.m_attachments[0], "positionSampler");
     prog.bindTexture(1, m_framebuffer.m_attachments[1], "normalSampler");
     prog.bindTexture(2, m_framebuffer.m_attachments[2], "albedoSampler");
-    prog.bindTexture(3, prevBuf.m_attachments[0], "prevColor");
-    prog.bindCubemap(4, cmap.color_cubemap, "env_cm");
+    prog.bindTexture(3, m_framebuffer.m_attachments[3], "velocitySampler");
+    prog.bindTexture(4, prevBuf.m_attachments[0], "prevColor");
+    prog.bindCubemap(5, cmap.color_cubemap, "env_cm");
     
-    g_Renderables.bindSun(g_Renderables.m_light, prog, 5);
+    g_Renderables.bindSun(g_Renderables.m_light, prog, 6);
     prog.setUniformInt(seed_loc, rand());
     prog.setUniform(eye_loc, eye);
     prog.setUniformInt(draw_flag_loc, dflag);
@@ -98,7 +98,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     glTextureBarrier(); DebugGL();
     GLScreen::draw();
 
-    // POST pass
+    // POST pass ---------------------------------------------------------------------------
     Framebuffer::bindDefault();
     Framebuffer::clear();
 
@@ -109,6 +109,8 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     glTextureBarrier(); DebugGL();
     GLScreen::draw();
     
+    // -------------------------------------------------------------------------------------
+
     draw_call++;
 }
 

@@ -7,6 +7,7 @@
 #include "renderobject.h"
 #include "gbuffer.h"
 #include "timer.h"
+#include "framecounter.h"
 
 #include <random>
 #include <ctime>
@@ -71,8 +72,13 @@ int main(int argc, char* argv[]){
             glm::translate({}, glm::vec3(5.0f, 0.0f, 5.0f)));
         g_Renderables.create("suzanne.mesh", channels[1].albedo, channels[1].material,
                 glm::translate({}, glm::vec3(10.0f, -2.1f, 5.0f)));
-        g_Renderables.create("plane.mesh", "wood_floor_albedo.png", "wood_floor_material.png", 
-            glm::scale(glm::translate({}, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(4.0f)));
+        HashString plane = g_Renderables.create("cube.mesh", "wood_floor_albedo.png", "wood_floor_material.png", 
+            glm::scale(glm::translate({}, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(16.0f, 0.1f, 16.0f)));
+        RenderResource* pRes = plane;
+        if(pRes)
+        {
+            pRes->m_uv_scale *= 16.0f;
+        }
     }
 
     input.poll();
@@ -81,11 +87,30 @@ int main(int argc, char* argv[]){
     u32 flag = DF_INDIRECT;
 
     Timer timer;
-    while(window.open()){
+    while(window.open())
+    {
         input.poll(frameBegin(i, t), camera);
 
-        for(int key : input){
-            switch(key){
+        RenderResource* pRes = suzanne;
+        if(pRes)
+        {
+            Transform* xform = pRes->transform;
+            if(xform)
+            {
+                float phase = frameCounter() / 10.0f;
+                phase = glm::mod(phase, 3.141592f * 2.0f);
+                float x = glm::sin(phase) * 0.05f;
+                float y = glm::cos(phase) * 0.05f;
+                glm::vec3 dv = glm::vec3(x, y, 0.0f);
+                *xform = glm::translate(*xform, dv);
+                pRes->setVelocity(dv);
+            }
+        }
+
+        for(int key : input)
+        {
+            switch(key)
+            {
                 case GLFW_KEY_KP_ADD:
                 {
 
@@ -146,6 +171,7 @@ int main(int argc, char* argv[]){
                     flag = DF_VIS_METALNESS;
                 }
                 break;
+                case GLFW_KEY_0: flag = DF_VIS_VELOCITY; break;
                 case GLFW_KEY_T:
                 {
                     flag = DF_VIS_TANGENTS;

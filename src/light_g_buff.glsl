@@ -17,6 +17,7 @@
 #define DF_VIS_TANGENTS     12
 #define DF_VIS_BITANGENTS   13
 #define DF_VIS_SUN_SHADOW_DEPTH 14
+#define DF_VIS_VELOCITY     15
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -38,11 +39,9 @@ in vec2 fragUv;
 uniform sampler2D positionSampler;
 uniform sampler2D normalSampler;
 uniform sampler2D albedoSampler;
-
+uniform sampler2D velocitySampler;
 uniform sampler2D prevColor;
-
 uniform samplerCube env_cm;
-
 uniform sampler2D sunDepth;
 
 uniform mat4 IVP;
@@ -128,7 +127,7 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 float sunShadowing(vec3 p, inout uint s){
     const int samples = 16;
     const float inv_samples = 1.0 / float(samples);
-    const float bias = 0.0;
+    const float bias = 0.001;
 
     const vec4 projCoords = (sunMatrix * vec4(p.xyz, 1.0)) * 0.5 + 0.5;
     float point_depth = projCoords.z;
@@ -136,10 +135,10 @@ float sunShadowing(vec3 p, inout uint s){
         return 1.0;
 
     float occlusion = 0.0;
-    const float variance = 0.001;
+    const float variance = 0.005;
     for(int i = 0; i < samples; ++i){
         const vec2 p = vec2(randBi(s), randBi(s)) * variance;
-        const float d = texture(sunDepth, projCoords.xy + p).r;
+        const float d = texture(sunDepth, projCoords.xy + p).r + bias;
         occlusion += point_depth > d ? 0.0 : 1.0;
     }
     occlusion *= inv_samples;
@@ -478,6 +477,9 @@ void main(){
             case DF_VIS_SUN_SHADOW_DEPTH:
                 lighting = visualizeShadow();
                 break;
+            case DF_VIS_VELOCITY:
+                outColor.xyz = texture(velocitySampler, fragUv).xyz;
+                return;
         }
     }
 
@@ -486,10 +488,14 @@ void main(){
     if(!shouldSkylight)
     {
         vec4 P = texture(positionSampler, fragUv);
+        const vec3 velocity = texture(velocitySampler, fragUv).xyz;
+        P.xyz -= velocity;
         P.w = 1.0;
         P = prevVP * P;
         P /= P.w;
         P.xy = P.xy * 0.5 + 0.5;
+
+
         if(P.x <= 1.0 && P.x >= 0.0)
         {
             if(P.y <= 1.0 && P.y >= 0.0)

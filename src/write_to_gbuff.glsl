@@ -2,7 +2,8 @@
 
 layout (location = 0) out vec4 gPosition; //   a: roughness
 layout (location = 1) out vec4 gNormal;   //   a: metalness
-layout (location = 2) out vec4 gAlbedo;   // rgb: albedo, a: depth
+layout (location = 2) out vec4 gAlbedo;   // rgb: albedo,   a: height
+layout (location = 3) out vec4 gVelocity; // rgb: velocity, a: depth
 
 // ------------------------------------------------------------------------
 
@@ -16,13 +17,17 @@ uniform sampler2D albedoSampler;
 uniform sampler2D materialSampler;
 
 uniform vec3 eye;
+uniform vec3 velocity;
+uniform vec2 uv_scale;
+uniform vec2 uv_offset;
 uniform int object_flags;
 uniform int draw_flags;
 uniform int seed;
 
 // -----------------------------------------------------------------------
 
-struct MaterialParams {
+struct MaterialParams 
+{
     float roughness_offset;
     float roughness_multiplier;
     float metalness_offset;
@@ -33,7 +38,8 @@ struct MaterialParams {
     float _pad3;
 };
 
-struct material {
+struct material 
+{
     vec3 albedo;
     float roughness;
     vec3 normal;
@@ -49,7 +55,8 @@ layout(std140) uniform materialparams_ubo
 
 // ------------------------------------------------------------------------
 
-vec3 normalFromHeight(float h){
+vec3 normalFromHeight(float h)
+{
     const float dhdx = dFdx(h);
     const float dhdy = dFdy(h);
 
@@ -156,7 +163,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){
     vec2 P = viewDir.xy / viewDir.z * heightScale; 
     vec2 deltaTexCoords = P / numLayers;
   
-    vec2  currentTexCoords     = texCoords;
+    vec2  currentTexCoords = texCoords;
     float currentDepthMapValue = getHeight(currentTexCoords);
       
     for(int i = 0; i < 16 && currentLayerDepth < currentDepthMapValue; ++i){
@@ -183,12 +190,13 @@ void main(){
 
     const vec3 tanV = transpose(GetBasis(MacroNormal)) * normalize(eye - P);
 
-    vec2 newUv = ParallaxMapping(UV, tanV);
+    vec2 newUv = ParallaxMapping(UV * uv_scale + uv_offset, tanV);
     const material mat = getMaterial(newUv);
 
     gPosition = vec4(P.xyz, mat.roughness);
     gAlbedo = vec4(mat.albedo, getHeight(newUv));
     gNormal = vec4(mat.normal, mat.metalness);
+    gVelocity = vec4(velocity.xyz, gl_FragCoord.z);
 
     if(draw_flags == DF_UV)
     {
