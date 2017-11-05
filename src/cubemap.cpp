@@ -3,6 +3,7 @@
 #include "renderobject.h"
 #include "camera.h"
 #include "glprogram.h"
+#include "profiler.h"
 
 void Cubemap::init(s32 size){
     current_face = 0;
@@ -47,7 +48,9 @@ void Cubemap::deinit(){
     glDeleteTextures(1, &color_cubemap);
 }
 
-void Cubemap::drawInto(const Camera& cam){
+void Cubemap::drawInto(const Camera& cam)
+{
+    ProfilerEvent("Cubemap::drawInto");
     static const Transform Vs[num_faces] = {
         glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
         glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),

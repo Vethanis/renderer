@@ -15,6 +15,10 @@ struct Store{
     unsigned count;
     unsigned capacity;
 
+    unsigned getKey(int idx){ return names[idx]; }
+    T& getValue(int idx){ return data[idx]; }
+    unsigned getCapacity(){ return capacity; }
+    bool validSlot(int idx){ return names[idx] != 0 && names[idx] != MSB; }
     bool is_deleted(unsigned key){
         return key == MSB;
     }

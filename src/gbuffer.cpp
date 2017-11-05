@@ -6,6 +6,7 @@
 #include "renderobject.h"
 #include "depthstate.h"
 #include "randf.h"
+#include "profiler.h"
 
 unsigned draw_call = 0;
 
@@ -45,6 +46,8 @@ GBuffer g_gBuffer;
 
 void GBuffer::draw(const Camera& cam, u32 dflag)
 {
+    ProfilerEvent("GBuffer::draw");
+
     static const int seed_loc = prog.getUniformLocation("seed");
     static const int eye_loc = prog.getUniformLocation("eye");
     static const int draw_flag_loc = prog.getUniformLocation("draw_flags");
@@ -74,40 +77,48 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     Framebuffer& curBuf = m_postbuffs[draw_call & 1];
     Framebuffer& prevBuf = m_postbuffs[(draw_call + 1) & 1];
 
-    curBuf.bind();
-    Framebuffer::clear();
-    DepthContext dfctx(GL_ALWAYS);
+    {
+        ProfilerEvent("GBuffer lighting pass");
 
-    prog.bind();
-
-    prog.bindTexture(0, m_framebuffer.m_attachments[0], "positionSampler");
-    prog.bindTexture(1, m_framebuffer.m_attachments[1], "normalSampler");
-    prog.bindTexture(2, m_framebuffer.m_attachments[2], "albedoSampler");
-    prog.bindTexture(3, m_framebuffer.m_attachments[3], "velocitySampler");
-    prog.bindTexture(4, prevBuf.m_attachments[0], "prevColor");
-    prog.bindCubemap(5, cmap.color_cubemap, "env_cm");
+        curBuf.bind();
+        Framebuffer::clear();
+        DepthContext dfctx(GL_ALWAYS);
+        prog.bind();
     
-    g_Renderables.bindSun(g_Renderables.m_light, prog, 6);
-    prog.setUniformInt(seed_loc, rand());
-    prog.setUniform(eye_loc, eye);
-    prog.setUniformInt(draw_flag_loc, dflag);
-    prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
-    prog.setUniform("IVP", IVP);
-    prog.setUniform("prevVP", cam.getPrevVP());
-
-    glTextureBarrier(); DebugGL();
-    GLScreen::draw();
+        prog.bindTexture(0, m_framebuffer.m_attachments[0], "positionSampler");
+        prog.bindTexture(1, m_framebuffer.m_attachments[1], "normalSampler");
+        prog.bindTexture(2, m_framebuffer.m_attachments[2], "albedoSampler");
+        prog.bindTexture(3, m_framebuffer.m_attachments[3], "velocitySampler");
+        prog.bindTexture(4, prevBuf.m_attachments[0], "prevColor");
+        prog.bindCubemap(5, cmap.color_cubemap, "env_cm");
+        
+        g_Renderables.bindSun(g_Renderables.m_light, prog, 10);
+        prog.setUniformInt(seed_loc, rand());
+        prog.setUniform(eye_loc, eye);
+        prog.setUniformInt(draw_flag_loc, dflag);
+        prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
+        prog.setUniform("IVP", IVP);
+        prog.setUniform("prevVP", cam.getPrevVP());
+    
+        glTextureBarrier(); DebugGL();
+        GLScreen::draw();
+    }
 
     // POST pass ---------------------------------------------------------------------------
-    Framebuffer::bindDefault();
-    Framebuffer::clear();
-
-    postProg.bind();
-    postProg.bindTexture(0, curBuf.m_attachments[0], "curColor");
-    postProg.setUniformInt("seed", rand());
-
-    glTextureBarrier(); DebugGL();
-    GLScreen::draw();
+    {
+        ProfilerEvent("GBuffer post pass");
+        
+        Framebuffer::bindDefault();
+        Framebuffer::clear();
+        DepthContext dfctx(GL_ALWAYS);
+    
+        postProg.bind();
+        postProg.bindTexture(0, curBuf.m_attachments[0], "curColor");
+        postProg.setUniformInt("seed", rand());
+    
+        glTextureBarrier(); DebugGL();
+        GLScreen::draw();
+    }
     
     // -------------------------------------------------------------------------------------
 

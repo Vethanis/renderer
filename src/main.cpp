@@ -8,25 +8,33 @@
 #include "gbuffer.h"
 #include "timer.h"
 #include "framecounter.h"
+#include "profiler.h"
 
 #include <random>
 #include <ctime>
 
-float frameBegin(unsigned& i, float& t){
-    float dt = (float)glfwGetTime() - t;
-    t += dt;
-    i++;
-    if(t >= 3.0){
-        float ms = (t / i) * 1000.0f;
-        printf("ms: %.6f, FPS: %.3f\n", ms, i / t);
-        i = 0;
-        t = 0.0;
-        glfwSetTime(0.0);
+float FpsStats()
+{
+    static float last_time = glfwGetTime();
+    static float average_dt = 0.0f;
+    const float cur_time = (float)glfwGetTime();
+    const float dt = cur_time - last_time;
+    last_time = cur_time;
+    average_dt += dt;
+
+    if((frameCounter() & 63) == 0)
+    {
+        average_dt /= 64.0f;
+        float ms = average_dt * 1000.0f;
+        printf("ms: %.6f, FPS: %.3f\n", ms, 1.0f / average_dt);
+        average_dt = 0.0f;
     }
+
     return dt;
 }
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[])
+{
     srand((unsigned)time(0));
 
     int WIDTH = int(1920.0f * 1.75f);
@@ -82,14 +90,14 @@ int main(int argc, char* argv[]){
     }
 
     input.poll();
-    unsigned i = 0;
-    float t = (float)glfwGetTime();
     u32 flag = DF_INDIRECT;
 
     Timer timer;
     while(window.open())
     {
-        input.poll(frameBegin(i, t), camera);
+        ProfilerEvent("Main Loop");
+        
+        input.poll(FpsStats(), camera);
 
         RenderResource* pRes = suzanne;
         if(pRes)
@@ -247,15 +255,15 @@ int main(int argc, char* argv[]){
             }
         }
 
-        //timer.begin();
         g_gBuffer.draw(camera, flag);
-        //timer.endPrint();
 
         window.swap();
     }
     
     g_Renderables.deinit();
     g_gBuffer.deinit();
+
+    FinishProfiling("profile_results.csv");
 
     return 0;
 }

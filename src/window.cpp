@@ -4,6 +4,7 @@
 #include "framecounter.h"
 #include <cassert>
 #include <cstdio>
+#include "profiler.h"
 
 void error_callback(int error, const char* description)
 {
@@ -36,6 +37,7 @@ bool Window::open(){
     return !glfwWindowShouldClose(window);
 }
 void Window::swap(){
+    ProfilerEvent("Window::swap");
     glfwSwapBuffers(window);
     frameCompleted();
 }

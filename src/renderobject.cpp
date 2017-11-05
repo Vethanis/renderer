@@ -4,16 +4,21 @@
 #include "glscreen.h"
 #include "depthstate.h"
 #include <random>
+#include "profiler.h"
 
 Renderables g_Renderables;
 
 HashString::operator RenderResource*() const
 {
+    ProfilerEvent("HashString::operator RenderResource*");
+
     return g_Renderables[m_hash];
 }
 
 void TextureChannels::bind(GLProgram& prog, int channel)
 {
+    ProfilerEvent("TextureChannels::bind");
+
     Texture* t = albedo;
     if(t)
     {
@@ -39,12 +44,16 @@ void RenderResource::deinit()
 
 void RenderResource::bind(GLProgram& prog, UBO& material_ubo)
 {
+    ProfilerEvent("RenderResource::bind");
+    
     texture_channels.bind(prog, 0);
     material_ubo.upload(&material_params, sizeof(MaterialParams));
 }
 
 void RenderResource::draw()
 {
+    ProfilerEvent("RenderResource::draw");
+    
     Mesh* m = mesh;
     if(m){
         m->draw();
@@ -65,6 +74,8 @@ void RenderResource::setVelocity(const glm::vec3& dv)
 
 void Renderables::init()
 {
+    ProfilerEvent("Renderables::init");
+    
     glEnable(GL_DEPTH_TEST); DebugGL();
     glEnable(GL_CULL_FACE); DebugGL();
     glCullFace(GL_BACK); DebugGL();
@@ -107,6 +118,8 @@ void Renderables::init()
 
 void Renderables::deinit()
 {
+    ProfilerEvent("Renderables::deinit");
+    
     fwdProg.deinit();
     zProg.deinit();
     defProg.deinit();
@@ -117,6 +130,8 @@ void Renderables::deinit()
 
 void Renderables::bindSun(DirectionalLight& light, GLProgram& prog, int channel)
 {
+    ProfilerEvent("Renderables::bindSun");
+    
     prog.setUniform("sunDirection", light.m_direction);
     prog.setUniform("sunColor", light.m_color);
     prog.setUniformFloat("sunIntensity", light.m_intensity);
@@ -126,6 +141,8 @@ void Renderables::bindSun(DirectionalLight& light, GLProgram& prog, int channel)
 
 void Renderables::drawSky(const glm::vec3& eye, const Transform& IVP)
 {
+    ProfilerEvent("Renderables::drawSky");
+    
     DrawModeContext ctx(GL_LEQUAL, GL_TRUE, 1);
     skyProg.bind();
     
@@ -139,11 +156,15 @@ void Renderables::drawSky(const glm::vec3& eye, const Transform& IVP)
 
 void Renderables::shadowPass()
 {
+    ProfilerEvent("Renderables::shadowPass");
+    
     m_light.drawInto();
 }
 
 void Renderables::prePass(const Transform& VP)
 {
+    ProfilerEvent("Renderables::prePass");
+    
     DepthContext less(GL_LESS);
     DepthMaskContext dmask(GL_TRUE);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
@@ -159,6 +180,8 @@ void Renderables::prePass(const Transform& VP)
 
 void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height)
 {
+    ProfilerEvent("Renderables::fwdDraw");
+    
     glViewport(0, 0, width, height); DebugGL();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
 
@@ -189,6 +212,8 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
 
 void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height)
 {
+    ProfilerEvent("Renderables::defDraw");
+    
     glViewport(0, 0, width, height); DebugGL();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
 
@@ -234,6 +259,7 @@ HashString Renderables::create(HashString mesh, HashString albedo,
     float roughness, float metalness, 
     unsigned flags)
 {
+    ProfilerEvent("Renderables::create");
 
     HashString handle = resources.grow();
     RenderResource* pRes = resources[handle.m_hash];
