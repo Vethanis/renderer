@@ -15,7 +15,7 @@
 
 float FpsStats()
 {
-    static float last_time = glfwGetTime();
+    static float last_time = (float)glfwGetTime();
     static float average_dt = 0.0f;
     const float cur_time = (float)glfwGetTime();
     const float dt = cur_time - last_time;

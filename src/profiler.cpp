@@ -17,7 +17,7 @@ Store<Profiler::Element, Profiler::eConstants::Capacity> Profiler::m_store;
 Profiler::Element::Element()
 { 
     total_time = 0.0f;
-    min_time = 1000000000.0;
+    min_time = 1000000.0;
     max_time = 0.0f;
     occurances = 0;
 }
@@ -61,14 +61,14 @@ void Profiler::PrintToFile(const char* filename)
         const char* name = g_NameStore[hash];
         assert(name);
         const Element& elem = m_store.getValue(i);
-        const double average_time = elem.total_time / double(elem.occurances);
+        const double average_time = elem.total_time * 1000000.0 / double(elem.occurances);
 
         fprintf(pFile,"%s, %f, %f, %f, %f, %u\r\n", 
             name,
-            elem.total_time,
+            elem.total_time * 1000000.0,
             average_time,
-            elem.min_time,
-            elem.max_time,
+            elem.min_time * 1000000.0,
+            elem.max_time * 1000000.0,
             elem.occurances
         );
     }
@@ -80,12 +80,12 @@ ProfilerEvent::ProfilerEvent(const char* symbol)
 {
     HashString hsym(symbol);
     m_symbol = hsym.m_hash;
-    m_begin = glfwGetTime() * 1000.0;
+    m_begin = glfwGetTime();
 }
 
 ProfilerEvent::~ProfilerEvent()
 {
-    const double duration = glfwGetTime() * 1000.0 - m_begin;
+    const double duration = glfwGetTime() - m_begin;
     Profiler::Observe(m_symbol, duration);
 }
 
