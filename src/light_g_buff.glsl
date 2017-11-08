@@ -495,12 +495,13 @@ void main(){
         P /= P.w;
         P.xy = P.xy * 0.5 + 0.5;
 
-
         if(P.x <= 1.0 && P.x >= 0.0)
         {
             if(P.y <= 1.0 && P.y >= 0.0)
             {
-                lighting.rgb = mix(lighting.rgb, texture(prevColor, P.xy).rgb, 0.5);
+                vec3 prev = texture(prevColor, P.xy).rgb;
+                if(prev.x + prev.y + prev.z > 0.00001)
+                    lighting.rgb = mix(lighting.rgb, prev, 0.5);
             }
         }
     }

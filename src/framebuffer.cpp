@@ -94,7 +94,7 @@ void Framebuffer::saveToFile(const char* filename, int attachment)
 
     for(int i = 0; i < num_elems; ++i)
     {
-        float val = texels[i];
+        float val = texels[i] * 2.0f;
         val = val / (1.0f + val);
         val = powf(val, 1.0f / 2.2f);
         val *= 255.0f;
