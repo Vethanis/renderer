@@ -154,31 +154,31 @@ float getHeight(vec2 uv){
 }
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){ 
-    const float minLayers = 8;
-    const float maxLayers = 32;
+    const float minLayers = 1;
+    const float maxLayers = 16;
     const float heightScale = material_params.heightScale;
-    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
-    float layerDepth = 1.0 / numLayers;
+    const float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
+    const float layerDepth = 1.0 / numLayers;
     float currentLayerDepth = 0.0;
-    vec2 P = viewDir.xy / viewDir.z * heightScale; 
-    vec2 deltaTexCoords = P / numLayers;
+    const vec2 P = viewDir.xy / viewDir.z * heightScale; 
+    const vec2 deltaTexCoords = P / numLayers;
   
     vec2  currentTexCoords = texCoords;
     float currentDepthMapValue = getHeight(currentTexCoords);
       
-    for(int i = 0; i < 16 && currentLayerDepth < currentDepthMapValue; ++i){
+    for(float i = 0; i < numLayers && currentLayerDepth < currentDepthMapValue; ++i){
         currentTexCoords -= deltaTexCoords;
         currentDepthMapValue = getHeight(currentTexCoords);
         currentLayerDepth += layerDepth;  
     }
     
-    vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+    const vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
 
-    float afterDepth  = currentDepthMapValue - currentLayerDepth;
-    float beforeDepth = getHeight(prevTexCoords) - currentLayerDepth + layerDepth;
+    const float afterDepth  = currentDepthMapValue - currentLayerDepth;
+    const float beforeDepth = getHeight(prevTexCoords) - currentLayerDepth + layerDepth;
  
-    float weight = afterDepth / (afterDepth - beforeDepth);
-    vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+    const float weight = afterDepth / (afterDepth - beforeDepth);
+    const vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 
     return finalTexCoords;
 }

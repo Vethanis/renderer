@@ -21,3 +21,7 @@ double frameSeconds()
 {
     return delta_time;
 }
+double timeElapsed()
+{
+    return cur_time;
+}

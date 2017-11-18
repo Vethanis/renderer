@@ -98,11 +98,10 @@ int main(int argc, char* argv[])
             Transform* xform = pRes->transform;
             if(xform)
             {
-                float phase = frameCounter() / 10.0f;
-                phase = glm::mod(phase, 3.141592f * 2.0f);
-                float x = glm::sin(phase) * 0.05f;
-                float y = glm::cos(phase) * 0.05f;
-                glm::vec3 dv = glm::vec3(x, y, 0.0f);
+                float phase = (float)timeElapsed() * 2.0f;
+                float x = glm::sin(phase);
+                float y = glm::cos(phase);
+                glm::vec3 dv = glm::vec3(x, y, 0.0f) * 0.02f;
                 *xform = glm::translate(*xform, dv);
                 pRes->setVelocity(dv);
             }
