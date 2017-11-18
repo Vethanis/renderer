@@ -13,24 +13,18 @@
 #include <random>
 #include <ctime>
 
-float FpsStats()
+void FpsStats()
 {
-    static float last_time = (float)glfwGetTime();
-    static float average_dt = 0.0f;
-    const float cur_time = (float)glfwGetTime();
-    const float dt = cur_time - last_time;
-    last_time = cur_time;
-    average_dt += dt;
+    static double average_dt = 0.0;
+    average_dt += frameSeconds();
 
     if((frameCounter() & 63) == 0)
     {
-        average_dt /= 64.0f;
-        float ms = average_dt * 1000.0f;
-        printf("ms: %.6f, FPS: %.3f\n", ms, 1.0f / average_dt);
-        average_dt = 0.0f;
+        average_dt /= 64.0;
+        const double ms = average_dt * 1000.0;
+        printf("ms: %.6f, FPS: %.3f\n", ms, 1.0 / average_dt);
+        average_dt = 0.0;
     }
-
-    return dt;
 }
 
 int main(int argc, char* argv[])
@@ -96,8 +90,7 @@ int main(int argc, char* argv[])
     while(window.open())
     {
         ProfilerEvent("Main Loop");
-        
-        input.poll(FpsStats(), camera);
+        input.poll(camera);
 
         RenderResource* pRes = suzanne;
         if(pRes)
@@ -258,6 +251,7 @@ int main(int argc, char* argv[])
         g_gBuffer.draw(camera, flag);
 
         window.swap();
+        FpsStats();
     }
     
     g_Renderables.deinit();

@@ -4,6 +4,7 @@
 #include "camera.h"
 #include "glm/glm.hpp"
 #include "array.h"
+#include "framecounter.h"
 
 bool Input::m_rightMouseDown = false;
 bool Input::m_leftMouseDown = false;
@@ -32,11 +33,11 @@ void Input::poll(){
     glfwPollEvents();
 }
 
-void Input::poll(float dt, Camera& cam){
-    g_downKeys.clear();
-    g_upKeys.clear();
-    glfwPollEvents();
+void Input::poll(Camera& cam){
+    poll();
+    
     glm::vec3 v(0.0f);
+    const float dt = (float)frameSeconds();
     v.z -= glfwGetKey(m_glwindow, GLFW_KEY_W) ? dt : 0.0f;
     v.z += glfwGetKey(m_glwindow, GLFW_KEY_S) ? dt : 0.0f;
     v.x -= glfwGetKey(m_glwindow, GLFW_KEY_A) ? dt : 0.0f;
