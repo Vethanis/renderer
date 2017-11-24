@@ -28,6 +28,7 @@
 #define DF_VIS_BITANGENTS   13
 #define DF_VIS_SUN_SHADOW_DEPTH 14
 #define DF_VIS_VELOCITY     15
+#define DF_VIS_SHADOW_BUFFER 16
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1

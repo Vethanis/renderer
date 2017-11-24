@@ -15,6 +15,7 @@ uniform sampler2D sunDepth;
 
 uniform samplerCube env_cm;
 
+uniform mat4 sunMatrix;
 uniform vec3 sunDirection;
 uniform vec3 sunColor;
 uniform vec3 eye;
@@ -102,6 +103,30 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
         T = cross(vec3(1.0, 0.0, 0.0), N);
     T = normalize(T);
     B = cross(N, T);
+}
+
+float sunShadowing(vec3 p, inout uint s){
+    const int samples = 8;
+    const float inv_samples = 1.0 / float(samples);
+    const float bias = 0.001;
+
+    vec4 projCoords = sunMatrix * vec4(p.xyz, 1.0);
+    projCoords /= projCoords.w;
+    projCoords = projCoords * 0.5 + 0.5;
+    float point_depth = projCoords.z;
+    if(point_depth > 1.0)
+        return 1.0;
+
+    float occlusion = 0.0;
+    const float variance = 0.005;
+    for(int i = 0; i < samples; ++i){
+        const vec2 p = vec2(randBi(s), randBi(s)) * variance;
+        const float d = texture(sunDepth, projCoords.xy + p).r + bias;
+        occlusion += point_depth > d ? 0.0 : 1.0;
+    }
+    occlusion *= inv_samples;
+
+    return occlusion;
 }
 
 // phi: [0, tau]
@@ -241,6 +266,8 @@ vec3 direct_lighting(inout uint s){
     const vec3 radiance = sunColor * sunIntensity;
 
     vec3 light = pbr_lighting(V, L, mat, radiance);
+
+    light *= sunShadowing(P, s);
 
     light += vec3(0.01) * mat.albedo;
 

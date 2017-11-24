@@ -153,14 +153,12 @@ float getHeight(vec2 uv){
     return texture(materialSampler, uv).x;
 }
 
-vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir){ 
-    const float minLayers = 1;
-    const float maxLayers = 16;
-    const float heightScale = material_params.heightScale;
-    const float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
+vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
+{ 
+    const float numLayers = 10.0;
     const float layerDepth = 1.0 / numLayers;
     float currentLayerDepth = 0.0;
-    const vec2 P = viewDir.xy / viewDir.z * heightScale; 
+    const vec2 P = viewDir.xy / viewDir.z * material_params.heightScale; 
     const vec2 deltaTexCoords = P / numLayers;
   
     vec2  currentTexCoords = texCoords;

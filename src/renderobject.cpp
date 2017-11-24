@@ -108,10 +108,10 @@ void Renderables::init()
     m_light.init(1024);
     m_light.m_direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
     m_light.m_color = glm::vec3(1.0f, 0.75f, 0.5f);
-    m_light.m_position = m_light.m_direction * 20.0f;
+    m_light.m_position = m_light.m_direction * 50.0f;
     m_light.m_intensity = 10.0f;
-    m_light.m_near = 5.0f;
-    m_light.m_far = 50.0f;
+    m_light.m_near = 10.0f;
+    m_light.m_far = 100.0f;
 
     materialparam_ubo.init(nullptr, sizeof(MaterialParams), "materialparams_ubo", &fwdProg.m_id, 1);
 }
@@ -187,9 +187,7 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
 
     fwdProg.bind();
 
-    fwdProg.setUniform("sunDirection", m_light.m_direction);
-    fwdProg.setUniform("sunColor", m_light.m_color);
-    fwdProg.setUniformFloat("sunIntensity", m_light.m_intensity);
+    bindSun(m_light, fwdProg, 10);
 
     fwdProg.setUniform("eye", eye);
     fwdProg.setUniformInt("seed", rand());

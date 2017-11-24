@@ -100,14 +100,6 @@ struct Store{
         unsigned dist = 0;
         T val = _val;
         while(true){
-            if(names[pos] == key){
-                if(val == data[pos]){
-                    return;
-                }
-                else{
-                    assert(false);
-                }
-            }
             if(names[pos] == 0){
                 names[pos] = key;
                 data[pos] = val;
@@ -212,6 +204,17 @@ struct Store{
         }
         insert(key, {});
         return key;
+    }
+    void clear()
+    {
+        for(unsigned i = 0; i < count; ++i)
+        {
+            names[i] = 0;
+        }
+        for(unsigned i = 0; i < count; ++i)
+        {
+            data[i] = T();
+        }
     }
 };
 

@@ -86,7 +86,8 @@ int main(int argc, char* argv[])
     input.poll();
     u32 flag = DF_INDIRECT;
 
-    Timer timer;
+    ProfilerInit();
+
     while(window.open())
     {
         ProfilerEvent("Main Loop");
@@ -124,6 +125,7 @@ int main(int argc, char* argv[])
                 case GLFW_KEY_E:
                 {
                     g_Renderables.m_light.m_direction = camera.getAxis();
+                    g_Renderables.m_light.m_position = camera.getEye() + camera.getAxis() * 50.0f;
                 }
                 break;
                 case GLFW_KEY_1:
@@ -182,6 +184,7 @@ int main(int argc, char* argv[])
                     flag = DF_VIS_BITANGENTS;
                 }
                 break;
+                case GLFW_KEY_KP_0: flag = DF_VIS_SHADOW_BUFFER; break;
                 case GLFW_KEY_V: flag = DF_VIS_SUN_SHADOW_DEPTH; break;
                 case GLFW_KEY_F1:
                 {
@@ -251,12 +254,14 @@ int main(int argc, char* argv[])
 
         window.swap();
         FpsStats();
+        ProfilerEndFrame();
     }
     
     g_Renderables.deinit();
     g_gBuffer.deinit();
 
     FinishProfiling("profile_results.csv");
+    ProfilerDeinit();
 
     return 0;
 }

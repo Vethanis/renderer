@@ -12,35 +12,68 @@
 #include "hashstring.h"
 #include <cassert>
 
-Store<Profiler::Element, Profiler::eConstants::Capacity> Profiler::m_store;
+Profiler Profiler::ms_instance;
 
-Profiler::Element::Element()
-{ 
-    total_time = 0.0f;
-    min_time = 1000000.0;
-    max_time = 0.0f;
-    occurances = 0;
+ProfilerEvent::ProfilerEvent(const char* symbol)
+{
+    HashString hsym(symbol);
+    m_symbol = hsym.m_hash;
+    ProfilerEvent& event = Profiler::CreateEvent();
+    m_handle = event.m_handle;
+    event.m_symbol = m_symbol;
+
+    glBeginQuery(GL_TIME_ELAPSED, m_handle); DebugGL();
 }
 
-void Profiler::Element::Observe(double duration)
+ProfilerEvent::~ProfilerEvent()
 {
-    total_time += duration;
-    min_time = min_time < duration ? min_time : duration;
-    max_time = max_time > duration ? max_time : duration;
-    occurances++;
+    glEndQuery(m_handle); DebugGL();
 }
 
-void Profiler::Observe(unsigned symbol, double duration)
+ ProfilerEvent& Profiler::CreateEvent()
+ {
+    ProfilerEvent& event = ms_instance.m_events.grow();
+    event.m_handle = ms_instance.m_queries.grow();
+    return event;
+}
+
+void Profiler::Init()
 {
-    Element* pElement = m_store[symbol];
-    if(!pElement)
+    glGenQueries(QueryCapacity, ms_instance.m_queries.begin()); DebugGL();
+}
+
+void Profiler::Deinit()
+{
+    glDeleteQueries(QueryCapacity, ms_instance.m_queries.begin()); DebugGL();
+}
+
+void Profiler::EndFrame()
+{
+    for(const ProfilerEvent& event : ms_instance.m_events)
     {
-        assert(m_store.full() == false);
-        m_store.insert(symbol, {});
-        pElement = m_store[symbol];
-    }
+        int nanoseconds = -1;
+        glGetQueryObjectiv(event.m_handle, GL_QUERY_RESULT, &nanoseconds); DebugGL();
+        if(nanoseconds > -1)
+        {
+            Statistic* pStat = ms_instance.m_statistics[event.m_symbol];
+            if(!pStat)
+            {
+                ms_instance.m_statistics.insert(event.m_symbol, {});
+                pStat = ms_instance.m_statistics[event.m_symbol];
+            }
 
-    pElement->Observe(duration);
+            const s32 microseconds = nanoseconds / 1000;
+            pStat->m_count++;
+            pStat->m_total += microseconds;
+            if(pStat->m_maximum < microseconds)
+                pStat->m_maximum = microseconds;
+            if(pStat->m_minimum > microseconds)
+                pStat->m_minimum = microseconds;
+        }
+    }
+    
+    ms_instance.m_queries.clear();
+    ms_instance.m_events.clear();
 }
 
 void Profiler::PrintToFile(const char* filename)
@@ -49,44 +82,38 @@ void Profiler::PrintToFile(const char* filename)
     
     FILE* pFile = fopen(filename, "wb");
     assert(pFile);
-    const char* header = "Name, total, average, min, max, count\r\n";
-    fwrite(header, strlen(header), 1, pFile);
+    fprintf(pFile, "%-48s, %-22s, %-22s, %-22s, %-22s, %-22s\r\n", 
+        "Name", 
+        "total", 
+        "average", 
+        "min", 
+        "max", 
+        "count");
 
-    for(unsigned i = 0; i < m_store.getCapacity(); ++i)
+    for(unsigned i = 0; i < ms_instance.m_statistics.getCapacity(); ++i)
     {
-        if(!m_store.validSlot(i))
+        if(!ms_instance.m_statistics.validSlot(i))
             continue;
 
-        const unsigned hash = m_store.getKey(i);
+        const unsigned hash = ms_instance.m_statistics.getKey(i);
         const char* name = g_NameStore[hash];
         assert(name);
-        const Element& elem = m_store.getValue(i);
-        const double average_time = elem.total_time * 1000000.0 / double(elem.occurances);
+        const auto& elem = ms_instance.m_statistics.getValue(i);
+        const s64 average_time = elem.m_total / elem.m_count;
 
-        fprintf(pFile,"%s, %f, %f, %f, %f, %u\r\n", 
+        fprintf(pFile,"%-48s, %-22lli, %-22lli, %-22lli, %-22lli, %-22lli\r\n", 
             name,
-            elem.total_time * 1000000.0,
+            elem.m_total,
             average_time,
-            elem.min_time * 1000000.0,
-            elem.max_time * 1000000.0,
-            elem.occurances
+            elem.m_minimum,
+            elem.m_maximum,
+            elem.m_count
         );
     }
 
+    ms_instance.m_statistics.clear();
+
     fclose(pFile);
-}
-
-ProfilerEvent::ProfilerEvent(const char* symbol)
-{
-    HashString hsym(symbol);
-    m_symbol = hsym.m_hash;
-    m_begin = glfwGetTime();
-}
-
-ProfilerEvent::~ProfilerEvent()
-{
-    const double duration = glfwGetTime() - m_begin;
-    Profiler::Observe(m_symbol, duration);
 }
 
 #endif

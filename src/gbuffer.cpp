@@ -7,6 +7,7 @@
 #include "depthstate.h"
 #include "randf.h"
 #include "profiler.h"
+#include "framecounter.h"
 
 unsigned draw_call = 0;
 
@@ -63,7 +64,8 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     VP[3][2] += jitter.z;
 
     // SHADOWS pass ---------------------------------------------------------------------------
-    g_Renderables.shadowPass();
+    if(frameCounter() & 1)
+        g_Renderables.shadowPass();
 
     // CUBEMAP pass ---------------------------------------------------------------------------
     cmap.drawInto(cam);
@@ -99,6 +101,10 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
         prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
         prog.setUniform("IVP", IVP);
         prog.setUniform("prevVP", cam.getPrevVP());
+        prog.setUniform("sunNearFar", glm::vec2(
+            g_Renderables.m_light.m_near,
+            g_Renderables.m_light.m_far
+        ));
     
         glTextureBarrier(); DebugGL();
         GLScreen::draw();

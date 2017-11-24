@@ -18,6 +18,7 @@
 #define DF_VIS_BITANGENTS   13
 #define DF_VIS_SUN_SHADOW_DEPTH 14
 #define DF_VIS_VELOCITY     15
+#define DF_VIS_SHADOW_BUFFER 16
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -51,6 +52,7 @@ uniform vec3 sunDirection;
 uniform vec3 sunColor;
 uniform vec3 eye;
 uniform vec2 render_resolution;
+uniform vec2 sunNearFar;
 uniform float sunIntensity;
 uniform int seed;
 uniform int draw_flags;
@@ -125,11 +127,13 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 // -------------------------------------------------------------------------------------------
 
 float sunShadowing(vec3 p, inout uint s){
-    const int samples = 16;
+    const int samples = 8;
     const float inv_samples = 1.0 / float(samples);
     const float bias = 0.001;
 
-    const vec4 projCoords = (sunMatrix * vec4(p.xyz, 1.0)) * 0.5 + 0.5;
+    vec4 projCoords = sunMatrix * vec4(p.xyz, 1.0);
+    projCoords /= projCoords.w;
+    projCoords = projCoords * 0.5 + 0.5;
     float point_depth = projCoords.z;
     if(point_depth > 1.0)
         return 1.0;
@@ -153,7 +157,7 @@ vec3 toWorld(float x, float y, float z){
 }
 
 float HeightOcclusion(vec3 N, inout uint s){
-    const int samples = 8;
+    const int samples = 4;
     const float bias = 0.1;
     const float base = getDepth(fragUv);
     if(base == 0.0)
@@ -256,9 +260,8 @@ vec3 indirect_lighting(inout uint s){
         const vec3 R = reflect(-V, mat_normal(mat));
         light += pbr_lighting(V, R, mat, environment_cubemap(R, mat_roughness(mat)));
     }
-    light += pbr_lighting(V, sunDirection, mat, environment_cubemap(sunDirection, mat_roughness(mat)));
 
-    for(int i = 0; i < 14; ++i){
+    for(int i = 0; i < 4; ++i){
         vec3 r = vec3(randBi(s), randBi(s), randBi(s));
         if(dot(r, mat_normal(mat)) < 0.001){
             r = -r;
@@ -267,7 +270,7 @@ vec3 indirect_lighting(inout uint s){
         light += pbr_lighting(V, r, mat, environment_cubemap(r, mat_roughness(mat)));
     }
 
-    light *= 3.141592 / (16.0);
+    light *= 3.141592 / (6.0);
     light *= 1.0 + (2.0 * mat_roughness(mat) - 1.0); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
@@ -334,6 +337,7 @@ vec3 visualizeShadow(){
     const material mat = getMaterial();
     vec3 p = mat_position(mat);
     vec4 projCoords = sunMatrix * vec4(p.xyz, 1.0);
+    projCoords /= projCoords.w;
     projCoords = projCoords * 0.5 + 0.5;
     float light_depth = texture(sunDepth, projCoords.xy).r;
     return vec3(light_depth);
@@ -419,12 +423,28 @@ vec3 skylight(){
         21e-6, 8e3, 1.2e3, 0.758);
 }
 
+vec3 visualizeShadowBuffer()
+{
+    float near = sunNearFar.x;
+    float far = sunNearFar.y;
+    float depth = texture(sunDepth, fragUv.xy).r;
+    depth = (2.0 * near) / (far + near - depth * (far - near));
+    return vec3(depth);
+}
+
 // -----------------------------------------------------------------------
 
 void main(){
     uint s = uint(seed) 
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
+
+    switch(draw_flags)
+    {
+        case DF_VIS_SHADOW_BUFFER:
+            outColor.xyz = visualizeShadowBuffer().xyz;
+            return;
+    }
 
     const vec3 albedo = texture(albedoSampler, fragUv).rgb;
     const bool shouldSkylight = albedo.x == 0.0 && albedo.y == 0.0 && albedo.z == 0.0;
