@@ -8,13 +8,6 @@
 
 Renderables g_Renderables;
 
-HashString::operator RenderResource*() const
-{
-    ProfilerEvent("HashString::operator RenderResource*");
-
-    return g_Renderables[m_hash];
-}
-
 void TextureChannels::bind(GLProgram& prog, int channel)
 {
     ProfilerEvent("TextureChannels::bind");
@@ -33,13 +26,13 @@ void TextureChannels::bind(GLProgram& prog, int channel)
 
 void RenderResource::init()
 {
-    transform = g_TransformStore.grow();
+    transform = g_TransformStore.insert({});
     m_uv_scale = glm::vec2(1.0f);
 }
 
 void RenderResource::deinit()
 {
-    g_TransformStore.release(transform.m_hash);
+    g_TransformStore.remove(transform);
 }
 
 void RenderResource::bind(GLProgram& prog, UBO& material_ubo)
@@ -62,8 +55,8 @@ void RenderResource::draw()
 
 void RenderResource::setTransform(const Transform& xform)
 {
-    Transform* pXform = transform;
-    *pXform = xform;
+    Transform& rXform = g_TransformStore[transform];
+    rXform = xform;
 }
 
 void RenderResource::setVelocity(const glm::vec3& dv)
@@ -172,8 +165,8 @@ void Renderables::prePass(const Transform& VP)
 
     zProg.bind();
     for(auto& res : resources){
-        Transform* M = res.transform;
-        zProg.setUniform("MVP", VP * *M);
+        Transform& M = g_TransformStore[res.transform];
+        zProg.setUniform("MVP", VP * M);
         res.draw();
     }
 }
@@ -194,11 +187,11 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     fwdProg.setUniformInt("draw_flags", dflag);
     
     for(auto& res : resources){
-        Transform* M = res.transform;
-        const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
+        Transform& M = g_TransformStore[res.transform];
+        const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
-        fwdProg.setUniform("MVP", VP * *M);
-        fwdProg.setUniform("M", *M);
+        fwdProg.setUniform("MVP", VP * M);
+        fwdProg.setUniform("M", M);
         fwdProg.setUniform("IM", IM);
 
         res.bind(fwdProg, materialparam_ubo);
@@ -220,11 +213,11 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     defProg.setUniformInt("draw_flags", dflag);
 
     for(auto& res : resources){
-        Transform* M = res.transform;
-        const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(*M)));
+        Transform& M = g_TransformStore[res.transform];
+        const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
-        defProg.setUniform("MVP", VP * *M);
-        defProg.setUniform("M", *M);
+        defProg.setUniform("MVP", VP * M);
+        defProg.setUniform("M", M);
         defProg.setUniform("IM", IM);
         defProg.setUniform("velocity", res.m_prevVelocity);
         defProg.setUniform("uv_scale", res.m_uv_scale);
@@ -235,39 +228,35 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     }
 }
 
-HashString Renderables::grow()
+u16 Renderables::grow()
 {
-    HashString handle = resources.grow();
-    resources[handle.m_hash]->init();
+    u16 handle = resources.insert({});
+    resources[handle].init();
     return handle;
 }
 
-void Renderables::release(HashString handle)
+void Renderables::release(u16 handle)
 {
-    resources.remove(handle.m_hash)->deinit();
+    resources[handle].deinit();
+    resources.remove(handle);
 }
 
-RenderResource* Renderables::operator[](unsigned i)
-{
-    return resources[i];
-}
-
-HashString Renderables::create(HashString mesh, HashString albedo, 
+u16 Renderables::create(HashString mesh, HashString albedo, 
     HashString material, const Transform& xform, 
     float roughness, float metalness, 
     unsigned flags)
 {
     ProfilerEvent("Renderables::create");
 
-    HashString handle = resources.grow();
-    RenderResource* pRes = resources[handle.m_hash];
-    pRes->init();
-    pRes->mesh = mesh;
-    pRes->texture_channels.albedo = albedo;
-    pRes->texture_channels.material = material;
-    pRes->material_params.roughness_offset = roughness;
-    pRes->material_params.metalness_offset = metalness;
-    pRes->setTransform(xform);
+    u16 handle = resources.insert({});
+    RenderResource& res = resources[handle];
+    res.init();
+    res.mesh = mesh;
+    res.texture_channels.albedo = albedo;
+    res.texture_channels.material = material;
+    res.material_params.roughness_offset = roughness;
+    res.material_params.metalness_offset = metalness;
+    res.setTransform(xform);
 
     return handle;
 }

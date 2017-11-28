@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     g_Renderables.init();
     g_gBuffer.init(WIDTH, HEIGHT);
 
-    HashString suzanne;
+    u16 suzanne;
     {
         const HashString mesh("ball.mesh");
         const TextureChannels channels[] = {
@@ -74,13 +74,10 @@ int main(int argc, char* argv[])
             glm::translate({}, glm::vec3(5.0f, 0.0f, 5.0f)));
         g_Renderables.create("suzanne.mesh", channels[1].albedo, channels[1].material,
                 glm::translate({}, glm::vec3(10.0f, -2.1f, 5.0f)));
-        HashString plane = g_Renderables.create("cube.mesh", "wood_floor_albedo.png", "wood_floor_material.png", 
+        u16 plane = g_Renderables.create("cube.mesh", "wood_floor_albedo.png", "wood_floor_material.png", 
             glm::scale(glm::translate({}, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(16.0f, 0.1f, 16.0f)));
-        RenderResource* pRes = plane;
-        if(pRes)
-        {
-            pRes->m_uv_scale *= 16.0f;
-        }
+        RenderResource& pRes = g_Renderables[plane];
+        pRes.m_uv_scale *= 16.0f;
     }
 
     input.poll();
@@ -93,19 +90,15 @@ int main(int argc, char* argv[])
         ProfilerEvent("Main Loop");
         input.poll(camera);
 
-        RenderResource* pRes = suzanne;
-        if(pRes)
+        RenderResource& res = g_Renderables[suzanne];
         {
-            Transform* xform = pRes->transform;
-            if(xform)
-            {
-                float phase = (float)timeElapsed() * 2.0f;
-                float x = glm::sin(phase);
-                float y = glm::cos(phase);
-                glm::vec3 dv = glm::vec3(x, y, 0.0f) * 0.02f;
-                *xform = glm::translate(*xform, dv);
-                pRes->setVelocity(dv);
-            }
+            Transform& xform = g_TransformStore[res.transform];
+            float phase = (float)timeElapsed() * 2.0f;
+            float x = glm::sin(phase);
+            float y = glm::cos(phase);
+            glm::vec3 dv = glm::vec3(x, y, 0.0f) * 0.02f;
+            xform = glm::translate(xform, dv);
+            res.setVelocity(dv);
         }
 
         for(int key : input)
@@ -188,57 +181,57 @@ int main(int argc, char* argv[])
                 case GLFW_KEY_V: flag = DF_VIS_SUN_SHADOW_DEPTH; break;
                 case GLFW_KEY_F1:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.roughness_offset;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.roughness_offset;
                     x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
                 }
                 break;
                 case GLFW_KEY_F2:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.roughness_offset;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.roughness_offset;
                     x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
                 }
                 break;
                 case GLFW_KEY_F3:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.metalness_offset;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.metalness_offset;
                     x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
                 }
                 break;
                 case GLFW_KEY_F4:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.metalness_offset;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.metalness_offset;
                     x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
                 }
                 break;
                 case GLFW_KEY_F5:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.bumpiness;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.bumpiness;
                     x = glm::clamp(x + 0.01f, 0.0f, 4.0f);
                 }
                 break;
                 case GLFW_KEY_F6:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.bumpiness;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.bumpiness;
                     x = glm::clamp(x - 0.01f, 0.0f, 4.0f);
                 }
                 break;
                 case GLFW_KEY_F7:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.index_of_refraction;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.index_of_refraction;
                     x = glm::clamp(x + 0.01f, 0.001f, 100.0f);
                 }
                 break;
                 case GLFW_KEY_F8:
                 {
-                    RenderResource* pRenderable = suzanne;
-                    float& x = pRenderable->material_params.index_of_refraction;
+                    RenderResource& pRenderable = g_Renderables[suzanne];
+                    float& x = pRenderable.material_params.index_of_refraction;
                     x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
                 }
                 break;

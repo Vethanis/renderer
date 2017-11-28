@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "common.h"
+#include "twister.h"
 #include "hashstring.h"
 #include "glprogram.h"
 #include "transform.h"
@@ -67,7 +68,7 @@ struct RenderResource
     TextureChannels texture_channels;
     MaterialParams material_params;
     HashString mesh;
-    HashString transform;
+    u16 transform;
     glm::vec3 m_velocity;
     glm::vec3 m_prevVelocity;
     glm::vec2 m_uv_scale;
@@ -84,7 +85,7 @@ struct RenderResource
 
 struct Renderables 
 {
-    Store<RenderResource, 1024> resources;
+    TwArray<RenderResource, 1024> resources;
     UBO materialparam_ubo;
     GLProgram fwdProg;
     GLProgram zProg;
@@ -101,10 +102,10 @@ struct Renderables
     void prePass(const Transform& VP);
     void fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
     void defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
-    HashString grow();
-    void release(HashString handle);
-    RenderResource* operator[](unsigned i);
-    HashString create(HashString mesh, HashString albedo, 
+    u16 grow();
+    void release(u16 handle);
+    RenderResource& operator[](u16 i){ return resources[i]; }
+    u16 create(HashString mesh, HashString albedo, 
         HashString material, const Transform& xform = Transform(), 
         float roughness = 0.0f, float metalness = 0.0f, 
         unsigned flags = 0);

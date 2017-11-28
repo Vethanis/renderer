@@ -190,15 +190,6 @@ material getMaterial(){
     return mat;
 }
 
-vec3 environment_cubemap(vec3 dir, float roughness){
-    float mip = textureQueryLod(env_cm, dir).x;
-    return textureLod(env_cm, dir, mip + roughness * 4.0).rgb;
-}
-
-vec3 env_cubemap(vec3 dir){
-    return texture(env_cm, dir).rgb;
-}
-
 // ------------------------------------------------------------------------
 
 float DisGGX(vec3 N, vec3 H, float roughness){
@@ -274,114 +265,15 @@ vec3 direct_lighting(inout uint s){
     return light;
 }
 
-vec3 indirect_lighting(inout uint s){
-    const material mat = getMaterial();
-    const vec3 V = normalize(eye - P);
-    vec3 T, B;
-    findBasis(mat.normal, T, B);
-    
-    const float samples = 4.0;
-    const float scaling = 1.0 / samples;
-
-    vec3 light = vec3(0.0);
-    for(float x = 0.0; x < samples; ++x){
-        for(float y = 0.0; y < samples; ++y){
-            const vec2 X = vec2(stratRand(x, scaling, s), stratRand(y, scaling, s));
-            const vec3 N = GGXPDF(mat.roughness, X, T, B, mat.normal);
-            const vec3 L = reflect(-V, N);
-            const vec3 radiance = environment_cubemap(L, mat.roughness);
-            light += pbr_lighting(V, L, mat, radiance);
-        }
-    }
-    {
-        // sometimes the macro normal has the most light. adding a bit of it can greatly reduce noise
-        const vec3 R = reflect(-V, mat.normal);
-        light += 0.1 * pbr_lighting(V, R, mat, environment_cubemap(R, mat.roughness));
-        light += pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
-    }
-
-    light *= 1.0 / (samples * samples + 1.1);
-    light += vec3(0.01) * mat.albedo;
-
-    return light;
-}
-
-vec3 visualizeReflections(){
-    const material mat = getMaterial();
-    const vec3 I = normalize(P - eye);
-    const vec3 R = reflect(I, mat.normal);
-    return environment_cubemap(R, mat.roughness);
-}
-
-vec3 visualizeNormals(){
-    const material mat = getMaterial();
-    return mat.normal * 0.5 + vec3(0.5);
-}
-
-vec3 visualizeUVs(){
-    return vec3(fract(UV.xy), 0.0);
-}
-
-vec3 visualizeCubemap(){
-    vec3 I = normalize(P - eye);
-    return env_cubemap(I);
-}
-
-vec3 visualizeDiffraction(){
-    const vec3 I = normalize(P - eye);
-    const material mat = getMaterial();
-    const vec3 R = refract(I, mat.normal, material_params.index_of_refraction);
-    return env_cubemap(R);
-}
-
-vec3 visualizeRoughness(){
-    return vec3(getMaterial().roughness);
-}
-
-vec3 visualizeMetalness(){
-    return vec3(getMaterial().metalness);
-}
-
 // ------------------------------------------------------------------------
 
-void main(){
+void main()
+{
     uint s = uint(seed) 
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
 
-    vec3 lighting;
-    switch(draw_flags)
-    {
-        default:
-        case DF_DIRECT:
-        case DF_DIRECT_CUBEMAP:
-            lighting = direct_lighting(s);
-            break;
-        case DF_INDIRECT:
-            lighting = indirect_lighting(s);
-            break;
-        case DF_NORMALS:
-            lighting = visualizeNormals();
-            break;
-        case DF_REFLECT:
-            lighting = visualizeReflections();
-            break;
-        case DF_UV:
-            lighting = visualizeUVs();
-            break;
-        case DF_VIS_CUBEMAP:
-            lighting = visualizeCubemap();
-            break;
-        case DF_VIS_REFRACT:
-            lighting = visualizeDiffraction();
-            break;
-        case DF_VIS_ROUGHNESS:
-            lighting = visualizeRoughness();
-            break;
-        case DF_VIS_METALNESS:
-            lighting = visualizeMetalness();
-            break;
-    }
+    vec3 lighting = direct_lighting(s);
 
     lighting.rgb.x += 0.0001 * randBi(s);
     lighting.rgb.y += 0.0001 * randBi(s);
