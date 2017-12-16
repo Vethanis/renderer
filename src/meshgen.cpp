@@ -2,6 +2,8 @@
 #include "meshgen.h"
 #include "assert.h"
 #include <glm/gtx/euler_angles.hpp>
+#include <thread>
+#include <mutex>
 
 using namespace glm;
 
@@ -41,6 +43,17 @@ struct FaceIndices
 {
     uvec3 indices[NumFaces];
 };
+
+
+float randf(u32& f) 
+{
+    f = (f ^ 61) ^ (f >> 16);
+    f *= 9;
+    f = f ^ (f >> 4);
+    f *= 0x27d4eb2d;
+    f = f ^ (f >> 15);
+    return glm::fract(float(f) * 2.3283064e-10f);
+}
 
 #define ConsFaceIndices(a, b, c, d, e, f) { g_cube[a], g_cube[b], g_cube[c], g_cube[d], g_cube[e], g_cube[f] }
 
@@ -155,6 +168,7 @@ Material SDFMaterial(const SDFList& sdfs, const SDFIndices& indices, const vec3 
 
 float SDFAO(const SDFList& sdfs, const SDFIndices& indices, const vec3 p, const vec3 N)
 {
+    static u32 s = 521985231;
     float ao = 0.0f;
     vec3 T, B;
     {
@@ -166,32 +180,17 @@ float SDFAO(const SDFList& sdfs, const SDFIndices& indices, const vec3 p, const 
         T = glm::normalize(T);
         B = glm::cross(N, T);
     }
-    float len = 0.01f;
     const s32 num_steps = 4;
-    const s32 samples_per_step = 4;
     for(s32 i = 0; i < num_steps; ++i)
     {
-        const vec3 pos = p + N * len;
-        if(SDFDis(sdfs, indices, pos + T * len) < 0.0f)
+        const vec3 pos = p + N + vec3(randf(s), randf(s), randf(s)) * 2.0f - 1.0f;
+        if(SDFDis(sdfs, indices, pos) < 0.0f)
         {
             ao += 1.0f;
         }
-        if(SDFDis(sdfs, indices, pos - T * len) < 0.0f)
-        {
-            ao += 1.0f;
-        }
-        if(SDFDis(sdfs, indices, pos + B * len) < 0.0f)
-        {
-            ao += 1.0f;
-        }
-        if(SDFDis(sdfs, indices, pos - B * len) < 0.0f)
-        {
-            ao += 1.0f;
-        }
-        len *= 5.0f;
     }
 
-    ao /= float(num_steps * samples_per_step);
+    ao /= float(num_steps);
 
     return ao;
 }
@@ -206,13 +205,15 @@ void GenerateMesh(MeshTask& task)
         glm::vec3 center;
         float radius = 0.0f;
         u32 depth = 0;
+
+        float qlen(){ return 1.732051f * radius; }
     };
 
     Vector<SubTask> subtasks;
 
     {
         const vec3 center = task.bounds.center();
-        const float rad = task.bounds.cornerRadius();
+        const float rad = task.bounds.sideRadius();
         SubTask& st = subtasks.grow();
         st.center = center;
         st.radius = rad;
@@ -222,57 +223,103 @@ void GenerateMesh(MeshTask& task)
         for(u16 i = 0; i < numSdfs; ++i)
         {
             const float dis = task.sdfs[i].distance(st.center);
-            if(dis < st.radius)
+            if(dis < st.qlen())
             {
                 st.indices.grow() = i;
             }
         }
     }
 
-    while(subtasks.count())
-    {
-        const SubTask st = subtasks.pop();
-        
-        if(st.indices.count() == 0)
-            continue;
+    const s32 num_threads = 16;
+    std::mutex subtaskLock;
+    std::thread threads[num_threads];
 
-        if(st.depth == task.max_depth)
+    auto ThreadTask = [&]()
+    {
+        subtaskLock.lock();
+        if(!subtasks.count())
+        {
+            subtaskLock.unlock();
+            return;
+        }
+        SubTask st = subtasks.pop();
+        subtaskLock.unlock();
+
+        if(st.indices.count() == 0)
+            return;
+
+        if(st.depth >= task.max_depth)
         {
             const vec3 N = SDFNorm(task.sdfs, st.indices, st.center);
             const vec3 p = st.center - N * SDFDis(task.sdfs, st.indices, st.center);
-            Vertex& vert = task.geom.vertices.grow();
+
+            Vertex vert;
             vert.setPosition(p);
             vert.setNormal(N);
             const Material mat = SDFMaterial(task.sdfs, st.indices, p);
-            vert.red = mat.red; vert.green = mat.green; vert.blue = mat.blue;
-            vert.roughness = mat.roughness;
-            vert.metalness = mat.metalness;
-            vert.setAmbientOcclusion(SDFAO(task.sdfs, st.indices, p, N));
+            vert.setColor(mat.getColor());
+            const float roughness = mat.getRoughness();
+            const float metalness = mat.getMetalness();
+            const float ao = SDFAO(task.sdfs, st.indices, p, N);
+            vert.setMaterial(glm::vec3(roughness, metalness, ao));
+
+            subtaskLock.lock();
+            task.geom.vertices.grow() = vert;
+            subtaskLock.unlock();
         }
         else
         {
             const float nlen = st.radius * 0.5f;
-            for(u8 i = 0; i < 8; ++i)
+            for(u32 i = 0; i < 8; ++i)
             {
                 vec3 nc = st.center;
                 nc.x += (i & 1) ? -nlen : nlen;
                 nc.y += (i & 2) ? -nlen : nlen;
                 nc.z += (i & 4) ? -nlen : nlen;
-
-                SubTask& child = subtasks.grow();
+                SubTask child;
                 child.center = nc;
                 child.radius = nlen;
                 child.depth = st.depth + 1;
 
-                for(u16 idx : st.indices)
+                for(const u16 idx : st.indices)
                 {
-                    if(task.sdfs[idx].distance(child.center) < child.radius)
+                    const float dis = task.sdfs[idx].distance(child.center);
+                    if(dis < child.qlen())
                     {
                         child.indices.grow() = idx;
                     }
                 }
+
+                subtaskLock.lock();
+                subtasks.grow() = child;
+                subtaskLock.unlock();
             }
         }
-        
+    };
+
+    auto ContinuousTask = [&]()
+    {
+        while(subtasks.count())
+        {
+            ThreadTask();
+        }
+    };
+
+    while(subtasks.count() <= num_threads)
+    {
+        ThreadTask();
+    }
+
+    while(subtasks.count())
+    {
+        for(s32 i = 0; i < num_threads; ++i)
+        {
+            threads[i] = std::thread(ContinuousTask);
+        }
+
+        for(s32 i = 0; i < num_threads; ++i)
+        {
+            threads[i].join();
+        }
     }
 }

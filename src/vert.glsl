@@ -28,7 +28,7 @@ void main()
 {
     {
         gl_Position = MVP * vec4(p.xyz, 1.0);
-	    gl_PointSize = clamp(50.0 / gl_Position.w, 1.0f, 500.0f);
+	    gl_PointSize = 200.0; //clamp(100.0 / gl_Position.w, 1.0f, 500.0f);
         P = vec3(M * vec4(p.xyz, 1.0));
     }
 
@@ -38,6 +38,6 @@ void main()
         MacroNormal = normalize(vec3(M * vec4(IM * N.xyz, 0.0)));
     }
 
-    Color = unpackUint(c).xyz;
-    Material = unpackUint(m).xyz;
+    Color = vec3(1.0, 0.0, 0.0); //unpackUint(c).xyz;
+    Material = vec3(0.5, 0.0, 0.0); //unpackUint(m).xyz;
 }

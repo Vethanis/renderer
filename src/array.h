@@ -187,7 +187,7 @@ struct Vector{
     T pop(){
         assert(_tail > 0);
         --_tail;
-        return _data[_tail + 1];
+        return _data[_tail];
     }
     void clear(){ _tail = 0; }
     void remove(int idx){
@@ -250,6 +250,21 @@ struct Vector{
         _capacity = cap;
         _tail = 0;
     }
+    Vector(const Vector& other)
+    {
+        _data = nullptr;
+        _tail = 0;
+        copy(other);
+    }
+    Vector(Vector&& other) noexcept
+    {
+        _data = other._data;
+        _tail = other._tail;
+        _capacity = other._capacity;
+        other._data = nullptr;
+        other._tail = 0;
+        other._capacity = 0;
+    }
     ~Vector(){
         if(_data){
             delete[] _data;
@@ -271,14 +286,19 @@ struct Vector{
             }
         }
     }
-    void swap(Vector& other){
-        std::swap(_data, other._data);
-        std::swap(_capacity, other._capacity);
-        std::swap(_tail, other._tail);
-    }
     Vector& operator=(const Vector& other){
         copy(other);
         return *this;
+    }
+    Vector& operator=(Vector&& other) noexcept
+    {
+        resize(0);
+        _data = other._data;
+        _tail = other._tail;
+        _capacity = other._capacity;
+        other._data = nullptr;
+        other._tail = 0;
+        other._capacity = 0;
     }
     bool operator==(const Vector& other)const{
         return hash() == other.hash();

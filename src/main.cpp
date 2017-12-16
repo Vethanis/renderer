@@ -19,9 +19,9 @@ void setupScene()
     using namespace glm;
 
     MeshTask task;
-    task.bounds.lo = vec3(-2.0f);
-    task.bounds.hi = vec3(2.0f);
-    task.max_depth = 5;
+    task.bounds.lo = vec3(-1.0f);
+    task.bounds.hi = vec3(1.0f);
+    task.max_depth = 4;
     SDF& sdf = task.sdfs.grow();
     sdf.translation = vec3(0.1f, 0.25f, 0.1f);
     sdf.material.setRoughness(0.5f);
