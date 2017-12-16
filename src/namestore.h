@@ -1,27 +1,40 @@
 #pragma once 
 
-#define _CRT_SECURE_NO_WARNINGS
-
 #include "store.h"
-#include "ints.h"
-#include <cstring>
 
-struct NameStore{
-    Store<const char*, 1024> m_store;
-    const char* get(unsigned name){
-        const char** res = m_store.get(name);
-        return res ? *res : nullptr;
+struct NameStore
+{
+    struct TextBlock
+    {
+        enum : int
+        {
+            Capacity = 256,
+        };
+        char m_text[Capacity] = {0};
+    };
+
+    Store<TextBlock, 256> m_store;
+
+    const char* get(unsigned name)
+    {
+        TextBlock* res = m_store.get(name);
+        return res ? res->m_text : nullptr;
     }
     const char* operator[](unsigned name){ return get(name); }
-    void insert(unsigned name, const char* val){
-        if(m_store.get(name)){
+    void insert(unsigned name, const char* val)
+    {
+        if(m_store.get(name))
+        {
             return;
         }
         
-        const u32 len = (u32)strlen(val);
-        char* value = new char[len + 1];
-        strcpy(value, val);
-        m_store.insert(name, value);
+        TextBlock block;
+        for(int i = 0; i < TextBlock::Capacity - 1 && val[i]; ++i)
+        {
+            block.m_text[i] = val[i];
+        }
+
+        m_store.insert(name, block);
     }
 };
 

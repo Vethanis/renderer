@@ -53,15 +53,9 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     static const int eye_loc = prog.getUniformLocation("eye");
     static const int draw_flag_loc = prog.getUniformLocation("draw_flags");
 
-    const float jitter_magnitude = 0.0001f;
-    Transform VP = cam.getVP();
-    Transform IVP = glm::inverse(VP);
-    glm::vec3 jitter = randf(jitter_magnitude) * getRight(VP) + randf(jitter_magnitude) * getUp(VP);
-    glm::vec3 eye = cam.getEye();
-    eye += jitter;
-    VP[3][0] += jitter.x;
-    VP[3][1] += jitter.y;
-    VP[3][2] += jitter.z;
+    const Transform VP = cam.getVP();
+    const Transform IVP = glm::inverse(VP);
+    const glm::vec3 eye = cam.getEye();
 
     // SHADOWS pass ---------------------------------------------------------------------------
     if(frameCounter() & 1)
@@ -80,7 +74,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     Framebuffer& prevBuf = m_postbuffs[(draw_call + 1) & 1];
 
     {
-        ProfilerEvent("GBuffer lighting pass");
+        ProfilerEvent("GBuffer::lighting_pass");
 
         curBuf.bind();
         Framebuffer::clear();
@@ -90,8 +84,6 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
         prog.bindTexture(0, m_framebuffer.m_attachments[0], "positionSampler");
         prog.bindTexture(1, m_framebuffer.m_attachments[1], "normalSampler");
         prog.bindTexture(2, m_framebuffer.m_attachments[2], "albedoSampler");
-        prog.bindTexture(3, m_framebuffer.m_attachments[3], "velocitySampler");
-        prog.bindTexture(4, prevBuf.m_attachments[0], "prevColor");
         prog.bindCubemap(5, cmap.color_cubemap, "env_cm");
         
         g_Renderables.bindSun(g_Renderables.m_light, prog, 10);
@@ -100,7 +92,6 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
         prog.setUniformInt(draw_flag_loc, dflag);
         prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
         prog.setUniform("IVP", IVP);
-        prog.setUniform("prevVP", cam.getPrevVP());
         prog.setUniform("sunNearFar", glm::vec2(
             g_Renderables.m_light.m_near,
             g_Renderables.m_light.m_far
@@ -112,7 +103,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
 
     // POST pass ---------------------------------------------------------------------------
     {
-        ProfilerEvent("GBuffer post pass");
+        ProfilerEvent("GBuffer::post_pass");
         
         Framebuffer::bindDefault();
         Framebuffer::clear();

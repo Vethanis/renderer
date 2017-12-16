@@ -11,10 +11,12 @@ private:
     T m_data[t_capacity];
     C m_twists[t_capacity];
     C m_tail;
+    C m_lastTwist;
 public:
     TwArray()
     {
         m_tail = 0;
+        m_lastTwist = 0;
     }
     C count() const
     {
@@ -76,18 +78,6 @@ public:
         const C pos = m_twists[idx];
         return m_data[pos];
     }
-    C find(const T& item) const
-    {
-        for(C i = 0; i < m_tail; ++i)
-        {
-            const C pos = m_twists[i];
-            if(pos < m_tail && m_data[pos] == item)
-            {
-                return i;
-            }
-        }
-        return (C)-1;
-    }
     void clear()
     {
         m_tail = 0;
@@ -99,6 +89,9 @@ public:
         ++m_tail;
         m_data[pos] = item;
         m_twists[pos] = pos;
+
+        m_lastTwist = m_lastTwist > pos ? m_lastTwist : pos;
+
         return pos;
     }
     void remove(C idx)
@@ -109,21 +102,28 @@ public:
         m_data[pos] = m_data[tail];
         m_twists[idx] = (C)-1;
         m_twists[tail] = pos;
-    }
-    bool findRemove(const T& item)
-    {
-        assert(!empty());
-        for(C i = 0; i < m_tail; ++i)
+
+        if(pos == m_lastTwist)
         {
-            if(m_data[i] == item)
+            while(m_twists[m_lastTwist] == (C)-1 && m_lastTwist)
             {
-                const C tail = m_tail - 1;
-                m_data[i] = m_data[tail];
-                m_twists[i] = (C)-1;
-                m_twists[tail] = i;
-                return true;
+                --m_lastTwist;
             }
         }
-        return false;
+    }
+    C numSlots() const { return m_lastTwist; }
+    C getSlotOf(const T& item) const
+    {
+        const size_t offset = size_t(&item - m_data);
+        assert(offset < (size_t)m_tail);
+
+        for(C i = (C)offset; i < m_lastTwist; ++i)
+        {
+            if(m_twists[i] == (C)offset)
+            {
+                return i;
+            }
+        }
+        return (C)-1;
     }
 };

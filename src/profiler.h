@@ -2,63 +2,61 @@
 
 #define PROFILING_ENABLED 0
 
-#if PROFILING_ENABLED
 
-#include "array.h"
-#include "store.h"
-#include "ints.h"
+#if PROFILING_ENABLED
+// ---------------------------------------------------------------
+
+#define RMT_USE_OPENGL 1
+#include "remotery.h"
+
+extern Remotery* g_rmt;
+
+inline void ProfilerInit()
+{
+    rmt_CreateGlobalInstance(&g_rmt);
+    rmt_BindOpenGL();
+}
+
+inline void ProfilerDeinit()
+{
+    rmt_UnbindOpenGL();
+    rmt_DestroyGlobalInstance(g_rmt);
+}
 
 struct ProfilerEvent
 {
-    unsigned m_symbol;
-    unsigned m_handle;
-    ProfilerEvent() { m_symbol = 0; m_handle = 0; }
-    ProfilerEvent(const char* symbol);
-    ~ProfilerEvent();
+    const char* m_sym;
+    ProfilerEvent(const char* s)
+    {
+        m_sym = s;
+        rmt_BeginCPUSample(m_sym, 0);
+    }
+    ~ProfilerEvent()
+    {
+        rmt_EndCPUSample();
+    }
 };
-
-class Profiler
+struct ProfilerGPUEvent
 {
-public:
-    static ProfilerEvent& CreateEvent();
-    static void Init();
-    static void Deinit();
-    static void EndFrame();
-    static void PrintToFile(const char* filename);
-private:
-    enum eConstants : int
+    const char* m_sym;
+    ProfilerGPUEvent(const char* s)
     {
-        EventCapacity = 4096,
-        QueryCapacity = 4096,
-        StatisticCapacity = 1024,
-    };
-
-    struct Statistic
+        m_sym = s;
+        rmt_BeginOpenGLSample(m_sym);
+    }
+    ~ProfilerGPUEvent()
     {
-        s64 m_maximum = -1;
-        s64 m_minimum = 1 << 29;
-        s64 m_total = 0;
-        s64 m_count = 0;
-    };
-
-    Array<unsigned, QueryCapacity> m_queries;
-    Array<ProfilerEvent, EventCapacity> m_events;
-    Store<Statistic, StatisticCapacity> m_statistics;
-
-    static Profiler ms_instance;
+        rmt_EndOpenGLSample();
+    }
 };
 
-#define ProfilerInit() Profiler::Init();
-#define ProfilerDeinit() Profiler::Deinit();
-#define ProfilerEndFrame() Profiler::EndFrame();
-#define FinishProfiling(x) Profiler::PrintToFile(x);
+#else // !PROFILING_ENABLED
+// ---------------------------------------------------------------
 
-#else
-
+#define ProfilerInit() 
+#define ProfilerDeinit() 
 #define ProfilerEvent(x) 
-#define ProfilerInit()
-#define ProfilerDeinit()
-#define ProfilerEndFrame()
-#define FinishProfiling(x)
+#define ProfilerGPUEvent(x) 
 
 #endif // PROFILING_ENABLED
+// ---------------------------------------------------------------

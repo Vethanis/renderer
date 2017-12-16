@@ -1,4 +1,6 @@
 
+#if MESH_IMPORT_ENABLED
+
 #define GLM_SWIZZLE
 #include "mesh_interchange.h"
 
@@ -102,3 +104,5 @@ namespace mesh_interchange
         processNode(scene->mRootNode, scene, glm::scale({}, glm::vec3(0.01f)));
     }
 };
+
+#endif // MESH_IMPORT_ENABLED

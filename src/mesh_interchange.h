@@ -1,5 +1,9 @@
 #pragma once
 
+#define MESH_IMPORT_ENABLED 0
+
+#if MESH_IMPORT_ENABLED
+
 #include "common.h"
 #include "vertexbuffer.h"
 
@@ -49,3 +53,5 @@ namespace mesh_interchange
         }
     };
 };
+
+#endif // MESH_IMPORT_ENABLED

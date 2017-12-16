@@ -25,7 +25,7 @@ Window::Window(int width, int height, int major_ver, int minor_ver, const char* 
     glViewport(0, 0, width, height);
     assert(glewInit() == GLEW_OK);
     glGetError();    // invalid enumerant shows up here, just part of glew being itself.
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 }
 
 Window::~Window(){

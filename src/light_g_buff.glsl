@@ -23,13 +23,6 @@
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
 
-#define TX_ALBEDO_CHANNEL   0
-#define TX_MATERIAL_CHANNEL 1
-#define TX_SUN_CHANNEL      2
-#define TX_CUBEMAP_CHANNEL  3
-#define TX_POSITION_CHANNEL 4
-#define TX_NORMAL_CHANNEL   5
-
 // ------------------------------------------------------------------------
 
 layout (location = 0) out vec4 outColor;
@@ -40,13 +33,10 @@ in vec2 fragUv;
 uniform sampler2D positionSampler;
 uniform sampler2D normalSampler;
 uniform sampler2D albedoSampler;
-uniform sampler2D velocitySampler;
-uniform sampler2D prevColor;
-uniform samplerCube env_cm;
 uniform sampler2D sunDepth;
+uniform samplerCube env_cm;
 
 uniform mat4 IVP;
-uniform mat4 prevVP;
 uniform mat4 sunMatrix;
 uniform vec3 sunDirection;
 uniform vec3 sunColor;
@@ -497,34 +487,9 @@ void main(){
             case DF_VIS_SUN_SHADOW_DEPTH:
                 lighting = visualizeShadow();
                 break;
-            case DF_VIS_VELOCITY:
-                outColor.xyz = texture(velocitySampler, fragUv).xyz;
-                return;
         }
     }
 
     lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
-
-    if(!shouldSkylight)
-    {
-        vec4 P = texture(positionSampler, fragUv);
-        const vec3 velocity = texture(velocitySampler, fragUv).xyz;
-        P.xyz -= velocity;
-        P.w = 1.0;
-        P = prevVP * P;
-        P /= P.w;
-        P.xy = P.xy * 0.5 + 0.5;
-
-        if(P.x <= 1.0 && P.x >= 0.0)
-        {
-            if(P.y <= 1.0 && P.y >= 0.0)
-            {
-                vec3 prev = texture(prevColor, P.xy).rgb;
-                if(prev.x + prev.y + prev.z > 0.00001)
-                    lighting.rgb = mix(lighting.rgb, prev, 0.5);
-            }
-        }
-    }
-
     outColor = vec4(lighting.rgb, 1.0);
 }

@@ -1,6 +1,6 @@
 #include "renderobject.h"
+#include "myglheaders.h"
 #include "mesh.h"
-#include "texture.h"
 #include "glscreen.h"
 #include "depthstate.h"
 #include <random>
@@ -8,61 +8,10 @@
 
 Renderables g_Renderables;
 
-void TextureChannels::bind(GLProgram& prog, int channel)
-{
-    ProfilerEvent("TextureChannels::bind");
-
-    Texture* t = albedo;
-    if(t)
-    {
-        prog.bindTexture(TX_ALBEDO_CHANNEL, t->handle, "albedoSampler");
-    }
-    t = material;
-    if(t)
-    {
-        prog.bindTexture(TX_MATERIAL_CHANNEL, t->handle, "materialSampler");
-    }
-}
-
-void RenderResource::init()
-{
-    transform = g_TransformStore.insert({});
-    m_uv_scale = glm::vec2(1.0f);
-}
-
-void RenderResource::deinit()
-{
-    g_TransformStore.remove(transform);
-}
-
-void RenderResource::bind(GLProgram& prog, UBO& material_ubo)
-{
-    ProfilerEvent("RenderResource::bind");
-    
-    texture_channels.bind(prog, 0);
-    material_ubo.upload(&material_params, sizeof(MaterialParams));
-}
-
-void RenderResource::draw()
+void RenderResource::draw()const
 {
     ProfilerEvent("RenderResource::draw");
-    
-    Mesh* m = mesh;
-    if(m){
-        m->draw();
-    }
-}
-
-void RenderResource::setTransform(const Transform& xform)
-{
-    Transform& rXform = g_TransformStore[transform];
-    rXform = xform;
-}
-
-void RenderResource::setVelocity(const glm::vec3& dv)
-{
-    m_prevVelocity = m_velocity;
-    m_velocity = dv;
+    mesh.draw();
 }
 
 void Renderables::init()
@@ -105,8 +54,6 @@ void Renderables::init()
     m_light.m_intensity = 10.0f;
     m_light.m_near = 10.0f;
     m_light.m_far = 100.0f;
-
-    materialparam_ubo.init(nullptr, sizeof(MaterialParams), "materialparams_ubo", &fwdProg.m_id, 1);
 }
 
 void Renderables::deinit()
@@ -117,7 +64,6 @@ void Renderables::deinit()
     zProg.deinit();
     defProg.deinit();
     skyProg.deinit();
-    materialparam_ubo.deinit();
     m_light.deinit();
 }
 
@@ -164,9 +110,9 @@ void Renderables::prePass(const Transform& VP)
     ColorMaskContext nocolor(0);
 
     zProg.bind();
-    for(auto& res : resources){
-        Transform& M = g_TransformStore[res.transform];
-        zProg.setUniform("MVP", VP * M);
+    for(const RenderResource& res : resources)
+    {
+        zProg.setUniform("MVP", VP * res.m_transform);
         res.draw();
     }
 }
@@ -184,17 +130,16 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
 
     fwdProg.setUniform("eye", eye);
     fwdProg.setUniformInt("seed", rand());
-    fwdProg.setUniformInt("draw_flags", dflag);
     
-    for(auto& res : resources){
-        Transform& M = g_TransformStore[res.transform];
+    for(const RenderResource& res : resources)
+    {
+        const Transform& M = res.m_transform;
         const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
         fwdProg.setUniform("MVP", VP * M);
         fwdProg.setUniform("M", M);
         fwdProg.setUniform("IM", IM);
 
-        res.bind(fwdProg, materialparam_ubo);
         res.draw();
     }
 
@@ -212,51 +157,25 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     defProg.setUniform("eye", eye);
     defProg.setUniformInt("draw_flags", dflag);
 
-    for(auto& res : resources){
-        Transform& M = g_TransformStore[res.transform];
+    for(const RenderResource& res : resources)
+    {
+        const Transform& M = res.m_transform;
         const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
         defProg.setUniform("MVP", VP * M);
         defProg.setUniform("M", M);
         defProg.setUniform("IM", IM);
-        defProg.setUniform("velocity", res.m_prevVelocity);
-        defProg.setUniform("uv_scale", res.m_uv_scale);
-        defProg.setUniform("uv_offset", res.m_uv_offset);
 
-        res.bind(defProg, materialparam_ubo);
         res.draw();
     }
 }
 
-u16 Renderables::grow()
+u16 Renderables::request()
 {
-    u16 handle = resources.insert({});
-    resources[handle].init();
-    return handle;
+    return resources.insert({});
 }
 
 void Renderables::release(u16 handle)
 {
-    resources[handle].deinit();
     resources.remove(handle);
-}
-
-u16 Renderables::create(HashString mesh, HashString albedo, 
-    HashString material, const Transform& xform, 
-    float roughness, float metalness, 
-    unsigned flags)
-{
-    ProfilerEvent("Renderables::create");
-
-    u16 handle = resources.insert({});
-    RenderResource& res = resources[handle];
-    res.init();
-    res.mesh = mesh;
-    res.texture_channels.albedo = albedo;
-    res.texture_channels.material = material;
-    res.material_params.roughness_offset = roughness;
-    res.material_params.metalness_offset = metalness;
-    res.setTransform(xform);
-
-    return handle;
 }

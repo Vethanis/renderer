@@ -322,4 +322,17 @@ struct Vector{
             }
         }
     }
+    void reserve(int new_cap)
+    {
+        if(_capacity < new_cap)
+        {
+            T* new_data = new T[new_cap];
+            for(int i = 0; i < _tail; ++i)
+                new_data[i] = _data[i];
+
+            delete[] _data;
+            _data = new_data;
+            _capacity = new_cap;
+        }
+    }
 };

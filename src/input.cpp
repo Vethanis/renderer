@@ -8,12 +8,12 @@
 
 bool Input::m_rightMouseDown = false;
 bool Input::m_leftMouseDown = false;
-float Input::m_scrollOffset = 0.0f;
-float Input::m_relScroll = 0.0f;
-float Input::m_cursorX = 0.0f;
-float Input::m_cursorY = 0.0f;
-float Input::m_relCursorX = 0.0f;
-float Input::m_relCursorY = 0.0f;
+double Input::m_scrollOffset = 0.0;
+double Input::m_relScroll = 0.0;
+double Input::m_cursorX = 0.0;
+double Input::m_cursorY = 0.0;
+double Input::m_relCursorX = 0.0;
+double Input::m_relCursorY = 0.0;
 
 Array<int, 1024> g_activeKeys;
 Array<int, 1024> g_downKeys;
@@ -36,19 +36,19 @@ void Input::poll(){
 void Input::poll(Camera& cam){
     poll();
     
-    glm::vec3 v(0.0f);
-    const float dt = (float)frameSeconds();
-    v.z -= glfwGetKey(m_glwindow, GLFW_KEY_W) ? dt : 0.0f;
-    v.z += glfwGetKey(m_glwindow, GLFW_KEY_S) ? dt : 0.0f;
-    v.x -= glfwGetKey(m_glwindow, GLFW_KEY_A) ? dt : 0.0f;
-    v.x += glfwGetKey(m_glwindow, GLFW_KEY_D) ? dt : 0.0f;
-    v.y += glfwGetKey(m_glwindow, GLFW_KEY_SPACE) ? dt : 0.0f;
-    v.y -= glfwGetKey(m_glwindow, GLFW_KEY_LEFT_SHIFT) ? dt : 0.0f;
-    cam.move(v * 2.0f);
+    glm::dvec3 v(0.0);
+    const double dt = frameSeconds();
+    v.z -= glfwGetKey(m_glwindow, GLFW_KEY_W) ? dt : 0.0;
+    v.z += glfwGetKey(m_glwindow, GLFW_KEY_S) ? dt : 0.0;
+    v.x -= glfwGetKey(m_glwindow, GLFW_KEY_A) ? dt : 0.0;
+    v.x += glfwGetKey(m_glwindow, GLFW_KEY_D) ? dt : 0.0;
+    v.y += glfwGetKey(m_glwindow, GLFW_KEY_SPACE) ? dt : 0.0;
+    v.y -= glfwGetKey(m_glwindow, GLFW_KEY_LEFT_SHIFT) ? dt : 0.0;
+    cam.move(v * 2.0);
     cam.yaw(m_relCursorX * dt);
     cam.pitch(m_relCursorY * dt);
-    m_relCursorX = 0.0f;
-    m_relCursorY = 0.0f;
+	m_relCursorX = 0.0;
+	m_relCursorY = 0.0;
     cam.update();
 }
 
@@ -60,27 +60,27 @@ bool Input::rightMouseDown(){
     return Input::m_rightMouseDown;
 }
 
-float Input::scrollOffset(){
+double Input::scrollOffset(){
     return Input::m_scrollOffset;
 }
 
-float Input::relScroll(){
+double Input::relScroll(){
     return Input::m_relScroll;
 }
 
-float Input::cursorX(){
+double Input::cursorX(){
     return Input::m_cursorX;
 }
 
-float Input::cursorY(){
+double Input::cursorY(){
     return Input::m_cursorY;
 }
 
-float Input::relCursorX(){
+double Input::relCursorX(){
     return Input::m_relCursorX;
 }
 
-float Input::relCursorY(){
+double Input::relCursorY(){
     return Input::m_relCursorY;
 }
 
@@ -108,15 +108,15 @@ void Input::mouse_button_callback(GLFWwindow* window, int button, int action, in
 }
 
 void Input::cursor_position_callback(GLFWwindow* window, double xpos, double ypos){
-    m_relCursorX = m_cursorX - (float)xpos;
-    m_relCursorY = m_cursorY - (float)ypos;
-    m_cursorX = (float) xpos;
-    m_cursorY = (float) ypos;
+    m_relCursorX = m_cursorX - xpos;
+    m_relCursorY = m_cursorY - ypos;
+    m_cursorX = xpos;
+    m_cursorY = ypos;
 }
 
 void Input::scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
-    m_relScroll = (float)yoffset - m_scrollOffset;
-    m_scrollOffset = (float)yoffset;
+    m_relScroll = yoffset - m_scrollOffset;
+    m_scrollOffset = yoffset;
 }
 
 void Input::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){

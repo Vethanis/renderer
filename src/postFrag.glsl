@@ -6,7 +6,8 @@ in vec2 fragUv;
 uniform sampler2D curColor;
 uniform int seed;
 
-float rand( inout uint f) {
+float rand( inout uint f) 
+{
     f = (f ^ 61) ^ (f >> 16);
     f *= 9;
     f = f ^ (f >> 4);
@@ -15,7 +16,8 @@ float rand( inout uint f) {
     return fract(float(f) * 2.3283064e-10);
 }
 
-float randBi(inout uint s){
+float randBi(inout uint s)
+{
     return rand(s) * 2.0 - 1.0;
 }
 

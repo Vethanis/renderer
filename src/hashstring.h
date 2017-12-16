@@ -17,7 +17,6 @@ struct HashString{
     HashString operator = (const char* str) { *this = HashString(str); return *this; }
     HashString operator = (unsigned hash) { m_hash = hash; return *this; }
     operator unsigned () const { return m_hash; }
-    operator const char* () const { return str(); }
     bool operator==(HashString other)const{ return m_hash == other.m_hash; }
 
     template<typename T>

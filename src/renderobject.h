@@ -5,7 +5,7 @@
 #include "hashstring.h"
 #include "glprogram.h"
 #include "transform.h"
-#include "UBO.h"
+#include "mesh.h"
 #include "directional_light.h"
 #include "transform.h"
 
@@ -43,50 +43,17 @@
 
 // ------------------------------------------------------------------------
 
-struct TextureChannels 
-{
-    HashString albedo;
-    HashString material;
-
-    void bind(GLProgram& prog, int channel);
-};
-
-struct MaterialParams 
-{
-    float roughness_offset = 0.0f;
-    float roughness_multiplier = 1.0f;
-    float metalness_offset = 0.0f;
-    float metalness_multiplier = 1.0f;
-    float index_of_refraction = 1.0f;
-    float bumpiness = 1.0f;
-    float heightScale = 0.0075f;
-    float _pad3;
-};
-
 struct RenderResource 
 {
-    TextureChannels texture_channels;
-    MaterialParams material_params;
-    HashString mesh;
-    u16 transform;
-    glm::vec3 m_velocity;
-    glm::vec3 m_prevVelocity;
-    glm::vec2 m_uv_scale;
-    glm::vec2 m_uv_offset;
+    Transform m_transform;
+    Mesh mesh;
 
-    bool operator==(const RenderResource& other)const{ return false; };
-    void init();
-    void deinit();
-    void bind(GLProgram& prog, UBO& material_ubo);
-    void draw();
-    void setTransform(const Transform& xform);
-    void setVelocity(const glm::vec3& dv);
+    void draw()const;
 };
 
 struct Renderables 
 {
     TwArray<RenderResource, 1024> resources;
-    UBO materialparam_ubo;
     GLProgram fwdProg;
     GLProgram zProg;
     GLProgram defProg;
@@ -102,13 +69,9 @@ struct Renderables
     void prePass(const Transform& VP);
     void fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
     void defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
-    u16 grow();
+    u16 request();
     void release(u16 handle);
     RenderResource& operator[](u16 i){ return resources[i]; }
-    u16 create(HashString mesh, HashString albedo, 
-        HashString material, const Transform& xform = Transform(), 
-        float roughness = 0.0f, float metalness = 0.0f, 
-        unsigned flags = 0);
 };
 
 extern Renderables g_Renderables;
