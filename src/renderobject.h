@@ -48,7 +48,9 @@ struct RenderResource
     Transform m_transform;
     Mesh mesh;
 
-    void draw()const;
+    void draw() const { mesh.draw(); }
+    void init() { mesh.init(); }
+    void deinit() { mesh.deinit(); }
 };
 
 struct Renderables 

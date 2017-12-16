@@ -5,8 +5,6 @@
 
 using namespace glm;
 
-MeshTaskContext g_meshTaskContexts[MeshTaskContext::ContextCapacity];
-
 #define Bits(a, b, c, d) ((1 << a) | (1 << b) | (1 << c) | (1 << d))
 #define CodeRight  Bits(0, 1, 2, 3)
 #define CodeLeft   Bits(4, 5, 6, 7)
@@ -58,7 +56,7 @@ const FaceIndices g_faces[NumFaces] = {
 float SDF::distance(vec3 p) const
 {
     p -= translation;
-    p = glm::orientate3(rotation) * p;
+    //p = glm::orientate3(rotation) * p;
     p /= scale;
 
     switch(type)
@@ -108,32 +106,34 @@ float SDF::blend(float a, float b) const
     return a;
 }
 
-float SDFDis(const SDFList& sdfs, const vec3 p)
+float SDFDis(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
 {
     float dis = SDF_BigDistance;
-    for(const SDF& sdf : sdfs)
+    for(const u16 i : indices)
     {
+        const SDF& sdf = sdfs[i];
         dis = sdf.blend(dis, sdf.distance(p));
     }
     return dis;
 }
 
-vec3 SDFNorm(const SDFList& sdfs, const vec3 p)
+vec3 SDFNorm(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
 {
     const float e = 0.001f;
     return normalize(vec3(
-        SDFDis(sdfs, p + vec3(e, 0.0f, 0.0f)) - SDFDis(sdfs, p - vec3(e, 0.0f, 0.0f)),
-        SDFDis(sdfs, p + vec3(0.0f, e, 0.0f)) - SDFDis(sdfs, p - vec3(0.0f, e, 0.0f)),
-        SDFDis(sdfs, p + vec3(0.0f, 0.0f, e)) - SDFDis(sdfs, p - vec3(0.0f, 0.0f, e))
+        SDFDis(sdfs, indices, p + vec3(e, 0.0f, 0.0f)) - SDFDis(sdfs, indices, p - vec3(e, 0.0f, 0.0f)),
+        SDFDis(sdfs, indices, p + vec3(0.0f, e, 0.0f)) - SDFDis(sdfs, indices, p - vec3(0.0f, e, 0.0f)),
+        SDFDis(sdfs, indices, p + vec3(0.0f, 0.0f, e)) - SDFDis(sdfs, indices, p - vec3(0.0f, 0.0f, e))
     ));
 }
 
-Material SDFMaterial(const SDFList& sdfs, const vec3 p)
+Material SDFMaterial(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
 {
     Material A, B;
     float disA = 1000.0f, disB = 1000.0f;
-    for(const SDF& sdf : sdfs)
+    for(const u16 i : indices)
     {
+        const SDF& sdf = sdfs[i];
         const float dis = sdf.distance(p);
         if(glm::abs(dis) < disA)
         {
@@ -153,7 +153,7 @@ Material SDFMaterial(const SDFList& sdfs, const vec3 p)
     return retMat;
 }
 
-float SDFAO(const SDFList& sdfs, const vec3 p, const vec3 N)
+float SDFAO(const SDFList& sdfs, const SDFIndices& indices, const vec3 p, const vec3 N)
 {
     float ao = 0.0f;
     vec3 T, B;
@@ -172,19 +172,19 @@ float SDFAO(const SDFList& sdfs, const vec3 p, const vec3 N)
     for(s32 i = 0; i < num_steps; ++i)
     {
         const vec3 pos = p + N * len;
-        if(SDFDis(sdfs, pos + T * len) < 0.0f)
+        if(SDFDis(sdfs, indices, pos + T * len) < 0.0f)
         {
             ao += 1.0f;
         }
-        if(SDFDis(sdfs, pos - T * len) < 0.0f)
+        if(SDFDis(sdfs, indices, pos - T * len) < 0.0f)
         {
             ao += 1.0f;
         }
-        if(SDFDis(sdfs, pos + B * len) < 0.0f)
+        if(SDFDis(sdfs, indices, pos + B * len) < 0.0f)
         {
             ao += 1.0f;
         }
-        if(SDFDis(sdfs, pos - B * len) < 0.0f)
+        if(SDFDis(sdfs, indices, pos - B * len) < 0.0f)
         {
             ao += 1.0f;
         }
@@ -196,87 +196,83 @@ float SDFAO(const SDFList& sdfs, const vec3 p, const vec3 N)
     return ao;
 }
 
-void GenerateMesh(MeshTask& task, u32 thread_id)
+void GenerateMesh(MeshTask& task)
 {
-    assert(task.pitch > 2 && task.pitch < MeshTaskContext::GridCapacity);
-    assert(thread_id >= 0 && thread_id < MeshTaskContext::ContextCapacity);
     task.geom.vertices.clear();
-    task.geom.indices.clear();
 
-    MeshTaskContext& ctx = g_meshTaskContexts[thread_id];
-    ctx.indices.clear();
-
-    const u32 pitch = task.pitch;
-    const float inv_pitch = 1.0f / float(pitch);
+    struct SubTask
     {
-        const vec3 dv = task.bounds.span() * inv_pitch;
-        for(u32 x = 0; x <= pitch; ++x)
-        for(u32 y = 0; y <= pitch; ++y)
-        for(u32 z = 0; z <= pitch; ++z)
+        Vector<u16> indices;
+        glm::vec3 center;
+        float radius = 0.0f;
+        u32 depth = 0;
+    };
+
+    Vector<SubTask> subtasks;
+
+    {
+        const vec3 center = task.bounds.center();
+        const float rad = task.bounds.cornerRadius();
+        SubTask& st = subtasks.grow();
+        st.center = center;
+        st.radius = rad;
+        st.depth = 0;
+
+        const u16 numSdfs = task.sdfs.count();
+        for(u16 i = 0; i < numSdfs; ++i)
         {
-            vec3 p = task.bounds.lo + dv * vec3(float(x), float(y), float(z));
-            float dis = SDFDis(task.sdfs, p);
-            ctx.dis[x][y][z] = glm::abs(dis) < inv_pitch;
-            if(ctx.dis[x][y][z])
+            const float dis = task.sdfs[i].distance(st.center);
+            if(dis < st.radius)
             {
-                const vec3 N = SDFNorm(task.sdfs, p);
-                for(u32 i = 0; i < 10; ++i)
-                {
-                    p -= N * dis;
-                    dis = SDFDis(task.sdfs, p);
-                }
-                ctx.grid[x][y][z] = p;
+                st.indices.grow() = i;
             }
         }
     }
-    
-    for(u32 x = 0; x < pitch; ++x)
-    for(u32 y = 0; y < pitch; ++y)
-    for(u32 z = 0; z < pitch; ++z)
+
+    while(subtasks.count())
     {
-        if(!ctx.dis[x][y][z])
-            continue;
+        const SubTask st = subtasks.pop();
         
-        const uvec3 ip(x, y, z);
-        u32 code = 0;
-        for(u32 v = 0; v < NumVerts; ++v)
-        {
-            const uvec3 pi = ip + g_cube[v];
-            code |= ctx.dis[pi.x][pi.y][pi.z] << v;
-        }
+        if(st.indices.count() == 0)
+            continue;
 
-        const u32 numIndices = ctx.indices.count();
-        for(u32 c = 0; c < NumFaces; ++c)
+        if(st.depth == task.max_depth)
         {
-            if((g_codes[c] & code) == g_codes[c])
-            {
-                const uvec3* pFace = g_faces[c].indices;
-                for(u32 f = 0; f < IndicesPerFace; ++f)
-                {
-                    ctx.indices.grow() = ip + pFace[f];
-                }
-            }
-        }
-
-        if(ctx.indices.count() != numIndices)
-        {
-            ctx.idx[x][y][z] = task.geom.vertices.count();
+            const vec3 N = SDFNorm(task.sdfs, st.indices, st.center);
+            const vec3 p = st.center - N * SDFDis(task.sdfs, st.indices, st.center);
             Vertex& vert = task.geom.vertices.grow();
-            vert.setPosition(ctx.grid[x][y][z]);
-            const vec3 N = SDFNorm(task.sdfs, ctx.grid[x][y][z]);
+            vert.setPosition(p);
             vert.setNormal(N);
-            const Material mat = SDFMaterial(task.sdfs, ctx.grid[x][y][z]);
+            const Material mat = SDFMaterial(task.sdfs, st.indices, p);
             vert.red = mat.red; vert.green = mat.green; vert.blue = mat.blue;
             vert.roughness = mat.roughness;
             vert.metalness = mat.metalness;
-            vert.setAmbientOcclusion(SDFAO(task.sdfs, ctx.grid[x][y][z], N));
+            vert.setAmbientOcclusion(SDFAO(task.sdfs, st.indices, p, N));
         }
-    }
+        else
+        {
+            const float nlen = st.radius * 0.5f;
+            for(u8 i = 0; i < 8; ++i)
+            {
+                vec3 nc = st.center;
+                nc.x += (i & 1) ? -nlen : nlen;
+                nc.y += (i & 2) ? -nlen : nlen;
+                nc.z += (i & 4) ? -nlen : nlen;
 
-    const s32 numIndices = ctx.indices.count();
-    task.geom.indices.reserve(numIndices);
-    for(s32 i = 0; i < numIndices; ++i)
-    {
-        task.geom.indices.append() = ctx.idx[ctx.indices[i].x][ctx.indices[i].y][ctx.indices[i].z];
+                SubTask& child = subtasks.grow();
+                child.center = nc;
+                child.radius = nlen;
+                child.depth = st.depth + 1;
+
+                for(u16 idx : st.indices)
+                {
+                    if(task.sdfs[idx].distance(child.center) < child.radius)
+                    {
+                        child.indices.grow() = idx;
+                    }
+                }
+            }
+        }
+        
     }
 }

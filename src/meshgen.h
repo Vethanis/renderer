@@ -59,7 +59,7 @@ struct Material
 struct SDF
 {
     glm::vec3 translation;
-    glm::vec3 scale;
+    glm::vec3 scale = glm::vec3(1.0f);
     glm::vec3 rotation;
     float smoothness = 0.005f;
     Material material;
@@ -71,29 +71,14 @@ struct SDF
 };
 
 typedef Vector<SDF> SDFList;
+typedef Vector<u16> SDFIndices;
 
 struct MeshTask
 {
     Geometry geom;
     SDFList sdfs;
     AABB bounds;
-    u32 pitch;
+    u32 max_depth = 5;
 };
 
-void GenerateMesh(MeshTask& task, u32 thread_id=0);
-
-struct MeshTaskContext
-{
-    enum : u32 
-    {
-        GridCapacity = 256,
-        ContextCapacity = 2,
-    };
-
-    glm::vec3 grid[GridCapacity][GridCapacity][GridCapacity];
-    u32 idx[GridCapacity][GridCapacity][GridCapacity];
-    bool dis[GridCapacity][GridCapacity][GridCapacity];
-    Vector<glm::uvec3> indices;
-};
-
-extern MeshTaskContext g_meshTaskContexts[MeshTaskContext::ContextCapacity];
+void GenerateMesh(MeshTask& task);

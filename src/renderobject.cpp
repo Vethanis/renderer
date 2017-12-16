@@ -8,19 +8,12 @@
 
 Renderables g_Renderables;
 
-void RenderResource::draw()const
-{
-    ProfilerEvent("RenderResource::draw");
-    mesh.draw();
-}
-
 void Renderables::init()
 {
     ProfilerEvent("Renderables::init");
     
     glEnable(GL_DEPTH_TEST); DebugGL();
-    glEnable(GL_CULL_FACE); DebugGL();
-    glCullFace(GL_BACK); DebugGL();
+    glEnable(GL_PROGRAM_POINT_SIZE); DebugGL();
 
     DrawMode::init();
 
@@ -154,8 +147,6 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
 
     defProg.bind();
-    defProg.setUniform("eye", eye);
-    defProg.setUniformInt("draw_flags", dflag);
 
     for(const RenderResource& res : resources)
     {
@@ -172,10 +163,13 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
 
 u16 Renderables::request()
 {
-    return resources.insert({});
+    const u16 handle =  resources.insert({});
+    resources[handle].init();
+    return handle;
 }
 
 void Renderables::release(u16 handle)
 {
+    resources[handle].deinit();
     resources.remove(handle);
 }

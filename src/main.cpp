@@ -19,23 +19,17 @@ void setupScene()
     using namespace glm;
 
     MeshTask task;
-    task.bounds.lo = vec3(-6.0f, -1.0f, -1.0f);
-    task.bounds.hi = vec3(6.0f, 11.0f, 1.0f);
-    task.pitch = 64;
-    for(float x = -5.0f; x <= 5.0f; ++x)
-    {
-        for(float y = 0.0f; y <= 10.0f; ++y)
-        {
-            SDF& sdf = task.sdfs.grow();
-            sdf.translation = vec3(x, y, 0.0f);
-            sdf.scale = vec3(0.5f);
-            sdf.material.setRoughness((x + 5.0f) / 10.0f);
-            sdf.material.setMetalness(y / 10.0f);
-            sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
-        }
-    }
-
+    task.bounds.lo = vec3(-2.0f);
+    task.bounds.hi = vec3(2.0f);
+    task.max_depth = 5;
+    SDF& sdf = task.sdfs.grow();
+    sdf.translation = vec3(0.1f, 0.25f, 0.1f);
+    sdf.material.setRoughness(0.5f);
+    sdf.material.setMetalness(0.0f);
+    sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
     GenerateMesh(task);
+
+    printf("num_vertices: %i\r\nnum_indices: %i\r\n", task.geom.vertices.count(), task.geom.indices.count());
 
     u16 handle = g_Renderables.request();
     RenderResource& res = g_Renderables[handle];
@@ -44,15 +38,10 @@ void setupScene()
 
 void FpsStats()
 {
-    static double average_dt = 0.0;
-    average_dt += frameSeconds();
-
-    //if((frameCounter() & 63) == 0)
+    if((frameCounter() & 127) == 0)
     {
-        //average_dt /= 64.0;
-        const double ms = average_dt * 1000.0;
-        printf("ms: %.6f, FPS: %.3f\n", ms, 1.0 / average_dt);
-        average_dt = 0.0;
+        const double ms = frameSeconds() * 1000.0;
+        printf("ms: %.6f, FPS: %.3f\n", ms, 1000.0 / ms);
     }
 }
 

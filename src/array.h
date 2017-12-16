@@ -14,9 +14,10 @@ struct Array{
         assert(_tail < _capacity);
         return _data[_tail++];
     }
-    T& pop(){
+    T pop(){
         assert(_tail > 0);
-        return _data[_tail--];
+        --_tail;
+        return _data[_tail + 1];
     }
     T* begin(){
         return _data;
@@ -60,6 +61,7 @@ struct Array{
         return fnv(_data, bytes());
     }
     void resize(int count){
+        assert(count <= _capacity);
         _tail = count;
     }
     void clear(){ _tail = 0; }
@@ -163,11 +165,8 @@ struct Vector{
                     new_data[i] = _data[i];
                 }
                 delete[] _data;
-                _data = new_data;
             }
-            else{
-                _data = new_data;
-            }
+            _data = new_data;
         }
         _capacity = new_cap;
         _tail = _tail < _capacity ? _tail : _capacity;
@@ -175,17 +174,20 @@ struct Vector{
 
     T& append(){
         assert(_tail < _capacity);
-        return _data[_tail++];
+        ++_tail;
+        return _data[_tail - 1];
     }
-    T& grow(int step = 16){
+    T& grow(){
         if(_tail >= _capacity){
-            resize(_tail + step);
+            resize(_tail * 2 + 4);
         }
-        return _data[_tail++];
+        ++_tail;
+        return _data[_tail - 1];
     }
-    T& pop(){
+    T pop(){
         assert(_tail > 0);
-        return _data[_tail--];
+        --_tail;
+        return _data[_tail + 1];
     }
     void clear(){ _tail = 0; }
     void remove(int idx){
@@ -262,8 +264,11 @@ struct Vector{
         _tail = other._tail;
         _capacity = _tail;
         if(_tail){
-            _data = new T[_tail];
-            memcpy(_data, other._data, sizeof(T) * _tail);
+            _data = new T[_capacity];
+            for(s32 i = 0; i < _tail; ++i)
+            {
+                _data[i] = other._data[i];
+            }
         }
     }
     void swap(Vector& other){

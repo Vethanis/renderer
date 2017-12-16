@@ -55,11 +55,9 @@ void Mesh::init()
     num_indices = 0;
     glGenVertexArrays(1, &vao); DebugGL();;
     glGenBuffers(1, &vbo); DebugGL();;
-    glGenBuffers(1, &ebo); DebugGL();
 
     glBindVertexArray(vao); DebugGL();;
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo); DebugGL();
 
     mesh_layout<Vertex> ml;
     ml.layout<glm::vec3>(0); // pos
@@ -70,7 +68,6 @@ void Mesh::init()
 
 void Mesh::deinit()
 {
-    glDeleteBuffers(1, &ebo); DebugGL();
     glDeleteBuffers(1, &vbo); DebugGL();;
     glDeleteVertexArrays(1, &vao); DebugGL();;
     DebugGL();
@@ -83,11 +80,8 @@ void Mesh::upload(const Geometry& geom)
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();
     glBufferData(GL_ARRAY_BUFFER, geom.vertices.bytes(), 
         geom.vertices.begin(), GL_STATIC_DRAW); DebugGL();
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo); DebugGL();
-    num_indices = geom.indices.count();
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, geom.indices.bytes(), 
-        geom.indices.begin(), GL_STATIC_DRAW); DebugGL();
+        
+    num_indices = geom.vertices.count();
 }
 
 void Mesh::draw()const
@@ -95,6 +89,5 @@ void Mesh::draw()const
     if(!num_indices)
         return;
 
-    glBindVertexArray(vao); DebugGL();
-    glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0); DebugGL();
+    glDrawArrays(GL_POINTS, 0, num_indices);
 }
