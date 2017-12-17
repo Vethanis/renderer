@@ -120,6 +120,11 @@ Material SDFMaterial(const SDFList& sdfs, const SDFIndices& indices, const vec3 
         }
     }
 
+    if(disB >= 10.0f)
+    {
+        return A;
+    }
+
     Material retMat;
     const float alpha = 0.5f * (disA / disB);
     retMat.setColor(glm::mix(A.getColor(), B.getColor(), alpha));
@@ -131,18 +136,9 @@ Material SDFMaterial(const SDFList& sdfs, const SDFIndices& indices, const vec3 
 
 float SDFAO(const SDFList& sdfs, const SDFIndices& indices, const vec3 p, const vec3 N)
 {
+    return 0.0f;
     static u32 s = 521985231;
     float ao = 0.0f;
-    vec3 T, B;
-    {
-        if(glm::abs(N.x) > 0.001f)
-            T = glm::cross(vec3(0.0f, 1.0f, 0.0f), N);
-        else
-            T = glm::cross(vec3(1.0f, 0.0f, 0.0f), N);
-
-        T = glm::normalize(T);
-        B = glm::cross(N, T);
-    }
     const s32 num_steps = 4;
     for(s32 i = 0; i < num_steps; ++i)
     {
@@ -159,12 +155,12 @@ float SDFAO(const SDFList& sdfs, const SDFIndices& indices, const vec3 p, const 
 }
 
 #define Bits(a, b, c, d) ((1 << a) | (1 << b) | (1 << c) | (1 << d))
-#define CodeRight  Bits(0, 1, 2, 3)
-#define CodeLeft   Bits(4, 5, 6, 7)
+#define CodeRight  Bits(4, 5, 6, 7)
+#define CodeLeft   Bits(0, 1, 2, 3)
 #define CodeUp     Bits(2, 3, 6, 7)
 #define CodeDown   Bits(0, 1, 4, 5)
-#define CodeFront  Bits(1, 3, 5, 7)
-#define CodeBack   Bits(0, 2, 4, 6)
+#define CodeFront  Bits(0, 2, 4, 6)
+#define CodeBack   Bits(1, 3, 5, 7)
 #define NumFaces  6
 #define NumVerts  8
 #define IndicesPerFace 6
@@ -187,13 +183,22 @@ struct FaceIndices
 #define ConsFaceIndices(a, b, c, d, e, f) { a, b, c, d, e, f }
 
 const FaceIndices g_faces[NumFaces] = {
-    ConsFaceIndices(1, 0, 3, 0, 2, 3),
-    ConsFaceIndices(5, 7, 4, 7, 6, 4),
-    ConsFaceIndices(3, 2, 6, 3, 6, 7),
-    ConsFaceIndices(1, 4, 0, 1, 5, 4),
-    ConsFaceIndices(6, 2, 4, 2, 0, 4),
-    ConsFaceIndices(1, 3, 5, 3, 7, 5)
+    ConsFaceIndices(6, 7, 4, 7, 5, 4),
+    ConsFaceIndices(3, 2, 0, 3, 0, 1),
+    ConsFaceIndices(6, 2, 3, 6, 3, 7),
+    ConsFaceIndices(5, 1, 4, 1, 0, 4),
+    ConsFaceIndices(2, 4, 0, 2, 6, 4),
+    ConsFaceIndices(7, 3, 5, 3, 1, 5)
 };
+
+// pts[0] = st.center;
+// pts[1] = st.center + vec3(0.0f,      0.0f,    offset);  
+// pts[2] = st.center + vec3(0.0f,      offset,  0.0f);    
+// pts[3] = st.center + vec3(0.0f,      offset,  offset);  
+// pts[4] = st.center + vec3(offset,    0.0f,    0.0f);    
+// pts[5] = st.center + vec3(offset,    0.0f,    offset);  
+// pts[6] = st.center + vec3(offset,    offset,  0.0f);    
+// pts[7] = st.center + vec3(offset,    offset,  offset);  
 
 void GenerateMesh(MeshTask& task)
 {
@@ -262,13 +267,16 @@ void GenerateMesh(MeshTask& task)
                 pts[6] = st.center + vec3(offset,    offset,  0.0f);    
                 pts[7] = st.center + vec3(offset,    offset,  offset);  
 
-                const float qlen = st.qlen();
+                const float qlen = st.radius;
                 for(u32 i = 0; i < 8; ++i)
                 {
                     const bool b = SDFDis(task.sdfs, st.indices, pts[i]) < qlen;
                     code |= b << i;
                 }
             }
+
+            if(code == 0xFF || code == 0)
+                return;
 
             Array<Vertex, 3 * 2 * 6> outVerts;
 
@@ -283,16 +291,15 @@ void GenerateMesh(MeshTask& task)
                     }
                 }
             }
-            
 
             for(Vertex& vert : outVerts)
             {
                 vec3 v = vec3(vert.position.x, vert.position.y, vert.position.z);
                 vec3 N = SDFNorm(task.sdfs, st.indices, v);
-                v -= N * SDFDis(task.sdfs, st.indices, v);
-                v -= N * SDFDis(task.sdfs, st.indices, v);
+
                 v -= N * SDFDis(task.sdfs, st.indices, v);
                 N = SDFNorm(task.sdfs, st.indices, v);
+
                 vert.setPosition(v);
                 vert.setNormal(N);
                 const Material mat = SDFMaterial(task.sdfs, st.indices, v);

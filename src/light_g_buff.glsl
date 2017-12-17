@@ -257,7 +257,7 @@ vec3 indirect_lighting(inout uint s)
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
 
-    light = light * 0.5 + 0.5 * light * mat_ao(mat);
+    //light *= 1.0 - mat_ao(mat);
 
     return light;
 }

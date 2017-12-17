@@ -20,16 +20,19 @@ void setupScene()
 
     MeshTask task;
     task.center = vec3(5.0f, 5.0f, 0.0f);
-    task.radius = 6.0f;
-    task.max_depth = 6;
+    task.radius = 10.0f;
+    task.max_depth = 8;
 
     for(float x = 0.0f; x < 10.0f; x += 2.5f)
     {
         for(float y = 0.0f; y < 10.0f; y += 2.5f)
         {
             SDF& sdf = task.sdfs.grow();
+            if(x > y)
+                sdf.type = SDF_BOX;
+                
             sdf.translation = vec3(x, y, 0.0f);
-            sdf.material.setRoughness(x / 10.0f + 0.1f);
+            sdf.material.setRoughness(x / 10.0f + 0.15f);
             sdf.material.setMetalness(y / 10.0f);
             sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
         }

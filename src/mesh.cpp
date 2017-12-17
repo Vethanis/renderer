@@ -88,6 +88,10 @@ void Mesh::draw()const
     if(!num_indices)
         return;
 
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); DebugGL();
+
     glBindVertexArray(vao); DebugGL();;
     glDrawArrays(GL_TRIANGLES, 0, num_indices);
+    
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); DebugGL();
 }
