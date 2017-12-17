@@ -19,13 +19,13 @@ void setupScene()
     using namespace glm;
 
     MeshTask task;
-    task.center = vec3(0.0f, 0.0f, 0.0f);
-    task.radius = 2.0f;
-    task.max_depth = 4;
+    task.center = vec3(5.0f, 5.0f, 0.0f);
+    task.radius = 6.0f;
+    task.max_depth = 6;
 
-    for(float x = 0.0f; x < 1.0f; x += 2.0f)
+    for(float x = 0.0f; x < 10.0f; x += 2.5f)
     {
-        for(float y = 0.0f; y < 1.0f; y += 2.0f)
+        for(float y = 0.0f; y < 10.0f; y += 2.5f)
         {
             SDF& sdf = task.sdfs.grow();
             sdf.translation = vec3(x, y, 0.0f);
