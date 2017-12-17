@@ -89,5 +89,5 @@ void Mesh::draw()const
         return;
 
     glBindVertexArray(vao); DebugGL();;
-    glDrawArrays(GL_POINTS, 0, num_indices);
+    glDrawArrays(GL_TRIANGLES, 0, num_indices);
 }

@@ -7,43 +7,15 @@
 
 using namespace glm;
 
-#define Bits(a, b, c, d) ((1 << a) | (1 << b) | (1 << c) | (1 << d))
-#define CodeRight  Bits(0, 1, 2, 3)
-#define CodeLeft   Bits(4, 5, 6, 7)
-#define CodeUp     Bits(2, 3, 6, 7)
-#define CodeDown   Bits(0, 1, 4, 5)
-#define CodeFront  Bits(1, 3, 5, 7)
-#define CodeBack   Bits(0, 2, 4, 6)
-#define NumFaces  6
-#define NumVerts  8
-#define IndicesPerFace 6
-#define SDF_BigDistance (float(1 << 22))
-
-const u32 g_codes[NumFaces] = {
-    CodeRight,
-    CodeLeft,
-    CodeUp,
-    CodeDown,
-    CodeFront,
-    CodeBack,
-};
-
-const uvec3 g_cube[NumVerts] = {
-    {0, 0, 0},
-    {0, 0, 1},
-    {0, 1, 0},
-    {0, 1, 1},
-    {1, 0, 0},
-    {1, 0, 1},
-    {1, 1, 0},
-    {1, 1, 1}
-};
-
-struct FaceIndices
+void findBasis(vec3 N, vec3& T, vec3& B)
 {
-    uvec3 indices[NumFaces];
-};
-
+    if(glm::abs(N.x) > 0.001f)
+        T = cross(vec3(0.0f, 1.0f, 0.0f), N);
+    else
+        T = cross(vec3(1.0f, 0.0f, 0.0f), N);
+    T = normalize(T);
+    B = cross(N, T);
+}
 
 float randf(u32& f) 
 {
@@ -54,17 +26,6 @@ float randf(u32& f)
     f = f ^ (f >> 15);
     return glm::fract(float(f) * 2.3283064e-10f);
 }
-
-#define ConsFaceIndices(a, b, c, d, e, f) { g_cube[a], g_cube[b], g_cube[c], g_cube[d], g_cube[e], g_cube[f] }
-
-const FaceIndices g_faces[NumFaces] = {
-    ConsFaceIndices(1, 0, 3, 0, 2, 3),
-    ConsFaceIndices(5, 7, 4, 7, 6, 4),
-    ConsFaceIndices(3, 2, 6, 3, 6, 7),
-    ConsFaceIndices(1, 4, 0, 1, 5, 4),
-    ConsFaceIndices(6, 2, 4, 2, 0, 4),
-    ConsFaceIndices(1, 3, 5, 3, 7, 5)
-};
 
 float SDF::distance(vec3 p) const
 {
@@ -81,7 +42,7 @@ float SDF::distance(vec3 p) const
             p = glm::abs(p) - 1.0f;
             return glm::min(glm::max(p.x, glm::max(p.y, p.z)), 0.0f) + glm::length(glm::max(p, glm::vec3(0.0f)));
     }
-    return SDF_BigDistance;
+    return 1000.0f;
 }
 
 float SDF::blend(float a, float b) const
@@ -121,7 +82,7 @@ float SDF::blend(float a, float b) const
 
 float SDFDis(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
 {
-    float dis = SDF_BigDistance;
+    float dis = 1000.0f;
     for(const u16 i : indices)
     {
         const SDF& sdf = sdfs[i];
@@ -229,7 +190,7 @@ void GenerateMesh(MeshTask& task)
         }
     }
 
-    const s32 num_threads = 16;
+    const s32 num_threads = 8;
     std::mutex subtaskLock;
     std::thread threads[num_threads];
 
@@ -247,31 +208,57 @@ void GenerateMesh(MeshTask& task)
         if(st.indices.count() == 0)
             return;
 
-        if(st.depth >= task.max_depth)
+        if(st.depth == task.max_depth)
         {
             vec3 N = SDFNorm(task.sdfs, st.indices, st.center);
             vec3 p = st.center - N * SDFDis(task.sdfs, st.indices, st.center);
-            for(s32 i = 0; i < 4; ++i)
-            {
-                p -= N * SDFDis(task.sdfs, st.indices, p);
-            }
+            p -= N * SDFDis(task.sdfs, st.indices, p);
             N = SDFNorm(task.sdfs, st.indices, p);
 
-            Vertex vert;
-            vert.setPosition(p);
-            vert.setNormal(N);
-            const Material mat = SDFMaterial(task.sdfs, st.indices, p);
-            vert.setColor(mat.getColor());
-            const float roughness = mat.getRoughness();
-            const float metalness = mat.getMetalness();
-            const float ao = SDFAO(task.sdfs, st.indices, p, N);
-            vert.setMaterial(glm::vec3(roughness, metalness, ao));
+            vec3 T, B;
+            findBasis(N, T, B);
+            T *= st.radius;
+            B *= st.radius;
+
+            vec3 pts[6];
+            Vertex verts[6];
+
+            pts[0] = p + T + B;
+            pts[1] = p - T - B;
+            pts[2] = p + T - B;
+
+            pts[3] = p + T + B;
+            pts[4] = p - T + B;
+            pts[5] = p - T - B;
+
+            for(s32 i = 0; i < 6; ++i)
+            {
+                vec3& v = pts[i];
+
+                N = SDFNorm(task.sdfs, st.indices, v);
+                v -= N * SDFDis(task.sdfs, st.indices, v);
+                N = SDFNorm(task.sdfs, st.indices, v);
+
+                Vertex& vert = verts[i];
+                vert.setPosition(v);
+                vert.setNormal(N);
+                const Material mat = SDFMaterial(task.sdfs, st.indices, v);
+                vert.setColor(mat.getColor());
+                const float roughness = mat.getRoughness();
+                const float metalness = mat.getMetalness();
+                const float ao = SDFAO(task.sdfs, st.indices, v, N);
+                vert.setMaterial(glm::vec3(roughness, metalness, ao));
+            }
 
             subtaskLock.lock();
-            task.geom.vertices.grow() = vert;
+            for(s32 i = 0; i < 6; ++i)
+            {
+                task.geom.vertices.grow() = verts[i];
+            }
             subtaskLock.unlock();
+
         }
-        else
+        else if(st.depth < task.max_depth)
         {
             const float nlen = st.radius * 0.5f;
             for(u32 i = 0; i < 8; ++i)
@@ -313,7 +300,7 @@ void GenerateMesh(MeshTask& task)
         }
     };
 
-    while(subtasks.count() < 8)
+    while(subtasks.count() < num_threads)
     {
         ThreadTask();
     }
