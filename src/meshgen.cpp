@@ -212,18 +212,17 @@ void GenerateMesh(MeshTask& task)
     Vector<SubTask> subtasks;
 
     {
-        const vec3 center = task.bounds.center();
-        const float rad = task.bounds.sideRadius();
         SubTask& st = subtasks.grow();
-        st.center = center;
-        st.radius = rad;
+        st.center = task.center;
+        st.radius = task.radius;
         st.depth = 0;
 
+        const float qlen = st.qlen();
         const u16 numSdfs = task.sdfs.count();
         for(u16 i = 0; i < numSdfs; ++i)
         {
             const float dis = task.sdfs[i].distance(st.center);
-            if(dis < st.qlen())
+            if(dis < qlen)
             {
                 st.indices.grow() = i;
             }
@@ -250,8 +249,13 @@ void GenerateMesh(MeshTask& task)
 
         if(st.depth >= task.max_depth)
         {
-            const vec3 N = SDFNorm(task.sdfs, st.indices, st.center);
-            const vec3 p = st.center - N * SDFDis(task.sdfs, st.indices, st.center);
+            vec3 N = SDFNorm(task.sdfs, st.indices, st.center);
+            vec3 p = st.center - N * SDFDis(task.sdfs, st.indices, st.center);
+            for(s32 i = 0; i < 4; ++i)
+            {
+                p -= N * SDFDis(task.sdfs, st.indices, p);
+            }
+            N = SDFNorm(task.sdfs, st.indices, p);
 
             Vertex vert;
             vert.setPosition(p);
@@ -281,18 +285,22 @@ void GenerateMesh(MeshTask& task)
                 child.radius = nlen;
                 child.depth = st.depth + 1;
 
+                const float qlen = child.qlen();
                 for(const u16 idx : st.indices)
                 {
                     const float dis = task.sdfs[idx].distance(child.center);
-                    if(dis < child.qlen())
+                    if(dis < qlen)
                     {
                         child.indices.grow() = idx;
                     }
                 }
 
-                subtaskLock.lock();
-                subtasks.grow() = child;
-                subtaskLock.unlock();
+                if(child.indices.count())
+                {
+                    subtaskLock.lock();
+                    subtasks.grow() = child;
+                    subtaskLock.unlock();
+                }
             }
         }
     };
@@ -305,7 +313,7 @@ void GenerateMesh(MeshTask& task)
         }
     };
 
-    while(subtasks.count() <= num_threads)
+    while(subtasks.count() < 8)
     {
         ThreadTask();
     }

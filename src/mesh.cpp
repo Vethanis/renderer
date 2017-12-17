@@ -60,10 +60,9 @@ void Mesh::init()
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();;
 
     mesh_layout<Vertex> ml;
-    ml.layout<glm::vec3>(0); // pos
-    ml.layout<unsigned>(1); // normal
-    ml.layout<unsigned>(2); // color
-    ml.layout<unsigned>(3); // material
+    ml.layout<glm::vec4>(0);    // pos
+    ml.layout<glm::vec4>(1);    // normal
+    ml.layout<glm::vec4>(2);    // color
 }
 
 void Mesh::deinit()
@@ -89,5 +88,6 @@ void Mesh::draw()const
     if(!num_indices)
         return;
 
+    glBindVertexArray(vao); DebugGL();;
     glDrawArrays(GL_POINTS, 0, num_indices);
 }

@@ -2,7 +2,6 @@
 
 #include "array.h"
 #include "vertexbuffer.h"
-#include "aabb.h"
 #include "ints.h"
 
 enum SDFType : u8
@@ -77,7 +76,8 @@ struct MeshTask
 {
     Geometry geom;
     SDFList sdfs;
-    AABB bounds;
+    glm::vec3 center;
+    float radius = 1.0f;
     u32 max_depth = 5;
 };
 

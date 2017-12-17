@@ -33,8 +33,8 @@ in vec2 fragUv;
 uniform sampler2D positionSampler;
 uniform sampler2D normalSampler;
 uniform sampler2D albedoSampler;
-uniform sampler2D sunDepth;
 uniform samplerCube env_cm;
+uniform sampler2D sunDepth;
 
 uniform mat4 IVP;
 uniform mat4 sunMatrix;
@@ -54,14 +54,15 @@ struct material
     vec4 albedo;
 };
 
-#define mat_metalness(x) x.normal.w
 #define mat_roughness(x) x.position.w
-#define mat_depth(x) x.albedo.w
+#define mat_metalness(x) x.normal.w
+#define mat_ao(x) x.albedo.w
 #define mat_position(x) x.position.xyz
 #define mat_normal(x) x.normal.xyz
 #define mat_albedo(x) x.albedo.xyz
 
-material getMaterial(){
+material getMaterial()
+{
     return material(
         texture(positionSampler, fragUv),
         texture(normalSampler, fragUv),
@@ -69,22 +70,21 @@ material getMaterial(){
     );
 }
 
-vec3 environment_cubemap(vec3 dir, float roughness){
+vec3 environment_cubemap(vec3 dir, float roughness)
+{
     float mip = textureQueryLod(env_cm, dir).x;
     return textureLod(env_cm, dir, mip + roughness * 10.0).rgb;
 }
 
-vec3 env_cubemap(vec3 dir){
+vec3 env_cubemap(vec3 dir)
+{
     return texture(env_cm, dir).rgb;
-}
-
-float getDepth(vec2 uv){
-    return texture(albedoSampler, uv).w;
 }
 
 // ------------------------------------------------------------------------
 
-float rand( inout uint f) {
+float rand( inout uint f) 
+{
     f = (f ^ 61) ^ (f >> 16);
     f *= 9;
     f = f ^ (f >> 4);
@@ -93,19 +93,23 @@ float rand( inout uint f) {
     return fract(float(f) * 2.3283064e-10);
 }
 
-float randBi(inout uint s){
+float randBi(inout uint s)
+{
     return rand(s) * 2.0 - 1.0;
 }
 
-float stratRand(float i, float inv_samples, inout uint s){
+float stratRand(float i, float inv_samples, inout uint s)
+{
     return i * inv_samples + rand(s) * inv_samples;
 }
 
-float stratRandBi(float i, float inv_samples, inout uint s){
+float stratRandBi(float i, float inv_samples, inout uint s)
+{
     return 2.0 * (inv_samples + rand(s) * inv_samples) - 1.0;
 }
 
-void findBasis(vec3 N, out vec3 T, out vec3 B){
+void findBasis(vec3 N, out vec3 T, out vec3 B)
+{
     if(abs(N.x) > 0.001)
         T = cross(vec3(0.0, 1.0, 0.0), N);
     else
@@ -116,7 +120,8 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 
 // -------------------------------------------------------------------------------------------
 
-float sunShadowing(vec3 p, inout uint s){
+float sunShadowing(vec3 p, inout uint s)
+{
     const int samples = 8;
     const float inv_samples = 1.0 / float(samples);
     const float bias = 0.001;
@@ -140,35 +145,17 @@ float sunShadowing(vec3 p, inout uint s){
     return occlusion;
 }
 
-vec3 toWorld(float x, float y, float z){
+vec3 toWorld(float x, float y, float z)
+{
     vec4 t = vec4(x, y, z, 1.0);
     t = IVP * t;
     return vec3(t/t.w);
 }
 
-float HeightOcclusion(vec3 N, inout uint s){
-    const int samples = 4;
-    const float bias = 0.1;
-    const float base = getDepth(fragUv);
-    if(base == 0.0)
-        return 0.0;
-        
-    float radius = 0.005;
-
-    float occlusion = 0.0;
-    for(int i = 0; i < samples; ++i)
-    {
-        const vec2 offset = radius * vec2(randBi(s), randBi(s));
-        const float p = getDepth(fragUv + offset);
-        occlusion += p + bias < base ? 1.0 : 0.0;
-        radius *= 1.333;
-    }
-    return occlusion / float(samples);
-}
-
 // ------------------------------------------------------------------------
 
-float DisGGX(vec3 N, vec3 H, float roughness){
+float DisGGX(vec3 N, vec3 H, float roughness)
+{
     const float a = roughness * roughness;
     const float a2 = a * a;
     const float NdH = max(dot(N, H), 0.0);
@@ -181,7 +168,8 @@ float DisGGX(vec3 N, vec3 H, float roughness){
     return nom / denom;
 }
 
-float GeomSchlickGGX(float NdV, float roughness){
+float GeomSchlickGGX(float NdV, float roughness)
+{
     const float r = (roughness + 1.0);
     const float k = (r * r) / 8.0;
 
@@ -191,7 +179,8 @@ float GeomSchlickGGX(float NdV, float roughness){
     return nom / denom;
 }
 
-float GeomSmith(vec3 N, vec3 V, vec3 L, float roughness){
+float GeomSmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
     const float NdV = max(dot(N, V), 0.0);
     const float NdL = max(dot(N, L), 0.0);
     const float ggx2 = GeomSchlickGGX(NdV, roughness);
@@ -200,14 +189,15 @@ float GeomSmith(vec3 N, vec3 V, vec3 L, float roughness){
     return ggx1 * ggx2;
 }
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0){
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 // ------------------------------------------------------------------------
 
-vec3 pbr_lighting(vec3 V, vec3 L, const material mat, vec3 radiance){
-
+vec3 pbr_lighting(vec3 V, vec3 L, const material mat, vec3 radiance)
+{
     const float NdL = max(0.0, dot(mat_normal(mat), L));
     const vec3 F0 = mix(vec3(0.04), mat_albedo(mat), mat_metalness(mat));
     const vec3 H = normalize(V + L);
@@ -226,7 +216,8 @@ vec3 pbr_lighting(vec3 V, vec3 L, const material mat, vec3 radiance){
     return (kD * mat_albedo(mat) / 3.141592 + specular) * radiance * NdL;
 }
 
-vec3 direct_lighting(inout uint s){
+vec3 direct_lighting(inout uint s)
+{
     const material mat = getMaterial();
     const vec3 V = normalize(eye - mat_position(mat));
     const vec3 L = sunDirection;
@@ -239,7 +230,8 @@ vec3 direct_lighting(inout uint s){
     return light;
 }
 
-vec3 indirect_lighting(inout uint s){
+vec3 indirect_lighting(inout uint s)
+{
     const material mat = getMaterial();
     const vec3 V = normalize(eye - mat_position(mat));
     vec3 T, B;
@@ -265,65 +257,75 @@ vec3 indirect_lighting(inout uint s){
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
 
-    light *= (1.0 - HeightOcclusion(mat_normal(mat), s) * 0.95);
+    light = light * 0.5 + 0.5 * light * mat_ao(mat);
 
     return light;
 }
 
-vec3 visualizeReflections(){
+vec3 visualizeReflections()
+{
     const material mat = getMaterial();
     const vec3 I = normalize(mat_position(mat) - eye);
     const vec3 R = reflect(I, mat_normal(mat));
     return environment_cubemap(R, mat_roughness(mat));
 }
 
-vec3 visualizeNormals(){
+vec3 visualizeNormals()
+{
     const material mat = getMaterial();
     return mat_normal(mat);
 }
 
-vec3 visualizeTangents(){
+vec3 visualizeTangents()
+{
     const material mat = getMaterial();
     vec3 T, B;
     findBasis(mat_normal(mat), T, B);
     return T;
 }
 
-vec3 visualizeBitangents(){
+vec3 visualizeBitangents()
+{
     const material mat = getMaterial();
     vec3 T, B;
     findBasis(mat_normal(mat), T, B);
     return B;
 }
 
-vec3 visualizeUVs(){
+vec3 visualizeUVs()
+{
     return vec3(mat_albedo(getMaterial()).xy, 0.0);
 }
 
-vec3 visualizeCubemap(){
+vec3 visualizeCubemap()
+{
     const material mat = getMaterial();
     vec3 I = normalize(mat_position(mat) - eye);
     return env_cubemap(I);
 }
 
-vec3 visualizeDiffraction(){
+vec3 visualizeDiffraction()
+{
     const material mat = getMaterial();
     const vec3 I = normalize(mat_position(mat) - eye);
     const vec3 R = refract(I, mat_normal(mat), 1.000293 / 1.33);
     return env_cubemap(R);
 }
 
-vec3 visualizeRoughness(){
+vec3 visualizeRoughness()
+{
     const material mat = getMaterial();
     return vec3(mat_roughness(mat));
 }
 
-vec3 visualizeMetalness(){
+vec3 visualizeMetalness()
+{
     const material mat = getMaterial();
     return vec3(mat_metalness(mat));
 }
 
-vec3 visualizeShadow(){
+vec3 visualizeShadow()
+{
     const material mat = getMaterial();
     vec3 p = mat_position(mat);
     vec4 projCoords = sunMatrix * vec4(p.xyz, 1.0);
@@ -333,7 +335,8 @@ vec3 visualizeShadow(){
     return vec3(light_depth);
 }
 
-vec2 rsi(vec3 r0, vec3 rd, float sr) {
+vec2 rsi(vec3 r0, vec3 rd, float sr) 
+{
     float a = dot(rd, rd);
     float b = 2.0 * dot(rd, r0);
     float c = dot(r0, r0) - (sr * sr);
@@ -346,7 +349,8 @@ vec2 rsi(vec3 r0, vec3 rd, float sr) {
 }
 
 // https://github.com/wwwtyro/glsl-atmosphere
-vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, float kMie, float shRlh, float shMie, float g) {
+vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, float kMie, float shRlh, float shMie, float g)
+{
     const int iSteps = 16;
     const int jSteps = 16;
     const float PI = 3.141592;
@@ -405,7 +409,8 @@ vec3 atmosphere(vec3 r, float iSun, float rPlanet, float rAtmos, vec3 kRlh, floa
     return iSun * (pRlh * kRlh * totalRlh + pMie * kMie * totalMie);
 }
 
-vec3 skylight(){
+vec3 skylight()
+{
     const vec2 uv = (gl_FragCoord.xy  / render_resolution) * 2.0 - vec2(1.0);
     const vec3 rd = normalize(toWorld(uv.x, uv.y, 0.0) - eye);
     return atmosphere(rd, sunIntensity, 6371e3, 6471e3, 
@@ -424,7 +429,8 @@ vec3 visualizeShadowBuffer()
 
 // -----------------------------------------------------------------------
 
-void main(){
+void main()
+{
     uint s = uint(seed) 
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
@@ -446,7 +452,8 @@ void main(){
     }
     else
     {
-        switch(draw_flags){
+        switch(draw_flags)
+        {
             default:
             case DF_DIRECT:
                 lighting = direct_lighting(s);

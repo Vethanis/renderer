@@ -2,17 +2,16 @@
 
 out vec4 outColor;
 
-in vec3 MacroNormal;
-in vec3 P;
-in vec3 Color;
-in vec3 Material; // roughness, metalness, ao
+in vec4 Position;
+in vec4 Normal;
+in vec4 Color;
 
 #define getAlbedo() Color.xyz
-#define getPosition() P.xyz
-#define getNormal() MacroNormal.xyz
-#define getRoughness() Material.x
-#define getMetalness() Material.y
-#define getAO() Material.z
+#define getPosition() Position.xyz
+#define getNormal() Normal.xyz
+#define getRoughness() Position.w
+#define getMetalness() Normal.w
+#define getAO() Color.w
 
 // ------------------------------------------------------------------------
 
@@ -139,19 +138,19 @@ vec3 pbr_lighting(vec3 V, vec3 L, vec3 radiance)
     const vec3 kS = F;
     const vec3 kD = (vec3(1.0) - kS) * (1.0 - getMetalness());
 
-    return (kD * Color / 3.141592 + specular) * radiance * NdL;
+    return (kD * getAlbedo() / 3.141592 + specular) * radiance * NdL;
 }
 
 vec3 direct_lighting(inout uint s)
 {
-    const vec3 V = normalize(eye - P);
+    const vec3 V = normalize(eye - getPosition());
     const vec3 L = sunDirection;
     const vec3 radiance = sunColor * sunIntensity;
 
     vec3 light = pbr_lighting(V, L, radiance);
 
     light *= 1.0 - getAO();
-    light *= sunShadowing(P, s);
+    light *= sunShadowing(getPosition(), s);
 
     light += vec3(0.01) * getAlbedo();
 
@@ -165,7 +164,7 @@ void main()
     uint s = uint(seed) 
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
-
+        
     vec3 lighting = direct_lighting(s);
 
     lighting.rgb.x += 0.0001 * randBi(s);

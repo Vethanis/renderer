@@ -19,17 +19,22 @@ void setupScene()
     using namespace glm;
 
     MeshTask task;
-    task.bounds.lo = vec3(-1.0f);
-    task.bounds.hi = vec3(1.0f);
-    task.max_depth = 4;
-    SDF& sdf = task.sdfs.grow();
-    sdf.translation = vec3(0.1f, 0.25f, 0.1f);
-    sdf.material.setRoughness(0.5f);
-    sdf.material.setMetalness(0.0f);
-    sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
-    GenerateMesh(task);
+    task.center = vec3(5.0f, 5.0f, 0.0f);
+    task.radius = 6.0f;
+    task.max_depth = 7;
 
-    printf("num_vertices: %i\r\nnum_indices: %i\r\n", task.geom.vertices.count(), task.geom.indices.count());
+    for(float x = 0.0f; x < 10.0f; x += 2.0f)
+    {
+        for(float y = 0.0f; y < 10.0f; y += 2.0f)
+        {
+            SDF& sdf = task.sdfs.grow();
+            sdf.translation = vec3(x, y, 0.0f);
+            sdf.material.setRoughness(x / 10.0f + 0.01f);
+            sdf.material.setMetalness(y / 10.0f);
+            sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
+        }
+    }
+    GenerateMesh(task);
 
     u16 handle = g_Renderables.request();
     RenderResource& res = g_Renderables[handle];

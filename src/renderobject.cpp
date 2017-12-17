@@ -147,6 +147,8 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
 
     defProg.bind();
+    fwdProg.setUniform("eye", eye);
+    fwdProg.setUniformInt("seed", rand());
 
     for(const RenderResource& res : resources)
     {
