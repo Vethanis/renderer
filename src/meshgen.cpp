@@ -183,12 +183,12 @@ struct FaceIndices
 #define ConsFaceIndices(a, b, c, d, e, f) { a, b, c, d, e, f }
 
 const FaceIndices g_faces[NumFaces] = {
-    ConsFaceIndices(6, 7, 4, 7, 5, 4),
+    ConsFaceIndices(7, 4, 6, 7, 4, 5),
     ConsFaceIndices(3, 2, 0, 3, 0, 1),
     ConsFaceIndices(6, 2, 3, 6, 3, 7),
-    ConsFaceIndices(5, 1, 4, 1, 0, 4),
+    ConsFaceIndices(1, 4, 5, 1, 0, 4),
     ConsFaceIndices(2, 4, 0, 2, 6, 4),
-    ConsFaceIndices(7, 3, 5, 3, 1, 5)
+    ConsFaceIndices(3, 5, 7, 3, 1, 5)
 };
 
 // pts[0] = st.center;
@@ -255,6 +255,7 @@ void GenerateMesh(MeshTask& task)
         if(st.depth == task.max_depth)
         {
             vec3 pts[8];
+            vec3 Ns[8];
             u32 code = 0;
             {
                 const float offset = st.radius * 2.0f;
@@ -267,17 +268,18 @@ void GenerateMesh(MeshTask& task)
                 pts[6] = st.center + vec3(offset,    offset,  0.0f);    
                 pts[7] = st.center + vec3(offset,    offset,  offset);  
 
-                const float qlen = st.radius;
+                const float qlen = st.qlen();
                 for(u32 i = 0; i < 8; ++i)
                 {
-                    const bool b = SDFDis(task.sdfs, st.indices, pts[i]) < qlen;
-                    code |= b << i;
+                    const bool b = glm::abs(SDFDis(task.sdfs, st.indices, pts[i])) < qlen;
+                    if(b)
+                    {
+                        code |= 1 << i;
+                        Ns[i] = SDFNorm(task.sdfs, st.indices, pts[i]);
+                        pts[i] -= Ns[i] * SDFDis(task.sdfs, st.indices, pts[i]);
+                    }
                 }
             }
-
-            if(code == 0xFF || code == 0)
-                return;
-
             Array<Vertex, 3 * 2 * 6> outVerts;
 
             for(u32 i = 0; i < NumFaces; ++i)
@@ -286,28 +288,17 @@ void GenerateMesh(MeshTask& task)
                 {
                     for(const u32 idx : g_faces[i].indices)
                     {
-                        const vec3& pos = pts[idx];
-                        outVerts.grow().setPosition(pos);
+                        Vertex& vert = outVerts.grow();
+                        vert.setPosition(pts[idx]);
+                        vert.setNormal(Ns[idx]);
+                        const Material mat = SDFMaterial(task.sdfs, st.indices, pts[idx]);
+                        vert.setColor(mat.getColor());
+                        const float roughness = mat.getRoughness();
+                        const float metalness = mat.getMetalness();
+                        const float ao = SDFAO(task.sdfs, st.indices, pts[idx], Ns[idx]);
+                        vert.setMaterial(glm::vec3(roughness, metalness, ao));
                     }
                 }
-            }
-
-            for(Vertex& vert : outVerts)
-            {
-                vec3 v = vec3(vert.position.x, vert.position.y, vert.position.z);
-                vec3 N = SDFNorm(task.sdfs, st.indices, v);
-
-                v -= N * SDFDis(task.sdfs, st.indices, v);
-                N = SDFNorm(task.sdfs, st.indices, v);
-
-                vert.setPosition(v);
-                vert.setNormal(N);
-                const Material mat = SDFMaterial(task.sdfs, st.indices, v);
-                vert.setColor(mat.getColor());
-                const float roughness = mat.getRoughness();
-                const float metalness = mat.getMetalness();
-                const float ao = SDFAO(task.sdfs, st.indices, v, N);
-                vert.setMaterial(glm::vec3(roughness, metalness, ao));
             }
 
             vertexLock.lock();
