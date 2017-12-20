@@ -7,54 +7,6 @@
 
 using namespace glm;
 
-#define Bit(x) (1u << (x))
-#define Bits(a, b, c, d) ((1 << a) | (1 << b) | (1 << c) | (1 << d))
-#define CodeRight  Bits(4, 5, 6, 7)
-#define CodeLeft   Bits(0, 1, 2, 3)
-#define CodeUp     Bits(2, 3, 6, 7)
-#define CodeDown   Bits(0, 1, 4, 5)
-#define CodeFront  Bits(0, 2, 4, 6)
-#define CodeBack   Bits(1, 3, 5, 7)
-#define NumFaces  6
-#define NumVerts  8
-#define IndicesPerFace 6
-#define SDF_BigDistance (float(1 << 22))
-
-const u32 g_codes[NumFaces] = {
-    CodeRight,
-    CodeLeft,
-    CodeUp,
-    CodeDown,
-    CodeFront,
-    CodeBack,
-};
-
-struct FaceIndices
-{
-    u32 indices[NumFaces];
-};
-
-#define ConsFaceIndices(a, b, c, d, e, f) { a, b, c, d, e, f }
-
-const FaceIndices g_faces[NumFaces] = {
-    ConsFaceIndices(6, 7, 4, 7, 5, 4),
-    ConsFaceIndices(3, 2, 1, 2, 0, 1),
-    ConsFaceIndices(6, 2, 7, 2, 3, 7),
-    ConsFaceIndices(5, 1, 4, 1, 0, 4),
-    ConsFaceIndices(2, 6, 0, 6, 4, 0),
-    ConsFaceIndices(7, 3, 5, 3, 1, 5)
-};
-
-struct SubTask
-{
-    Vector<u16> indices;
-    glm::vec3 center;
-    float radius = 0.0f;
-    u32 depth = 0;
-
-    float qlen(){ return 1.732051f * radius; }
-};
-
 void findBasis(vec3 N, vec3& T, vec3& B)
 {
     if(glm::abs(N.x) > 0.001f)
@@ -333,6 +285,16 @@ s32 HandleTet(const GridCell& cell, glm::vec3* tris, const s32* ind, const float
 
    return num_tri;
 }
+
+struct SubTask
+{
+    Vector<u16> indices;
+    glm::vec3 center;
+    float radius = 0.0f;
+    u32 depth = 0;
+
+    float qlen(){ return 1.732051f * radius; }
+};
 
 void MakeTris(const SDFList& sdfs, SubTask& st, Vector<Vertex>& outVerts, std::mutex& mut, const float iso)
 {
