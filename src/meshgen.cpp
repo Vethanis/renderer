@@ -113,6 +113,11 @@ vec3 SDFNorm(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
 
 Material SDFMaterial(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
 {
+    if(indices.count() == 1)
+    {
+        return sdfs[indices[0]].material;
+    }
+
     Material A, B;
     float disA = 1000.0f, disB = 1000.0f;
     for(const u16 i : indices)
@@ -126,11 +131,6 @@ Material SDFMaterial(const SDFList& sdfs, const SDFIndices& indices, const vec3 
             B = A;
             A = sdf.material;
         }
-    }
-
-    if(disB >= 10.0f)
-    {
-        return A;
     }
 
     Material retMat;
@@ -172,7 +172,7 @@ float SDFAO(const SDFList& sdfs, const vec3 p, const vec3 N)
         len *= 2.0f;
     }
 
-    ao /= float(num_steps * 4.0f);
+    ao /= float(num_steps * 4);
 
     return ao;
 }
