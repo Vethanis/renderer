@@ -21,7 +21,7 @@ void setupScene()
     MeshTask task;
     task.center = vec3(5.0f, 5.0f, 0.0f);
     task.radius = 10.0f;
-    task.max_depth = 7;
+    task.max_depth = 6;
 
     for(float x = 0.0f; x < 10.0f; x += 2.25f)
     {

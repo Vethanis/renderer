@@ -229,40 +229,39 @@ struct GridCell
 {
     glm::vec3 pts[8];
     float vals[8];
+
+    glm::vec3 interp(const float iso, const s32 i, const s32 j) const
+    {
+        if(glm::abs(iso - vals[i]) < 0.00001f)
+        {
+            return pts[i];
+        }
+        if(glm::abs(iso - vals[j]) < 0.00001f)
+        {
+            return pts[j];
+        }
+        if(glm::abs(vals[i] - vals[j]) < 0.00001f)
+        {
+            return pts[i];
+        }
+        const float alpha = (iso - vals[i]) / (vals[j] - vals[i]);
+        return glm::vec3(
+            pts[i].x + alpha * (pts[j].x - pts[i].x),
+            pts[i].y + alpha * (pts[j].y - pts[i].y),
+            pts[i].z + alpha * (pts[j].z - pts[i].z)
+        );
+    }
 };
 
-glm::vec3 VertexInterp(const float iso, const glm::vec3 p1, const glm::vec3 p2, 
-    const float valp1, const float valp2)
-{
-    if(glm::abs(iso - valp1) < 0.0001f)
-    {
-        return p1;
-    }
-    if(glm::abs(iso - valp2) < 0.0001f)
-    {
-        return p2;
-    }
-    if(glm::abs(valp1 - valp2) < 0.0001f)
-    {
-        return p1;
-    }
-    const float alpha = (iso - valp1) / (valp2 - valp1);
-    return glm::vec3(
-        p1.x + alpha * (p2.x - p1.x),
-        p1.y + alpha * (p2.y - p1.y),
-        p1.z + alpha * (p2.z - p1.z)
-    );
-}
-
-s32 HandleTet(const float iso, GridCell& cell, glm::vec3* tris, s32 v0, s32 v1, s32 v2, s32 v3)
+s32 HandleTet(const GridCell& cell, glm::vec3* tris, const s32* ind, const float iso)
 {
     s32 num_tri = 0;
     u32 code = 0;
 
-    code |= (cell.vals[v0] < iso) << 0;
-    code |= (cell.vals[v1] < iso) << 1;
-    code |= (cell.vals[v2] < iso) << 2;
-    code |= (cell.vals[v3] < iso) << 3;
+    if(cell.vals[ind[0]] < iso) code |= 1;
+    if(cell.vals[ind[1]] < iso) code |= 2;
+    if(cell.vals[ind[2]] < iso) code |= 4;
+    if(cell.vals[ind[3]] < iso) code |= 8;
 
    switch (code) 
    {
@@ -271,63 +270,63 @@ s32 HandleTet(const float iso, GridCell& cell, glm::vec3* tris, s32 v0, s32 v1, 
         break;
     case 0x0E:
     case 0x01:
-        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v1], cell.vals[v0], cell.vals[v1]);
-        tris[1] = VertexInterp(iso, cell.pts[v0], cell.pts[v2], cell.vals[v0], cell.vals[v2]);
-        tris[2] = VertexInterp(iso, cell.pts[v0], cell.pts[v3], cell.vals[v0], cell.vals[v3]);
+        tris[0] = cell.interp(iso, ind[0], ind[1]);
+        tris[1] = cell.interp(iso, ind[0], ind[2]);
+        tris[2] = cell.interp(iso, ind[0], ind[3]);
         num_tri++;
         break;
     case 0x0D:
     case 0x02:
-        tris[0] = VertexInterp(iso, cell.pts[v1], cell.pts[v0], cell.vals[v1], cell.vals[v0]);
-        tris[1] = VertexInterp(iso, cell.pts[v1], cell.pts[v3], cell.vals[v1], cell.vals[v3]);
-        tris[2] = VertexInterp(iso, cell.pts[v1], cell.pts[v2], cell.vals[v1], cell.vals[v2]);
+        tris[0] = cell.interp(iso, ind[1], ind[0]);
+        tris[1] = cell.interp(iso, ind[1], ind[3]);
+        tris[2] = cell.interp(iso, ind[1], ind[2]);
         num_tri++;
         break;
     case 0x0C:
     case 0x03:
-        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v3], cell.vals[v0], cell.vals[v3]);
-        tris[1] = VertexInterp(iso, cell.pts[v0], cell.pts[v2], cell.vals[v0], cell.vals[v2]);
-        tris[2] = VertexInterp(iso, cell.pts[v1], cell.pts[v3], cell.vals[v1], cell.vals[v3]);
+        tris[0] = cell.interp(iso, ind[0], ind[3]);
+        tris[1] = cell.interp(iso, ind[0], ind[2]);
+        tris[2] = cell.interp(iso, ind[1], ind[3]);
         num_tri++;
         tris[3] = tris[2];
-        tris[4] = VertexInterp(iso, cell.pts[v1], cell.pts[v2], cell.vals[v1], cell.vals[v2]);
+        tris[4] = cell.interp(iso, ind[1], ind[2]);
         tris[5] = tris[1];
         num_tri++;
         break;
     case 0x0B:
     case 0x04:
-        tris[0] = VertexInterp(iso, cell.pts[v2], cell.pts[v0], cell.vals[v2], cell.vals[v0]);
-        tris[1] = VertexInterp(iso, cell.pts[v2], cell.pts[v1], cell.vals[v2], cell.vals[v1]);
-        tris[2] = VertexInterp(iso, cell.pts[v2], cell.pts[v3], cell.vals[v2], cell.vals[v3]);
+        tris[0] = cell.interp(iso, ind[2], ind[0]);
+        tris[1] = cell.interp(iso, ind[2], ind[1]);
+        tris[2] = cell.interp(iso, ind[2], ind[3]);
         num_tri++;
         break;
     case 0x0A:
     case 0x05:
-        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v1], cell.vals[v0], cell.vals[v1]);
-        tris[1] = VertexInterp(iso, cell.pts[v2], cell.pts[v3], cell.vals[v2], cell.vals[v3]);
-        tris[2] = VertexInterp(iso, cell.pts[v0], cell.pts[v3], cell.vals[v0], cell.vals[v3]);
+        tris[0] = cell.interp(iso, ind[0], ind[1]);
+        tris[1] = cell.interp(iso, ind[2], ind[3]);
+        tris[2] = cell.interp(iso, ind[0], ind[3]);
         num_tri++;
         tris[3] = tris[0];
-        tris[4] = VertexInterp(iso, cell.pts[v1], cell.pts[v2], cell.vals[v1], cell.vals[v2]);
+        tris[4] = cell.interp(iso, ind[1], ind[2]);
         tris[5] = tris[1];
         num_tri++;
         break;
     case 0x09:
     case 0x06:
-        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v1], cell.vals[v0], cell.vals[v1]);
-        tris[1] = VertexInterp(iso, cell.pts[v1], cell.pts[v3], cell.vals[v1], cell.vals[v3]);
-        tris[2] = VertexInterp(iso, cell.pts[v2], cell.pts[v3], cell.vals[v2], cell.vals[v3]);
+        tris[0] = cell.interp(iso, ind[0], ind[1]);
+        tris[1] = cell.interp(iso, ind[1], ind[3]);
+        tris[2] = cell.interp(iso, ind[2], ind[3]);
         num_tri++;
         tris[3] = tris[0];
-        tris[4] = VertexInterp(iso, cell.pts[v0], cell.pts[v2], cell.vals[v0], cell.vals[v2]);
+        tris[4] = cell.interp(iso, ind[0], ind[2]);
         tris[5] = tris[2];
         num_tri++;
         break;
     case 0x07:
     case 0x08:
-        tris[0] = VertexInterp(iso, cell.pts[v3], cell.pts[v0], cell.vals[v3], cell.vals[v0]);
-        tris[1] = VertexInterp(iso, cell.pts[v3], cell.pts[v2], cell.vals[v3], cell.vals[v2]);
-        tris[2] = VertexInterp(iso, cell.pts[v3], cell.pts[v1], cell.vals[v3], cell.vals[v1]);
+        tris[0] = cell.interp(iso, ind[3], ind[0]);
+        tris[1] = cell.interp(iso, ind[3], ind[2]);
+        tris[2] = cell.interp(iso, ind[3], ind[1]);
         num_tri++;
         break;
    }
@@ -335,7 +334,7 @@ s32 HandleTet(const float iso, GridCell& cell, glm::vec3* tris, s32 v0, s32 v1, 
    return num_tri;
 }
 
-void MakeTris(const float iso, const SDFList& sdfs, SubTask& st, Vector<Vertex>& outVerts, std::mutex& mut)
+void MakeTris(const SDFList& sdfs, SubTask& st, Vector<Vertex>& outVerts, std::mutex& mut, const float iso)
 {
     GridCell cell;
 
@@ -363,7 +362,7 @@ void MakeTris(const float iso, const SDFList& sdfs, SubTask& st, Vector<Vertex>&
     for(s32 i = 0; i < 6; ++i)
     {
         vec3 tris[6];
-        const s32 num_verts = 3 * HandleTet(iso, cell, tris, indices[i][0], indices[i][1], indices[i][2], indices[i][3]);
+        const s32 num_verts = 3 * HandleTet(cell, tris, indices[i], iso);
         for(s32 j = 0; j < num_verts; ++j)
         {
             Vertex& vert = vertices.grow();
@@ -434,7 +433,7 @@ void GenerateMesh(MeshTask& task)
 
         if(st.depth == task.max_depth)
         {
-            MakeTris(0.0f, task.sdfs, st, task.geom.vertices, vertexLock);
+            MakeTris(task.sdfs, st, task.geom.vertices, vertexLock, 0.0f);
         }
         else
         {
