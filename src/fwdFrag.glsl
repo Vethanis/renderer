@@ -2,9 +2,9 @@
 
 out vec4 outColor;
 
-in vec4 Position;
-in vec4 Normal;
-in vec4 Color;
+smooth in vec4 Position;
+smooth in vec4 Normal;
+smooth in vec4 Color;
 
 #define getAlbedo() Color.xyz
 #define getPosition() Position.xyz
@@ -149,8 +149,8 @@ vec3 direct_lighting(inout uint s)
 
     vec3 light = pbr_lighting(V, L, radiance);
 
-    light *= 1.0 - getAO();
     light *= sunShadowing(getPosition(), s);
+    light *= 1.0 - getAO();
 
     light += vec3(0.01) * getAlbedo();
 

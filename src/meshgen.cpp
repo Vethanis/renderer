@@ -8,6 +8,52 @@
 using namespace glm;
 
 #define Bit(x) (1u << (x))
+#define Bits(a, b, c, d) ((1 << a) | (1 << b) | (1 << c) | (1 << d))
+#define CodeRight  Bits(4, 5, 6, 7)
+#define CodeLeft   Bits(0, 1, 2, 3)
+#define CodeUp     Bits(2, 3, 6, 7)
+#define CodeDown   Bits(0, 1, 4, 5)
+#define CodeFront  Bits(0, 2, 4, 6)
+#define CodeBack   Bits(1, 3, 5, 7)
+#define NumFaces  6
+#define NumVerts  8
+#define IndicesPerFace 6
+#define SDF_BigDistance (float(1 << 22))
+
+const u32 g_codes[NumFaces] = {
+    CodeRight,
+    CodeLeft,
+    CodeUp,
+    CodeDown,
+    CodeFront,
+    CodeBack,
+};
+
+struct FaceIndices
+{
+    u32 indices[NumFaces];
+};
+
+#define ConsFaceIndices(a, b, c, d, e, f) { a, b, c, d, e, f }
+
+const FaceIndices g_faces[NumFaces] = {
+    ConsFaceIndices(6, 7, 4, 7, 5, 4),
+    ConsFaceIndices(3, 2, 1, 2, 0, 1),
+    ConsFaceIndices(6, 2, 7, 2, 3, 7),
+    ConsFaceIndices(5, 1, 4, 1, 0, 4),
+    ConsFaceIndices(2, 6, 0, 6, 4, 0),
+    ConsFaceIndices(7, 3, 5, 3, 1, 5)
+};
+
+struct SubTask
+{
+    Vector<u16> indices;
+    glm::vec3 center;
+    float radius = 0.0f;
+    u32 depth = 0;
+
+    float qlen(){ return 1.732051f * radius; }
+};
 
 void findBasis(vec3 N, vec3& T, vec3& B)
 {
@@ -93,6 +139,16 @@ float SDFDis(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
     return dis;
 }
 
+float SDFDis(const SDFList& sdfs, const vec3 p)
+{
+    float dis = 1000.0f;
+    for(const SDF& sdf : sdfs)
+    {
+        dis = sdf.blend(dis, sdf.distance(p));
+    }
+    return dis;
+}
+
 vec3 SDFNorm(const SDFList& sdfs, const SDFIndices& indices, const vec3 p)
 {
     const float e = 0.001f;
@@ -134,85 +190,209 @@ Material SDFMaterial(const SDFList& sdfs, const SDFIndices& indices, const vec3 
     return retMat;
 }
 
-float SDFAO(const SDFList& sdfs, const SDFIndices& indices, const vec3 p, const vec3 N)
+float SDFAO(const SDFList& sdfs, const vec3 p, const vec3 N)
 {
-    return 0.0f;
     static u32 s = 521985231;
     float ao = 0.0f;
-    const s32 num_steps = 4;
+    const s32 num_steps = 8;
+    float len = 0.01f;
+    vec3 T, B;
+    findBasis(N, T, B);
     for(s32 i = 0; i < num_steps; ++i)
     {
-        const vec3 pos = p + N + vec3(randf(s), randf(s), randf(s)) * 2.0f - 1.0f;
-        if(SDFDis(sdfs, indices, pos) < 0.0f)
+        const vec3 pos = p + len * N;
+        if(SDFDis(sdfs, pos + T * len) < 0.0f)
         {
             ao += 1.0f;
         }
+        if(SDFDis(sdfs, pos - T * len) < 0.0f)
+        {
+            ao += 1.0f;
+        }
+        if(SDFDis(sdfs, pos + B * len) < 0.0f)
+        {
+            ao += 1.0f;
+        }
+        if(SDFDis(sdfs, pos - B * len) < 0.0f)
+        {
+            ao += 1.0f;
+        }
+        len *= 2.0f;
     }
 
-    ao /= float(num_steps);
+    ao /= float(num_steps * 4.0f);
 
     return ao;
 }
 
-#define Bits(a, b, c, d) ((1 << a) | (1 << b) | (1 << c) | (1 << d))
-#define CodeRight  Bits(4, 5, 6, 7)
-#define CodeLeft   Bits(0, 1, 2, 3)
-#define CodeUp     Bits(2, 3, 6, 7)
-#define CodeDown   Bits(0, 1, 4, 5)
-#define CodeFront  Bits(0, 2, 4, 6)
-#define CodeBack   Bits(1, 3, 5, 7)
-#define NumFaces  6
-#define NumVerts  8
-#define IndicesPerFace 6
-#define SDF_BigDistance (float(1 << 22))
-
-const u32 g_codes[NumFaces] = {
-    CodeRight,
-    CodeLeft,
-    CodeUp,
-    CodeDown,
-    CodeFront,
-    CodeBack,
-};
-
-struct FaceIndices
+struct GridCell
 {
-    u32 indices[NumFaces];
+    glm::vec3 pts[8];
+    float vals[8];
 };
 
-#define ConsFaceIndices(a, b, c, d, e, f) { a, b, c, d, e, f }
+glm::vec3 VertexInterp(const float iso, const glm::vec3 p1, const glm::vec3 p2, 
+    const float valp1, const float valp2)
+{
+    if(glm::abs(iso - valp1) < 0.0001f)
+    {
+        return p1;
+    }
+    if(glm::abs(iso - valp2) < 0.0001f)
+    {
+        return p2;
+    }
+    if(glm::abs(valp1 - valp2) < 0.0001f)
+    {
+        return p1;
+    }
+    const float alpha = (iso - valp1) / (valp2 - valp1);
+    return glm::vec3(
+        p1.x + alpha * (p2.x - p1.x),
+        p1.y + alpha * (p2.y - p1.y),
+        p1.z + alpha * (p2.z - p1.z)
+    );
+}
 
-const FaceIndices g_faces[NumFaces] = {
-    ConsFaceIndices(7, 4, 6, 7, 4, 5),
-    ConsFaceIndices(3, 2, 0, 3, 0, 1),
-    ConsFaceIndices(6, 2, 3, 6, 3, 7),
-    ConsFaceIndices(1, 4, 5, 1, 0, 4),
-    ConsFaceIndices(2, 4, 0, 2, 6, 4),
-    ConsFaceIndices(3, 5, 7, 3, 1, 5)
-};
+s32 HandleTet(const float iso, GridCell& cell, glm::vec3* tris, s32 v0, s32 v1, s32 v2, s32 v3)
+{
+    s32 num_tri = 0;
+    u32 code = 0;
 
-// pts[0] = st.center;
-// pts[1] = st.center + vec3(0.0f,      0.0f,    offset);  
-// pts[2] = st.center + vec3(0.0f,      offset,  0.0f);    
-// pts[3] = st.center + vec3(0.0f,      offset,  offset);  
-// pts[4] = st.center + vec3(offset,    0.0f,    0.0f);    
-// pts[5] = st.center + vec3(offset,    0.0f,    offset);  
-// pts[6] = st.center + vec3(offset,    offset,  0.0f);    
-// pts[7] = st.center + vec3(offset,    offset,  offset);  
+    code |= (cell.vals[v0] < iso) << 0;
+    code |= (cell.vals[v1] < iso) << 1;
+    code |= (cell.vals[v2] < iso) << 2;
+    code |= (cell.vals[v3] < iso) << 3;
+
+   switch (code) 
+   {
+    case 0x00:
+    case 0x0F:
+        break;
+    case 0x0E:
+    case 0x01:
+        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v1], cell.vals[v0], cell.vals[v1]);
+        tris[1] = VertexInterp(iso, cell.pts[v0], cell.pts[v2], cell.vals[v0], cell.vals[v2]);
+        tris[2] = VertexInterp(iso, cell.pts[v0], cell.pts[v3], cell.vals[v0], cell.vals[v3]);
+        num_tri++;
+        break;
+    case 0x0D:
+    case 0x02:
+        tris[0] = VertexInterp(iso, cell.pts[v1], cell.pts[v0], cell.vals[v1], cell.vals[v0]);
+        tris[1] = VertexInterp(iso, cell.pts[v1], cell.pts[v3], cell.vals[v1], cell.vals[v3]);
+        tris[2] = VertexInterp(iso, cell.pts[v1], cell.pts[v2], cell.vals[v1], cell.vals[v2]);
+        num_tri++;
+        break;
+    case 0x0C:
+    case 0x03:
+        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v3], cell.vals[v0], cell.vals[v3]);
+        tris[1] = VertexInterp(iso, cell.pts[v0], cell.pts[v2], cell.vals[v0], cell.vals[v2]);
+        tris[2] = VertexInterp(iso, cell.pts[v1], cell.pts[v3], cell.vals[v1], cell.vals[v3]);
+        num_tri++;
+        tris[3] = tris[2];
+        tris[4] = VertexInterp(iso, cell.pts[v1], cell.pts[v2], cell.vals[v1], cell.vals[v2]);
+        tris[5] = tris[1];
+        num_tri++;
+        break;
+    case 0x0B:
+    case 0x04:
+        tris[0] = VertexInterp(iso, cell.pts[v2], cell.pts[v0], cell.vals[v2], cell.vals[v0]);
+        tris[1] = VertexInterp(iso, cell.pts[v2], cell.pts[v1], cell.vals[v2], cell.vals[v1]);
+        tris[2] = VertexInterp(iso, cell.pts[v2], cell.pts[v3], cell.vals[v2], cell.vals[v3]);
+        num_tri++;
+        break;
+    case 0x0A:
+    case 0x05:
+        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v1], cell.vals[v0], cell.vals[v1]);
+        tris[1] = VertexInterp(iso, cell.pts[v2], cell.pts[v3], cell.vals[v2], cell.vals[v3]);
+        tris[2] = VertexInterp(iso, cell.pts[v0], cell.pts[v3], cell.vals[v0], cell.vals[v3]);
+        num_tri++;
+        tris[3] = tris[0];
+        tris[4] = VertexInterp(iso, cell.pts[v1], cell.pts[v2], cell.vals[v1], cell.vals[v2]);
+        tris[5] = tris[1];
+        num_tri++;
+        break;
+    case 0x09:
+    case 0x06:
+        tris[0] = VertexInterp(iso, cell.pts[v0], cell.pts[v1], cell.vals[v0], cell.vals[v1]);
+        tris[1] = VertexInterp(iso, cell.pts[v1], cell.pts[v3], cell.vals[v1], cell.vals[v3]);
+        tris[2] = VertexInterp(iso, cell.pts[v2], cell.pts[v3], cell.vals[v2], cell.vals[v3]);
+        num_tri++;
+        tris[3] = tris[0];
+        tris[4] = VertexInterp(iso, cell.pts[v0], cell.pts[v2], cell.vals[v0], cell.vals[v2]);
+        tris[5] = tris[2];
+        num_tri++;
+        break;
+    case 0x07:
+    case 0x08:
+        tris[0] = VertexInterp(iso, cell.pts[v3], cell.pts[v0], cell.vals[v3], cell.vals[v0]);
+        tris[1] = VertexInterp(iso, cell.pts[v3], cell.pts[v2], cell.vals[v3], cell.vals[v2]);
+        tris[2] = VertexInterp(iso, cell.pts[v3], cell.pts[v1], cell.vals[v3], cell.vals[v1]);
+        num_tri++;
+        break;
+   }
+
+   return num_tri;
+}
+
+void MakeTris(const float iso, const SDFList& sdfs, SubTask& st, Vector<Vertex>& outVerts, std::mutex& mut)
+{
+    GridCell cell;
+
+    const float offset = st.radius * 2.0f;
+    for(u32 i = 0; i < 8; ++i)
+    {
+        cell.pts[i] = st.center;
+        cell.pts[i].x += (i & 1) ? -offset : offset;
+        cell.pts[i].y += (i & 2) ? -offset : offset;
+        cell.pts[i].z += (i & 4) ? -offset : offset;
+        cell.vals[i] = SDFDis(sdfs, st.indices, cell.pts[i]);
+    }
+
+    const s32 indices[6][4] = 
+    {
+        { 0, 2, 3, 7 },
+        { 0, 2, 6, 7 },
+        { 0, 4, 6, 7 },
+        { 0, 6, 1, 2 },
+        { 0, 6, 1, 4 },
+        { 5, 6, 1, 4 }
+    };
+
+    Array<Vertex, 36> vertices;
+    for(s32 i = 0; i < 6; ++i)
+    {
+        vec3 tris[6];
+        const s32 num_verts = 3 * HandleTet(iso, cell, tris, indices[i][0], indices[i][1], indices[i][2], indices[i][3]);
+        for(s32 j = 0; j < num_verts; ++j)
+        {
+            Vertex& vert = vertices.grow();
+            const vec3 N = SDFNorm(sdfs, st.indices, tris[j]);
+            const Material mat = SDFMaterial(sdfs, st.indices, tris[j]);
+            const float ao = SDFAO(sdfs, tris[j], N);
+            const float roughness = mat.getRoughness();
+            const float metalness = mat.getMetalness();
+            vert.setPosition(tris[j]);
+            vert.setNormal(N);
+            vert.setColor(mat.getColor());
+            vert.setMaterial(glm::vec3(roughness, metalness, ao));
+        }
+    }
+
+    if(vertices.count())
+    {
+        mut.lock();
+        for(const Vertex& vert : vertices)
+        {
+            outVerts.grow() = vert;
+        }
+        mut.unlock();
+    }
+}
 
 void GenerateMesh(MeshTask& task)
 {
     task.geom.vertices.clear();
-
-    struct SubTask
-    {
-        Vector<u16> indices;
-        glm::vec3 center;
-        float radius = 0.0f;
-        u32 depth = 0;
-
-        float qlen(){ return 1.732051f * radius; }
-    };
 
     Vector<SubTask> subtasks;
     {
@@ -254,59 +434,7 @@ void GenerateMesh(MeshTask& task)
 
         if(st.depth == task.max_depth)
         {
-            vec3 pts[8];
-            vec3 Ns[8];
-            u32 code = 0;
-            {
-                const float offset = st.radius * 2.0f;
-                pts[0] = st.center;
-                pts[1] = st.center + vec3(0.0f,      0.0f,    offset);  
-                pts[2] = st.center + vec3(0.0f,      offset,  0.0f);    
-                pts[3] = st.center + vec3(0.0f,      offset,  offset);  
-                pts[4] = st.center + vec3(offset,    0.0f,    0.0f);    
-                pts[5] = st.center + vec3(offset,    0.0f,    offset);  
-                pts[6] = st.center + vec3(offset,    offset,  0.0f);    
-                pts[7] = st.center + vec3(offset,    offset,  offset);  
-
-                const float qlen = st.qlen();
-                for(u32 i = 0; i < 8; ++i)
-                {
-                    const bool b = glm::abs(SDFDis(task.sdfs, st.indices, pts[i])) < qlen;
-                    if(b)
-                    {
-                        code |= 1 << i;
-                        Ns[i] = SDFNorm(task.sdfs, st.indices, pts[i]);
-                        pts[i] -= Ns[i] * SDFDis(task.sdfs, st.indices, pts[i]);
-                    }
-                }
-            }
-            Array<Vertex, 3 * 2 * 6> outVerts;
-
-            for(u32 i = 0; i < NumFaces; ++i)
-            {
-                if((code & g_codes[i]) == g_codes[i])
-                {
-                    for(const u32 idx : g_faces[i].indices)
-                    {
-                        Vertex& vert = outVerts.grow();
-                        vert.setPosition(pts[idx]);
-                        vert.setNormal(Ns[idx]);
-                        const Material mat = SDFMaterial(task.sdfs, st.indices, pts[idx]);
-                        vert.setColor(mat.getColor());
-                        const float roughness = mat.getRoughness();
-                        const float metalness = mat.getMetalness();
-                        const float ao = SDFAO(task.sdfs, st.indices, pts[idx], Ns[idx]);
-                        vert.setMaterial(glm::vec3(roughness, metalness, ao));
-                    }
-                }
-            }
-
-            vertexLock.lock();
-            for(const Vertex& vert : outVerts)
-            {
-                task.geom.vertices.grow() = vert;
-            }
-            vertexLock.unlock();
+            MakeTris(0.0f, task.sdfs, st, task.geom.vertices, vertexLock);
         }
         else
         {

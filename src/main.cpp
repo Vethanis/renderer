@@ -21,18 +21,18 @@ void setupScene()
     MeshTask task;
     task.center = vec3(5.0f, 5.0f, 0.0f);
     task.radius = 10.0f;
-    task.max_depth = 8;
+    task.max_depth = 7;
 
-    for(float x = 0.0f; x < 10.0f; x += 2.5f)
+    for(float x = 0.0f; x < 10.0f; x += 2.25f)
     {
-        for(float y = 0.0f; y < 10.0f; y += 2.5f)
+        for(float y = 0.0f; y < 10.0f; y += 1.5f)
         {
             SDF& sdf = task.sdfs.grow();
             if(x > y)
                 sdf.type = SDF_BOX;
                 
             sdf.translation = vec3(x, y, 0.0f);
-            sdf.material.setRoughness(x / 10.0f + 0.15f);
+            sdf.material.setRoughness(glm::clamp(x / 10.0f, 0.15f, 1.0f));
             sdf.material.setMetalness(y / 10.0f);
             sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
         }
@@ -164,6 +164,8 @@ int main(int argc, char* argv[])
                 break;
                 case GLFW_KEY_KP_0: flag = DF_VIS_SHADOW_BUFFER; break;
                 case GLFW_KEY_V: flag = DF_VIS_SUN_SHADOW_DEPTH; break;
+                case GLFW_KEY_L: flag = DF_VIS_LDN; break;
+                case GLFW_KEY_O: flag = DF_VIS_AO; break;
                 case GLFW_KEY_F12:
                 {
                     g_gBuffer.screenshot();

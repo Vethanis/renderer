@@ -19,6 +19,8 @@
 #define DF_VIS_SUN_SHADOW_DEPTH 14
 #define DF_VIS_VELOCITY     15
 #define DF_VIS_SHADOW_BUFFER 16
+#define DF_VIS_LDN 17
+#define DF_VIS_AO 18
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -224,6 +226,7 @@ vec3 direct_lighting(inout uint s)
     const vec3 radiance = sunColor * sunIntensity;
 
     vec3 light = sunShadowing(mat_position(mat), s) * pbr_lighting(V, L, mat, radiance);
+    light *= 1.0 - mat_ao(mat);
 
     light += vec3(0.01) * mat_albedo(mat);
 
@@ -243,9 +246,11 @@ vec3 indirect_lighting(inout uint s)
         light += pbr_lighting(V, R, mat, environment_cubemap(R, mat_roughness(mat)));
     }
 
-    for(int i = 0; i < 4; ++i){
+    for(int i = 0; i < 4; ++i)
+    {
         vec3 r = vec3(randBi(s), randBi(s), randBi(s));
-        if(dot(r, mat_normal(mat)) < 0.001){
+        if(dot(r, mat_normal(mat)) < 0.0)
+        {
             r = -r;
         }
         r = normalize(r);
@@ -256,8 +261,7 @@ vec3 indirect_lighting(inout uint s)
     light *= 1.0 + (2.0 * mat_roughness(mat) - 1.0); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
-
-    //light *= 1.0 - mat_ao(mat);
+    light *= 1.0 - mat_ao(mat);
 
     return light;
 }
@@ -427,6 +431,17 @@ vec3 visualizeShadowBuffer()
     return vec3(depth);
 }
 
+vec3 visualizeLdotN()
+{
+    const material mat = getMaterial();
+    return vec3(max(0.0, dot(mat_normal(mat), sunDirection)));
+}
+
+vec3 visualizeAO()
+{
+    const material mat = getMaterial();
+    return vec3(1.0f - mat_ao(mat));
+}
 // -----------------------------------------------------------------------
 
 void main()
@@ -493,6 +508,12 @@ void main()
                 break;
             case DF_VIS_SUN_SHADOW_DEPTH:
                 lighting = visualizeShadow();
+                break;
+            case DF_VIS_LDN:
+                lighting = visualizeLdotN();
+                break;
+            case DF_VIS_AO:
+                lighting = visualizeAO();
                 break;
         }
     }

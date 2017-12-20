@@ -4,9 +4,9 @@ layout(location = 0) in vec4 position;
 layout(location = 1) in vec4 normal;
 layout(location = 2) in vec4 color;
 
-out vec4 Position;
-out vec4 Normal;
-out vec4 Color;
+smooth out vec4 Position;
+smooth out vec4 Normal;
+smooth out vec4 Color;
 
 uniform mat4 MVP;
 uniform mat4 M;
