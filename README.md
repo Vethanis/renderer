@@ -19,6 +19,7 @@ Messing about with deferred shading and triangles.
 | Spacebar       | Move up              |
 | E              | Set light direction  |
 | ESC            | Close program        |
+| 1-9            | Render Mode Select   |
 
 ## __Dependencies:__
 
