@@ -2,6 +2,10 @@
 
 Messing about with deferred shading and triangles.
 
+## **Video**
+
+[![](http://img.youtube.com/vi/P54NGWgKg-Q/0.jpg)](https://www.youtube.com/watch?v=P54NGWgKg-Q)
+
 ## __Controls:__
 
 | **Input**      | **Action**           |
