@@ -5,11 +5,11 @@
 #include "hash.h"
 #include "ints.h"
 
-template<typename T, int _capacity>
+template<typename T, s32 _capacity>
 class Array
 {
     T _data[_capacity];
-    int _tail;
+    s32 _tail;
 public:
     Array() : _tail(0){
     }
@@ -43,36 +43,36 @@ public:
         --_tail;
         return _data[_tail];
     }
-    T& operator[](int idx){
+    T& operator[](s32 idx){
         Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
-    const T& operator[](int idx)const{
+    const T& operator[](s32 idx)const{
         Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
     bool full()const{
         return _tail >= _capacity;
     }
-    int count()const{
+    s32 count()const{
         return _tail;
     }
-    int capacity()const{
+    s32 capacity()const{
         return _capacity;
     }
-    int bytes()const{
+    s32 bytes()const{
         return sizeof(T) * _tail;
     }
-    unsigned hash()const{
+    u32 hash()const{
         return fnv(_data, bytes());
     }
-    void resize(int count){
+    void resize(s32 count){
         Assert(count <= _capacity);
         _tail = count;
     }
     void clear(){ _tail = 0; }
-    int find(const T& t){
-        for(int i = 0; i < _tail; ++i){
+    s32 find(const T& t){
+        for(s32 i = 0; i < _tail; ++i){
             if(_data[i] == t)
                 return i;
         }
@@ -83,21 +83,21 @@ public:
             grow() = t;
         }
     }
-    void remove(int idx){
+    void remove(s32 idx){
         --_tail;
         _data[idx] = _data[_tail];
     }
     void findRemove(const T& t){
-        int idx = find(t);
+        s32 idx = find(t);
         if(idx != -1){
             remove(idx);
         }
     }
-    void sort(int a, int b){
+    void sort(s32 a, s32 b){
         if(a - b < 2)
             return;
 
-        int i, j;
+        s32 i, j;
         {
             T& pivot = _data[(a + b) >> 1];
             for(i = a, j = b - 1; ; ++i, --j){
@@ -131,14 +131,14 @@ template<typename T>
 class Vector
 {
     T* _data;
-    int _tail;
-    int _capacity;
+    s32 _tail;
+    s32 _capacity;
 public:
-    int capacity()const{ return _capacity; }
-    int count()const{ return _tail; }
+    s32 capacity()const{ return _capacity; }
+    s32 count()const{ return _tail; }
     bool full()const{ return _tail >= _capacity; }
-    int bytes()const{ return sizeof(T) * _tail; }
-    int hash()const{ return fnv(_data, bytes()); }
+    s32 bytes()const{ return sizeof(T) * _tail; }
+    s32 hash()const{ return fnv(_data, bytes()); }
 
     T* begin(){ return _data; }
     const T* begin()const{ return _data; }
@@ -152,16 +152,16 @@ public:
         Assert(_tail > 0);
         return _data[_tail - 1];
     }
-    T& operator[](int idx){
+    T& operator[](s32 idx){
         Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
-    const T& operator[](int idx)const{
+    const T& operator[](s32 idx)const{
         Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
 
-    void resize(const int new_cap){
+    void resize(const s32 new_cap){
         if(!new_cap){
             delete[] _data;
             _data = nullptr;
@@ -170,7 +170,7 @@ public:
             T* new_data = new T[new_cap];
             
             if(_data){
-                for(int i = 0; i < _tail; ++i){
+                for(s32 i = 0; i < _tail; ++i){
                     new_data[i] = _data[i];
                 }
                 delete[] _data;
@@ -199,13 +199,13 @@ public:
         return _data[_tail];
     }
     void clear(){ _tail = 0; }
-    void remove(int idx){
+    void remove(s32 idx){
         Assert(idx <= _tail);
         --tail;
         _data[idx] = _data[tail];
     }
-    int find(const T& t){
-        for(int i = 0; i < _tail; ++i){
+    s32 find(const T& t){
+        for(s32 i = 0; i < _tail; ++i){
             if(_data[i] == t)
                 return i;
         }
@@ -217,16 +217,16 @@ public:
         }
     }
     void findRemove(const T& t){
-        int idx = find(t);
+        s32 idx = find(t);
         if(idx != -1){
             remove(idx);
         }
     }
-    void sort(int a, int b){
+    void sort(s32 a, s32 b){
         if(a - b < 2)
             return;
 
-        int i, j;
+        s32 i, j;
         {
             T& pivot = _data[(a + b) >> 1];
             for(i = a, j = b - 1; ; ++i, --j){
@@ -249,7 +249,7 @@ public:
     }
     Vector() : _data(nullptr), _tail(0), _capacity(0){
     }
-    Vector(int cap){
+    Vector(s32 cap){
         if(cap > 0){
             _data = new T[cap];
         }
@@ -356,12 +356,12 @@ public:
             }
         }
     }
-    void reserve(int new_cap)
+    void reserve(s32 new_cap)
     {
         if(_capacity < new_cap)
         {
             T* new_data = new T[new_cap];
-            for(int i = 0; i < _tail; ++i)
+            for(s32 i = 0; i < _tail; ++i)
                 new_data[i] = _data[i];
 
             delete[] _data;
