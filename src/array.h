@@ -1,23 +1,17 @@
 #pragma once
 
-#include <cassert>
+#include "asserts.h"
 #include <cstdio>
 #include "hash.h"
+#include "ints.h"
 
 template<typename T, int _capacity>
-struct Array{
+class Array
+{
     T _data[_capacity];
     int _tail;
+public:
     Array() : _tail(0){
-    }
-    T& grow(){
-        assert(_tail < _capacity);
-        return _data[_tail++];
-    }
-    T pop(){
-        assert(_tail > 0);
-        --_tail;
-        return _data[_tail + 1];
     }
     T* begin(){
         return _data;
@@ -32,17 +26,29 @@ struct Array{
         return _data + _tail;
     }
     T& back(){ 
-        assert(_tail > 0);
+        Assert(_tail > 0);
         return _data[_tail - 1]; 
     }
     const T& back()const{ 
-        assert(_tail > 0);
+        Assert(_tail > 0);
         return _data[_tail - 1];
     }
+    T& grow(){
+        Assert(_tail < _capacity);
+        ++_tail;
+        return _data[_tail - 1];
+    }
+    T pop(){
+        Assert(_tail > 0);
+        --_tail;
+        return _data[_tail];
+    }
     T& operator[](int idx){
+        Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
     const T& operator[](int idx)const{
+        Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
     bool full()const{
@@ -61,7 +67,7 @@ struct Array{
         return fnv(_data, bytes());
     }
     void resize(int count){
-        assert(count <= _capacity);
+        Assert(count <= _capacity);
         _tail = count;
     }
     void clear(){ _tail = 0; }
@@ -122,11 +128,12 @@ struct Array{
 };
 
 template<typename T>
-struct Vector{
+class Vector
+{
     T* _data;
     int _tail;
     int _capacity;
-
+public:
     int capacity()const{ return _capacity; }
     int count()const{ return _tail; }
     bool full()const{ return _tail >= _capacity; }
@@ -138,17 +145,19 @@ struct Vector{
     T* end(){ return _data + _tail; }
     const T* end()const{ return _data + _tail; }
     T& back(){ 
-        assert(_tail > 0);
+        Assert(_tail > 0);
         return _data[_tail - 1]; 
     }
     const T& back()const{ 
-        assert(_tail > 0);
+        Assert(_tail > 0);
         return _data[_tail - 1];
     }
     T& operator[](int idx){
+        Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
     const T& operator[](int idx)const{
+        Assert(idx >= 0 && idx < _tail);
         return _data[idx];
     }
 
@@ -173,25 +182,25 @@ struct Vector{
     }
 
     T& append(){
-        assert(_tail < _capacity);
+        Assert(_tail < _capacity);
         ++_tail;
         return _data[_tail - 1];
     }
     T& grow(){
         if(_tail >= _capacity){
-            resize(_tail * 2 + 4);
+            resize(_tail ? _tail << 1 : 16);
         }
         ++_tail;
         return _data[_tail - 1];
     }
     T pop(){
-        assert(_tail > 0);
+        Assert(_tail > 0);
         --_tail;
         return _data[_tail];
     }
     void clear(){ _tail = 0; }
     void remove(int idx){
-        assert(idx <= _tail);
+        Assert(idx <= _tail);
         --tail;
         _data[idx] = _data[tail];
     }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ints.h"
-#include "assert.h"
+#include "asserts.h"
 #include "hash.h"
 
 template<typename T, const u32 t_capacity, typename C = u16>
@@ -60,12 +60,12 @@ public:
     }
     const T& back() const
     {
-        assert(count());
+        Assert(count());
         return m_data[m_tail - 1];
     }
     T& back()
     {
-        assert(count());
+        Assert(count());
         return m_data[m_tail - 1];
     }
     const T& operator[](C idx) const
@@ -84,7 +84,7 @@ public:
     }
     C insert(const T& item)
     {
-        assert(!full());
+        Assert(!full());
         const C pos = m_tail;
         ++m_tail;
         m_data[pos] = item;
@@ -96,7 +96,7 @@ public:
     }
     void remove(C idx)
     {
-        assert(count());
+        Assert(count());
         const C pos = m_twists[idx];
         const C tail = m_tail - 1;
         m_data[pos] = m_data[tail];
@@ -115,7 +115,7 @@ public:
     C getSlotOf(const T& item) const
     {
         const size_t offset = size_t(&item - m_data);
-        assert(offset < (size_t)m_tail);
+        Assert(offset < (size_t)m_tail);
 
         for(C i = (C)offset; i < m_lastTwist; ++i)
         {

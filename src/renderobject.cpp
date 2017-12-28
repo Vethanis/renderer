@@ -13,8 +13,10 @@ void Renderables::init()
     ProfilerEvent("Renderables::init");
     
     glEnable(GL_DEPTH_TEST); DebugGL();
-    glEnable(GL_CULL_FACE); DebugGL();
-    glCullFace(GL_BACK); DebugGL();
+    //glEnable(GL_CULL_FACE); DebugGL();
+    //glCullFace(GL_BACK); DebugGL();
+
+    glEnable(GL_PROGRAM_POINT_SIZE); DebugGL();
 
     DrawMode::init();
 
@@ -107,6 +109,7 @@ void Renderables::prePass(const Transform& VP)
     for(const RenderResource& res : resources)
     {
         zProg.setUniform("MVP", VP * res.m_transform);
+        zProg.setUniformFloat("ptSize", res.ptSize);
         res.draw();
     }
 }
@@ -133,6 +136,7 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
         fwdProg.setUniform("MVP", VP * M);
         fwdProg.setUniform("M", M);
         fwdProg.setUniform("IM", IM);
+        fwdProg.setUniformFloat("ptSize", res.ptSize);
 
         res.draw();
     }
@@ -148,6 +152,7 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); DebugGL();
 
     defProg.bind();
+    defProg.setUniform("eye", eye);
 
     for(const RenderResource& res : resources)
     {
@@ -157,6 +162,7 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
         defProg.setUniform("MVP", VP * M);
         defProg.setUniform("M", M);
         defProg.setUniform("IM", IM);
+        defProg.setUniformFloat("ptSize", res.ptSize);
 
         res.draw();
     }

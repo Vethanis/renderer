@@ -60,9 +60,7 @@ void Mesh::init()
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();;
 
     mesh_layout<Vertex> ml;
-    ml.layout<glm::vec4>(0);    // pos
-    ml.layout<glm::vec4>(1);    // normal
-    ml.layout<glm::vec4>(2);    // color
+    ml.layout<glm::vec3>(0);    // pos
 }
 
 void Mesh::deinit()
@@ -72,15 +70,15 @@ void Mesh::deinit()
     DebugGL();
 }
 
-void Mesh::upload(const Geometry& geom)
+void Mesh::upload(const Vertex* p, const u32 count)
 {
     glBindVertexArray(vao); DebugGL();
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();
-    glBufferData(GL_ARRAY_BUFFER, geom.vertices.bytes(), 
-        geom.vertices.begin(), GL_STATIC_DRAW); DebugGL();
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * count, 
+        p, GL_STATIC_DRAW); DebugGL();
         
-    num_indices = geom.vertices.count();
+    num_indices = count;
 }
 
 void Mesh::draw()const

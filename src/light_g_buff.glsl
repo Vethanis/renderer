@@ -257,8 +257,8 @@ vec3 indirect_lighting(inout uint s)
         light += pbr_lighting(V, r, mat, environment_cubemap(r, mat_roughness(mat)));
     }
 
-    light *= 3.141592 / (6.0);
-    light *= 1.0 + (2.0 * mat_roughness(mat) - 1.0); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
+    light *= 3.141592 / (4.0 + 2.0);
+    light *= 1.0 + (1.0 * mat_roughness(mat) - 1.0); // hacky, but rough materials require more samples to get same luminosity, so make them brighter
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
     light *= 1.0 - mat_ao(mat);

@@ -98,9 +98,9 @@ namespace mesh_interchange
     {
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(dir, aiProcessPreset_TargetRealtime_Quality | aiProcess_FlipUVs);
-        assert(scene);
-        assert((scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) == 0);
-        assert(scene->mRootNode);
+        Assert(scene);
+        Assert((scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) == 0);
+        Assert(scene->mRootNode);
         processNode(scene->mRootNode, scene, glm::scale({}, glm::vec3(0.01f)));
     }
 };

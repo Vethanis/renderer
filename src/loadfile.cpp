@@ -1,16 +1,16 @@
-#include "loadfile.h"
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#include "loadfile.h"
 #include "stdio.h"
 #include "string.h"
-#include "assert.h"
+#include "asserts.h"
 
 char* load_file(const char* path){
     FILE* f = fopen(path, "rb");
     if(!f){
         printf("Could not open file: %s\n", path);
-        assert(false);
+        Assert(false);
     }
     fseek(f, 0, SEEK_END);
     const size_t sz = size_t(ftell(f));

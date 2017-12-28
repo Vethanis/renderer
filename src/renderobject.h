@@ -49,6 +49,7 @@ struct RenderResource
 {
     Transform m_transform;
     Mesh mesh;
+    float ptSize = 25.0f;
 
     void draw() const { mesh.draw(); }
     void init() { mesh.init(); }

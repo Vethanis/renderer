@@ -1,40 +1,43 @@
 #pragma once 
 
 #include "store.h"
+#include "ints.h"
 
 struct NameStore
 {
     struct TextBlock
     {
-        enum : int
+        enum : u32
         {
             Capacity = 256,
         };
         char m_text[Capacity] = {0};
+        TextBlock(){};
+        TextBlock(const char* val)
+        {
+            for(u32 i = 0; i < Capacity - 1 && val[i]; ++i)
+            {
+                m_text[i] = val[i];
+            }
+        }
     };
 
     Store<TextBlock, 256> m_store;
 
-    const char* get(unsigned name)
+    const char* get(u32 name)
     {
         TextBlock* res = m_store.get(name);
         return res ? res->m_text : nullptr;
     }
-    const char* operator[](unsigned name){ return get(name); }
-    void insert(unsigned name, const char* val)
+    const char* operator[](u32 name){ return get(name); }
+    void insert(u32 name, const char* val)
     {
         if(m_store.get(name))
         {
             return;
         }
-        
-        TextBlock block;
-        for(int i = 0; i < TextBlock::Capacity - 1 && val[i]; ++i)
-        {
-            block.m_text[i] = val[i];
-        }
 
-        m_store.insert(name, block);
+        m_store.insert(name, TextBlock(val));
     }
 };
 

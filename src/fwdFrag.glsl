@@ -5,6 +5,7 @@ out vec4 outColor;
 smooth in vec4 Position;
 smooth in vec4 Normal;
 smooth in vec4 Color;
+flat in int Valid;
 
 #define getAlbedo() Color.xyz
 #define getPosition() Position.xyz
@@ -161,10 +162,22 @@ vec3 direct_lighting(inout uint s)
 
 void main()
 {
+    if(Valid == 0)
+    {
+        discard;
+        return;
+    }
     uint s = uint(seed) 
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
         
+    const vec2 coord = gl_PointCoord * 2.0 - 1.0;
+    if(length(coord) > 1.0)
+    {
+        discard;
+        return;
+    }
+
     vec3 lighting = direct_lighting(s);
 
     lighting.rgb.x += 0.0001 * randBi(s);

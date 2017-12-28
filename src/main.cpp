@@ -9,39 +9,14 @@
 #include "timer.h"
 #include "framecounter.h"
 #include "profiler.h"
-#include "meshgen.h"
+#include "rasterfield.h"
 
 #include <random>
 #include <ctime>
 
 void setupScene()
 {
-    using namespace glm;
 
-    MeshTask task;
-    task.center = vec3(5.0f, 5.0f, 0.0f);
-    task.radius = 10.0f;
-    task.max_depth = 6;
-
-    for(float x = 0.0f; x < 10.0f; x += 2.25f)
-    {
-        for(float y = 0.0f; y < 10.0f; y += 1.5f)
-        {
-            SDF& sdf = task.sdfs.grow();
-            if(x > y)
-                sdf.type = SDF_BOX;
-                
-            sdf.translation = vec3(x, y, 0.0f);
-            sdf.material.setRoughness(glm::clamp(x / 10.0f, 0.15f, 1.0f));
-            sdf.material.setMetalness(y / 10.0f);
-            sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
-        }
-    }
-    GenerateMesh(task);
-
-    u16 handle = g_Renderables.request();
-    RenderResource& res = g_Renderables[handle];
-    res.mesh.upload(task.geom);
 }
 
 void FpsStats()
@@ -53,12 +28,12 @@ void FpsStats()
     }
 }
 
-int main(int argc, char* argv[])
+s32 main(s32 argc, char* argv[])
 {
-    srand((unsigned)time(0));
+    srand((u32)time(0));
 
-    int WIDTH = int(1920.0f * 1.75f);
-    int HEIGHT = int(1080.0f * 1.75f);
+    s32 WIDTH = s32(1920.0f * 1.75f);
+    s32 HEIGHT = s32(1080.0f * 1.75f);
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -86,7 +61,7 @@ int main(int argc, char* argv[])
         ProfilerEvent("MainLoop");
         input.poll(camera);
 
-        for(int key : input)
+        for(s32 key : input)
         {
             switch(key)
             {

@@ -1,12 +1,16 @@
 #pragma once
 
-#include <random>
+#include "ints.h"
+#include <glm/glm.hpp>
 
-float randf(void){
-    constexpr float inv = 1.0f / float(RAND_MAX);
-    return rand() * inv;
-}
-
-float randf(float range){
-    return randf() * range - (range * 0.5f);
+inline float randf(u32& s) 
+{
+    u32 f = s;
+    f = (f ^ 61u) ^ (f >> 16u);
+    f *= 9u;
+    f = f ^ (f >> 4u);
+    f *= 0x27d4eb2d;
+    f = f ^ (f >> 15u);
+    s = f;
+    return glm::fract(float(f) * 2.3283064e-10f);
 }

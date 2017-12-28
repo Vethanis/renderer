@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include <cassert>
+#include "asserts.h"
 #include "ints.h"
 
 template<typename T, u16 capacity>
@@ -10,7 +10,7 @@ class CircularQueue{
     std::atomic<u16> head, tail;
 public:
     CircularQueue() : head(0), tail(0){
-        assert( ( (capacity-1) & capacity ) == 0);
+        Assert( ( (capacity-1) & capacity ) == 0);
         data = new T[capacity];
     }
     ~CircularQueue(){

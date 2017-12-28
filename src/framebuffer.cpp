@@ -1,6 +1,7 @@
 #include "framebuffer.h"
 #include "myglheaders.h"
 #include "lodepng.h"
+#include "randf.h"
 
 const GLenum attach_ids[Framebuffer::max_attachments] = { 
     GL_COLOR_ATTACHMENT0 + 0,
@@ -18,7 +19,7 @@ void Framebuffer::init(int width, int height, int num_attachments)
     m_width = width;
     m_height = height;
 
-    assert(num_attachments <= max_attachments && num_attachments > 0);
+    Assert(num_attachments <= max_attachments && num_attachments > 0);
 
     glGenFramebuffers(1, &m_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
@@ -45,7 +46,7 @@ void Framebuffer::init(int width, int height, int num_attachments)
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
         puts("Framebuffer not complete!");
-        assert(false);
+        Assert(false);
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0); DebugGL();
@@ -92,11 +93,13 @@ void Framebuffer::saveToFile(const char* filename, int attachment)
         }
     }
 
+    u32 s = 72917124;
     for(int i = 0; i < num_elems; ++i)
     {
         float val = texels[i] * 2.0f;
         val = val / (1.0f + val);
         val = powf(val, 1.0f / 2.2f);
+        val += randf(s) / 255.0f;
         val *= 255.0f;
         if(val > 255.0f)
             val = 255.0f;

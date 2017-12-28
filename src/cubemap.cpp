@@ -38,7 +38,7 @@ void Cubemap::init(s32 size){
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
         puts("[OpenGL] Incomplete framebuffer.");
-        assert(false);
+        Assert(false);
     }
 }
 
