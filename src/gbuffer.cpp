@@ -1,7 +1,6 @@
 #include "gbuffer.h"
 #include "camera.h"
 #include "myglheaders.h"
-#include "light.h"
 #include "glscreen.h"
 #include "renderobject.h"
 #include "depthstate.h"

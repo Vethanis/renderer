@@ -1,6 +1,5 @@
 #pragma once 
 
-#include "common.h"
 #include "twister.h"
 #include "hashstring.h"
 #include "glprogram.h"

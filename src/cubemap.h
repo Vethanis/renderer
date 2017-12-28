@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "ints.h"
 
 struct GLProgram;
 class Camera;
