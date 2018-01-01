@@ -2,10 +2,7 @@
 
 out vec4 outColor;
 
-smooth in vec4 Position;
-smooth in vec4 Normal;
-smooth in vec4 Color;
-flat in int Valid;
+smooth in vec3 Position;
 
 #define getAlbedo() Color.xyz
 #define getPosition() Position.xyz

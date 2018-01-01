@@ -2,6 +2,9 @@
 
 #include "glm/glm.hpp"
 
+struct GLProgram;
+class Camera;
+
 struct DirectionalLight
 {
     glm::mat4 m_matrix;
@@ -17,5 +20,6 @@ struct DirectionalLight
 
     void init(int size = 1024);
     void deinit();
-    void drawInto();
+    void bind(GLProgram& prog, int channel);
+    void drawInto(const Camera& cam);
 };

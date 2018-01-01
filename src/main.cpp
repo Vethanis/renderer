@@ -16,7 +16,21 @@
 
 void setupScene()
 {
+    InitRasterFields();
+    u16 handle = g_Renderables.request();
+    RenderResource& res = g_Renderables[handle];
+    SDFList list;
+    SDF& sdf = list.grow();
+    sdf.scale = vec3(0.5f);
+    sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
+    res.updateField(list);
+}
 
+void DrawScene(const Camera& cam, u32 dflag)
+{
+    g_Renderables.shadowPass(cam);
+    g_gBuffer.drawCubemap(cam);
+    g_gBuffer.draw(cam, dflag);
 }
 
 void FpsStats()
@@ -149,7 +163,7 @@ s32 main(s32 argc, char* argv[])
             }
         }
 
-        g_gBuffer.draw(camera, flag);
+        DrawScene(camera, flag);
 
         window.swap();
         FpsStats();

@@ -16,10 +16,10 @@ void InitRasterFields()
         glBindTexture(GL_TEXTURE_3D, texHandle); DebugGL();
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); DebugGL();
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); DebugGL();
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT); DebugGL();
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT); DebugGL();
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT); DebugGL();
-        glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, RF_CAP, RF_CAP, RF_CAP, 0, GL_R, GL_FLOAT, nullptr); DebugGL();
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); DebugGL();
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); DebugGL();
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); DebugGL();
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, RF_CAP, RF_CAP, RF_CAP, 0, GL_RED, GL_FLOAT, nullptr); DebugGL();
     }
 
     const vec3 pts[8] = 
@@ -55,7 +55,10 @@ void DrawRasterField(const RasterField& field, GLProgram& prog)
     glActiveTexture(GL_TEXTURE0 + channel); DebugGL();
     glBindTexture(GL_TEXTURE_3D, texHandle); DebugGL();
     prog.setUniformInt("distance_field", channel);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, RF_CAP, RF_CAP, RF_CAP, 0, GL_R, GL_FLOAT, field.m_field); DebugGL();
+    prog.setUniform("df_translation", field.m_translation);
+    prog.setUniform("df_scale", field.m_scale);
+    prog.setUniformFloat("df_pitch", 1.0f / RF_CAP);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, RF_CAP, RF_CAP, RF_CAP, 0, GL_RED, GL_FLOAT, field.m_field); DebugGL();
 
     mesh.draw();
 }

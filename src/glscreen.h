@@ -1,6 +1,7 @@
 #pragma once 
 
-namespace GLScreen {
+namespace GLScreen 
+{
+    void init();
     void draw();
-    int vertexShader();
 };

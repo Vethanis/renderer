@@ -5,7 +5,8 @@
 struct GLProgram;
 class Camera;
 
-struct Cubemap{
+struct Cubemap
+{
     static constexpr u32 num_faces = 6;
     u32 fbo;
     u32 rbo;
@@ -14,5 +15,5 @@ struct Cubemap{
     s32 m_size;
     void init(s32 size);
     void deinit();
-    void drawInto(const Camera& cam);
+    void draw(const Camera& cam);
 };

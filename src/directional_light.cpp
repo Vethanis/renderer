@@ -2,6 +2,8 @@
 #include "myglheaders.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "renderobject.h"
+#include "glprogram.h"
+#include "camera.h"
 
 void DirectionalLight::init(int size)
 {
@@ -29,7 +31,16 @@ void DirectionalLight::deinit()
     glDeleteFramebuffers(1, &m_fbo);
 }
 
-void DirectionalLight::drawInto()
+void DirectionalLight::bind(GLProgram& prog, int channel)
+{
+    prog.setUniform("sunDirection", m_direction);
+    prog.setUniform("sunColor", m_color);
+    prog.setUniformFloat("sunIntensity", m_intensity);
+    prog.setUniform("sunMatrix", m_matrix);
+    prog.bindTexture(channel, m_tex, "sunDepth");
+}
+
+void DirectionalLight::drawInto(const Camera& cam)
 {
     glViewport(0, 0, m_size, m_size);  DebugGL();
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);  DebugGL();
@@ -38,6 +49,6 @@ void DirectionalLight::drawInto()
     m_matrix = glm::perspective(glm::radians(60.0f), 1.0f, m_near, m_far) 
         * glm::lookAt(m_position + m_direction, m_position, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    g_Renderables.prePass(m_matrix);
+    g_Renderables.depthPass(cam.getEye(), m_matrix);
     glCullFace(GL_BACK);  DebugGL();
 }

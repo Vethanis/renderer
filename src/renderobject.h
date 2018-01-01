@@ -7,6 +7,7 @@
 #include "mesh.h"
 #include "directional_light.h"
 #include "transform.h"
+#include "rasterfield.h"
 
 // ------------------------------------------------------------------------
 
@@ -46,35 +47,28 @@
 
 struct RenderResource 
 {
-    Transform m_transform;
-    Mesh mesh;
-    float ptSize = 25.0f;
+    RasterField m_field;
 
-    void draw() const { mesh.draw(); }
-    void init() { mesh.init(); }
-    void deinit() { mesh.deinit(); }
+    void updateField(const SDFList& list){ m_field.update(list); }
+    void draw(GLProgram& prog) const { DrawRasterField(m_field, prog); }
 };
 
 struct Renderables 
 {
-    TwArray<RenderResource, 1024> resources;
-    GLProgram fwdProg;
+    TwArray<RenderResource, 64> resources;
     GLProgram zProg;
     GLProgram defProg;
-    GLProgram skyProg;
 
     DirectionalLight m_light;
 
     void init();
     void deinit();
-    void bindSun(DirectionalLight& light, GLProgram& prog, int channel = TX_SUN_CHANNEL);
-    void drawSky(const glm::vec3& eye, const Transform& IVP);
-    void shadowPass();
-    void prePass(const Transform& VP);
-    void fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
-    void defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
-    u16 request();
-    void release(u16 handle);
+    void bindSun(GLProgram& prog, int channel = TX_SUN_CHANNEL){ m_light.bind(prog, channel); }
+    void shadowPass(const Camera& cam);
+    void depthPass(const glm::vec3& eye, const Transform& VP);
+    void defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height, u32 target = 0);
+    u16 request(){ return resources.request(); }
+    void release(u16 handle){ resources.remove(handle); }
     RenderResource& operator[](u16 i){ return resources[i]; }
 };
 

@@ -12,11 +12,12 @@ struct GBuffer
     GLProgram postProg;
     Cubemap cmap;
     Framebuffer m_framebuffer;
-    Framebuffer m_postbuffs[2];
+    Framebuffer m_postbuff;
     unsigned width, height;
     void init(int w, int h);
     void deinit();
-    void draw(const Camera& cam, u32 dflag);
+    void drawCubemap(const Camera& cam){ cmap.draw(cam); }
+    void draw(const Camera& cam, u32 dflag, u32 target = 0);
     void screenshot();
 };
 

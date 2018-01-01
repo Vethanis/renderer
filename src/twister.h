@@ -82,12 +82,12 @@ public:
     {
         m_tail = 0;
     }
-    C insert(const T& item)
+    C request()
     {
         Assert(!full());
         const C pos = m_tail;
         ++m_tail;
-        m_data[pos] = item;
+        m_data[pos];
         m_twists[pos] = pos;
 
         m_lastTwist = m_lastTwist > pos ? m_lastTwist : pos;

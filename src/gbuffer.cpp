@@ -10,27 +10,26 @@
 
 unsigned draw_call = 0;
 
-const char* progFilenames[2] = {
-    "screenVert.glsl",
-    "light_g_buff.glsl"
-};
-const char* postFilenames[2] = {
-    "screenVert.glsl",
-    "postFrag.glsl"
-};
-
 void GBuffer::init(int w, int h){
     width = w;
     height = h;
 
     m_framebuffer.init(w, h, 4);
-    m_postbuffs[0].init(w, h, 1);
-    m_postbuffs[1].init(w, h, 1);
+    m_postbuff.init(w, h, 1);
 
+    const char* progFilenames[2] = {
+        "screenVert.glsl",
+        "light_g_buff.glsl"
+    };
+    const char* postFilenames[2] = {
+        "screenVert.glsl",
+        "postFrag.glsl"
+    };
     prog.setup(progFilenames, 2);
     postProg.setup(postFilenames, 2);
 
     cmap.init(512);
+    GLScreen::init();
 }
 void GBuffer::deinit(){
     prog.deinit();
@@ -38,13 +37,12 @@ void GBuffer::deinit(){
     cmap.deinit();
 
     m_framebuffer.deinit();
-    m_postbuffs[0].deinit();
-    m_postbuffs[1].deinit();
+    m_postbuff.deinit();
 }
 
 GBuffer g_gBuffer;
 
-void GBuffer::draw(const Camera& cam, u32 dflag)
+void GBuffer::draw(const Camera& cam, u32 dflag, u32 target)
 {
     ProfilerEvent("GBuffer::draw");
 
@@ -56,21 +54,15 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     const Transform IVP = glm::inverse(VP);
     const glm::vec3 eye = cam.getEye();
 
-    // SHADOWS pass ---------------------------------------------------------------------------
-    if(frameCounter() & 1)
-        g_Renderables.shadowPass();
-
-    // CUBEMAP pass ---------------------------------------------------------------------------
-    cmap.drawInto(cam);
-
     // WRITE pass -----------------------------------------------------------------------------
-    m_framebuffer.bind();
-    Framebuffer::clear();
-    g_Renderables.defDraw(eye, VP, dflag, width, height);
+    {
+        m_framebuffer.bind();
+        Framebuffer::clear();
+        g_Renderables.defDraw(eye, VP, dflag, width, height);
+    }
 
     // LIGHTING pass ---------------------------------------------------------------------------
-    Framebuffer& curBuf = m_postbuffs[draw_call & 1];
-    Framebuffer& prevBuf = m_postbuffs[(draw_call + 1) & 1];
+    Framebuffer& curBuf = m_postbuff;
 
     {
         ProfilerEvent("GBuffer::lighting_pass");
@@ -83,9 +75,13 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
         prog.bindTexture(0, m_framebuffer.m_attachments[0], "positionSampler");
         prog.bindTexture(1, m_framebuffer.m_attachments[1], "normalSampler");
         prog.bindTexture(2, m_framebuffer.m_attachments[2], "albedoSampler");
-        prog.bindCubemap(5, cmap.color_cubemap, "env_cm");
+
+        if(dflag != DF_DIRECT_CUBEMAP)
+            prog.bindCubemap(5, cmap.color_cubemap, "env_cm");
+        else
+            prog.bindCubemap(5, 0, "env_cm");
         
-        g_Renderables.bindSun(g_Renderables.m_light, prog, 10);
+        g_Renderables.bindSun(prog);
         prog.setUniformInt(seed_loc, rand());
         prog.setUniform(eye_loc, eye);
         prog.setUniformInt(draw_flag_loc, dflag);
@@ -104,7 +100,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     {
         ProfilerEvent("GBuffer::post_pass");
         
-        Framebuffer::bindDefault();
+        glBindFramebuffer(GL_FRAMEBUFFER, target); DebugGL();
         Framebuffer::clear();
         DepthContext dfctx(GL_ALWAYS);
     
@@ -125,5 +121,5 @@ void GBuffer::screenshot()
 {
     char buff[64];
     snprintf(buff, sizeof(buff), "screenshots/Screenshot_%i.png", draw_call);
-    m_postbuffs[draw_call & 1].saveToFile(buff, 0);
+    m_postbuff.saveToFile(buff, 0);
 }
