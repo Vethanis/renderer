@@ -135,20 +135,20 @@ void main()
     const float max_dis = 2.0 * max(SU.df_scale.x, max(SU.df_scale.y, SU.df_scale.z));
     vec3 pt = Position - rd * (max_dis * 0.6);
     
-    int i = 0;
     {
+        const float e = 0.001;
         float dis = 10000.0;
-        for(; i < 10; ++i)
+        for(int i = 0; i < 10; ++i)
         {
             dis = map(pt);
-            if(abs(dis) < 0.001 || dis > max_dis)
+            if(abs(dis) < e || dis > max_dis)
             {
                 break;
             }
             pt += rd * dis;
         }
 
-        if(dis > 0.1)
+        if(dis > e)
         {
             discard;
         }
