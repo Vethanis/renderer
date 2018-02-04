@@ -1,3 +1,4 @@
+
 #include "renderobject.h"
 #include "myglheaders.h"
 #include "mesh.h"
@@ -6,6 +7,9 @@
 #include "profiler.h"
 #include "framebuffer.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include "shared_uniform.h"
+#include "randf.h"
+#include "camera.h"
 
 Renderables g_Renderables;
 
@@ -23,13 +27,14 @@ void Renderables::init()
         "vert.glsl",
         "zfrag.glsl"
     };
-    const char* defFilenames[] = {
-        "vert.glsl",
-        "write_to_gbuff.glsl"
+    const char* fwdFilenames[] = 
+    {
+        "fwdVert.glsl",
+        "fwdFrag.glsl"
     };
 
+    fwdProg.setup(fwdFilenames, 2);
     zProg.setup(zFilenames, 2);
-    defProg.setup(defFilenames, 2);
 
     m_light.init(1024);
     m_light.m_direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
@@ -38,6 +43,10 @@ void Renderables::init()
     m_light.m_intensity = 10.0f;
     m_light.m_near = 10.0f;
     m_light.m_far = 100.0f;
+    
+    InitializeSharedUniforms();
+    InitRasterFields();
+    ProfilerInit();
 }
 
 void Renderables::deinit()
@@ -45,18 +54,25 @@ void Renderables::deinit()
     ProfilerEvent("Renderables::deinit");
     
     zProg.deinit();
-    defProg.deinit();
+    fwdProg.deinit();
     m_light.deinit();
+
+    ShutdownSharedUniforms();
+    ProfilerDeinit();
 }
 
 void Renderables::shadowPass(const Camera& cam)
 {
     ProfilerEvent("Renderables::shadowPass");
+
+    g_sharedUniforms.sunMatrix = m_light.m_matrix;
+    g_sharedUniforms.sunDirection = vec4(m_light.m_direction.x, m_light.m_direction.y, m_light.m_direction.z, g_sharedUniforms.sunDirection.w);
+    g_sharedUniforms.sunColor = vec4(m_light.m_color.x, m_light.m_color.y, m_light.m_color.z, m_light.m_intensity);
     
-    m_light.drawInto(cam);
+    depthPass(cam.getEye(), cam.getVP());
 }
 
-void Renderables::depthPass(const glm::vec3& eye, const Transform& VP)
+void Renderables::depthPass(const glm::vec3& eye, const mat4& VP)
 {
     ProfilerEvent("Renderables::depthPass");
     
@@ -65,32 +81,35 @@ void Renderables::depthPass(const glm::vec3& eye, const Transform& VP)
     Framebuffer::clear();
     ColorMaskContext nocolor(0);
 
+    g_sharedUniforms.MVP = VP;
+    g_sharedUniforms.eye = vec4(eye.x, eye.y, eye.z, g_sharedUniforms.eye.w);
+
     zProg.bind();
-    defProg.setUniform("eye", eye);
     for(const RenderResource& res : resources)
     {
-        const Transform M = glm::scale(glm::translate(Transform(), res.m_field.m_translation), res.m_field.m_scale);
-        zProg.setUniform("MVP", VP * M);
-        zProg.setUniform("M", M);
         res.draw(zProg);
     }
 }
 
-void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height, u32 target)
+void Renderables::fwdPass(const glm::vec3& eye, const mat4& VP, u32 dflag)
 {
-    ProfilerEvent("Renderables::defDraw");
+    ProfilerEvent("Renderables::fwdPass");
     
-    glViewport(0, 0, width, height); DebugGL();
+    DrawModeContext defaultCtx;
     Framebuffer::clear();
 
-    defProg.bind();
-    defProg.setUniform("eye", eye);
+    g_sharedUniforms.MVP = VP;
+    g_sharedUniforms.IVP = glm::inverse(VP);
+    g_sharedUniforms.eye = vec4(eye.x, eye.y, eye.z, g_sharedUniforms.eye.w);
+    g_sharedUniforms.seed_flags.y = s32(dflag);
+
+    g_sharedUniforms.sunMatrix = m_light.m_matrix;
+    g_sharedUniforms.sunDirection = vec4(m_light.m_direction.x, m_light.m_direction.y, m_light.m_direction.z, g_sharedUniforms.sunDirection.w);
+    g_sharedUniforms.sunColor = vec4(m_light.m_color.x, m_light.m_color.y, m_light.m_color.z, m_light.m_intensity);
+
+    fwdProg.bind();
     for(const RenderResource& res : resources)
     {
-        const Transform M = glm::scale(glm::translate(Transform(), res.m_field.m_translation), res.m_field.m_scale);
-        defProg.setUniform("MVP", VP * M);
-        defProg.setUniform("M", M);
-        res.draw(defProg);
+        res.draw(fwdProg);
     }
-
 }

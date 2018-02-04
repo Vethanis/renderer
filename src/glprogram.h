@@ -7,7 +7,7 @@
 
 struct GLProgram{
     u32 m_id;
-    Store<s32, 32> locations;
+    Store<s32, 8> locations;
     void init();
     void deinit();
     s32 addShader(const char* path, s32 type);
@@ -25,6 +25,7 @@ struct GLProgram{
     void setUniformFloat(s32 loc, float v);
     void bindTexture(s32 channel, s32 texture, const char* name);
     void bindCubemap(s32 channel, s32 texture, const char* name);
+    void bind3DTexture(s32 channel, s32 texture, const char* name);
     void computeCall(s32 x=0, s32 y=0, s32 z=0);
     void setup(const char** filenames, s32 count);
     template<typename T>

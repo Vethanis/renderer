@@ -28,6 +28,7 @@ layout(std430, binding = SHARED_UNIFORMS_BINDING) buffer SU_BUFFER
 
 void main() 
 {
-    gl_Position = SU.MVP * vec4(position.xyz, 1.0);
-    Position.xyz = vec3(SU.M * vec4(position.xyz, 1.0));
+    const vec3 pos = position.xyz * SU.df_scale.xyz + SU.df_translation.xyz;
+    Position.xyz = pos.xyz;
+    gl_Position = SU.MVP * vec4(pos.xyz, 1.0);
 }

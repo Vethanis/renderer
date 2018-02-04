@@ -135,3 +135,10 @@ void GLProgram::bindCubemap(s32 channel, s32 texture, const char* name)
     glBindTexture(GL_TEXTURE_CUBE_MAP, texture);  DebugGL();
     setUniformInt(name, channel);
 }
+
+void GLProgram::bind3DTexture(s32 channel, s32 texture, const char* name)
+{
+    glActiveTexture(GL_TEXTURE0 + channel);  DebugGL();
+    glBindTexture(GL_TEXTURE_3D, texture);  DebugGL();
+    setUniformInt(name, channel);
+}

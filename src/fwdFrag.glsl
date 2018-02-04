@@ -1,30 +1,31 @@
 #version 450 core
 
-out vec4 outColor;
+in vec3 Position;
+out vec4 Color;
 
-smooth in vec3 Position;
+#define SHARED_UNIFORMS_BINDING 13
 
-#define getAlbedo() Color.xyz
-#define getPosition() Position.xyz
-#define getNormal() Normal.xyz
-#define getRoughness() Position.w
-#define getMetalness() Normal.w
-#define getAO() Color.w
+struct SharedUniforms
+{
+    mat4 MVP;
+    mat4 IVP;
+    mat4 sunMatrix;
+    vec4 sunDirection;
+    vec4 sunColor; // w -> intensity
+    vec4 eye;
+    vec4 render_resolution; // zw -> sunNearFar
+    vec4 df_translation; // w -> df_pitch;
+    vec4 df_scale;
+    ivec4 seed_flags; // x -> seed, y -> draw mode, z -> draw pass (shadow, cubemap, color)
+    ivec4 sampler_states; // x -> env_cm; y -> sunDepth;
+};
 
-// ------------------------------------------------------------------------
+layout(std430, binding = SHARED_UNIFORMS_BINDING) buffer SU_BUFFER
+{
+    SharedUniforms SU;
+};
 
-uniform sampler2D sunDepth;
-
-uniform samplerCube env_cm;
-
-uniform mat4 sunMatrix;
-uniform vec3 sunDirection;
-uniform vec3 sunColor;
-uniform vec3 eye;
-uniform float sunIntensity;
-uniform int seed;
-
-// ------------------------------------------------------------------------
+uniform sampler3D distance_field;
 
 float rand( inout uint f) 
 {
@@ -36,50 +37,35 @@ float rand( inout uint f)
     return fract(float(f) * 2.3283064e-10);
 }
 
-float randBi(inout uint s)
+float map(vec3 pt)
 {
-    return rand(s) * 2.0 - 1.0;
+    pt -= SU.df_translation.xyz;
+    pt /= SU.df_scale.xyz;
+
+    return length(pt) - 0.5f;
+
+    //return texture(distance_field, pt).r;
 }
 
-// #9 in http://www-labs.iro.umontreal.ca/~mignotte/IFT2425/Documents/EfficientApproximationArctgFunction.pdf
-float fasterAtan(float x)
+vec3 mapN(vec3 pt)
 {
-    return 3.141592 * 0.25 * x 
-    - x * (abs(x) - 1.0) 
-        * (0.2447 + 0.0663 * abs(x));
-}
+    pt -= SU.df_translation.xyz;
+    pt /= SU.df_scale.xyz;
 
-float sunShadowing(vec3 p, inout uint s)
-{
-    const int samples = 8;
-    const float inv_samples = 1.0 / float(samples);
-    const float bias = 0.001;
+    const vec3 e = vec3(0.001, 0.0, 0.0);
 
-    vec4 projCoords = sunMatrix * vec4(p.xyz, 1.0);
-    projCoords /= projCoords.w;
-    projCoords = projCoords * 0.5 + 0.5;
-    float point_depth = projCoords.z;
-    if(point_depth > 1.0)
-        return 1.0;
-
-    float occlusion = 0.0;
-    const float variance = 0.005;
-    for(int i = 0; i < samples; ++i)
-    {
-        const vec2 p = vec2(randBi(s), randBi(s)) * variance;
-        const float d = texture(sunDepth, projCoords.xy + p).r + bias;
-        occlusion += point_depth > d ? 0.0 : 1.0;
-    }
-    occlusion *= inv_samples;
-
-    return occlusion;
+    return normalize(vec3(
+        map(pt + e.xyz) - map(pt - e.xyz),
+        map(pt + e.yxz) - map(pt - e.yxz),
+        map(pt + e.yzx) - map(pt - e.yzx)
+    ));
 }
 
 // ------------------------------------------------------------------------
 
-float DisGGX(vec3 N, vec3 H)
+float DisGGX(vec3 N, vec3 H, float roughness)
 {
-    const float a = getRoughness() * getRoughness();
+    const float a = roughness * roughness;
     const float a2 = a * a;
     const float NdH = max(dot(N, H), 0.0);
     const float NdH2 = NdH * NdH;
@@ -91,9 +77,9 @@ float DisGGX(vec3 N, vec3 H)
     return nom / denom;
 }
 
-float GeomSchlickGGX(float NdV)
+float GeomSchlickGGX(float NdV, float roughness)
 {
-    const float r = (getRoughness() + 1.0);
+    const float r = (roughness + 1.0);
     const float k = (r * r) / 8.0;
 
     const float nom = NdV;
@@ -102,12 +88,12 @@ float GeomSchlickGGX(float NdV)
     return nom / denom;
 }
 
-float GeomSmith(vec3 N, vec3 V, vec3 L)
+float GeomSmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     const float NdV = max(dot(N, V), 0.0);
     const float NdL = max(dot(N, L), 0.0);
-    const float ggx2 = GeomSchlickGGX(NdV);
-    const float ggx1 = GeomSchlickGGX(NdL);
+    const float ggx2 = GeomSchlickGGX(NdV, roughness);
+    const float ggx1 = GeomSchlickGGX(NdL, roughness);
 
     return ggx1 * ggx2;
 }
@@ -117,69 +103,73 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-// ------------------------------------------------------------------------
-
-vec3 pbr_lighting(vec3 V, vec3 L, vec3 radiance)
+vec3 pbr_lighting(vec3 V, vec3 L, vec3 N, vec3 albedo, float roughness, float metalness, vec3 radiance)
 {
-    const float NdL = max(0.0, dot(getNormal(), L));
-    const vec3 F0 = mix(vec3(0.04), getAlbedo(), getMetalness());
+    const float NdL = max(0.0, dot(N, L));
+    const vec3 F0 = mix(vec3(0.04), albedo, metalness);
     const vec3 H = normalize(V + L);
 
-    const float NDF = DisGGX(getNormal(), H);
-    const float G = GeomSmith(getNormal(), V, L);
+    const float NDF = DisGGX(N, H, roughness);
+    const float G = GeomSmith(N, V, L, roughness);
     const vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
     const vec3 nom = NDF * G * F;
-    const float denom = 4.0 * max(dot(getNormal(), V), 0.0) * NdL + 0.001;
+    const float denom = 4.0 * max(dot(N, V), 0.0) * NdL + 0.001;
     const vec3 specular = nom / denom;
 
     const vec3 kS = F;
-    const vec3 kD = (vec3(1.0) - kS) * (1.0 - getMetalness());
+    const vec3 kD = (vec3(1.0) - kS) * (1.0 - metalness);
 
-    return (kD * getAlbedo() / 3.141592 + specular) * radiance * NdL;
-}
-
-vec3 direct_lighting(inout uint s)
-{
-    const vec3 V = normalize(eye - getPosition());
-    const vec3 L = sunDirection;
-    const vec3 radiance = sunColor * sunIntensity;
-
-    vec3 light = pbr_lighting(V, L, radiance);
-
-    light *= sunShadowing(getPosition(), s);
-    light *= 1.0 - getAO();
-
-    light += vec3(0.01) * getAlbedo();
-
-    return light;
+    return (kD * albedo / 3.141592 + specular) * radiance * NdL;
 }
 
 // ------------------------------------------------------------------------
 
 void main()
 {
-    if(Valid == 0)
-    {
-        discard;
-        return;
-    }
-    uint s = uint(seed) 
+    uint s = uint(SU.seed_flags.x) 
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
-        
-    const vec2 coord = gl_PointCoord * 2.0 - 1.0;
-    if(length(coord) > 1.0)
+
+    const vec3 rd = normalize(Position.xyz - SU.eye.xyz);
+    const float max_dis = 2.0 * max(SU.df_scale.x, max(SU.df_scale.y, SU.df_scale.z));
+    vec3 pt = Position - rd * (max_dis * 0.6);
+    
+    int i = 0;
     {
-        discard;
-        return;
+        float dis = 10000.0;
+        for(; i < 10; ++i)
+        {
+            dis = map(pt);
+            if(abs(dis) < 0.001 || dis > max_dis)
+            {
+                break;
+            }
+            pt += rd * dis;
+        }
+
+        if(dis > 0.1)
+        {
+            discard;
+        }
     }
 
-    vec3 lighting = direct_lighting(s);
+    vec4 scrPt = SU.MVP * vec4(pt.xyz, 1.0);
+    scrPt /= scrPt.w;
+    gl_FragDepth = scrPt.z;
 
-    lighting.rgb.x += 0.0001 * randBi(s);
-    lighting.rgb.y += 0.0001 * randBi(s);
-    lighting.rgb.z += 0.0001 * randBi(s);
+    const vec3 V = -rd;
+    const vec3 L = SU.sunDirection.xyz;
+    const vec3 N = mapN(pt);
+    const vec3 albedo = vec3(0.7, 0.1, 0.2);
+    const float roughness = 0.25;
+    const float metalness = 0.001;
+    const vec3 radiance = SU.sunColor.xyz * SU.sunColor.w;
+    vec3 color = pbr_lighting(V, L, N, albedo, roughness, metalness, radiance);
 
-    outColor = vec4(lighting.rgb, 1.0);
+    color = color / (color + vec3(1.0));
+
+    color += 0.01 * vec3(rand(s), rand(s), rand(s));
+
+    Color = vec4(color.xyz, 1.0);
 }

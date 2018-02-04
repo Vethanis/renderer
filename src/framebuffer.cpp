@@ -93,13 +93,12 @@ void Framebuffer::saveToFile(const char* filename, int attachment)
         }
     }
 
-    u32 s = 72917124;
     for(int i = 0; i < num_elems; ++i)
     {
         float val = texels[i] * 2.0f;
         val = val / (1.0f + val);
         val = powf(val, 1.0f / 2.2f);
-        val += randf(s) / 255.0f;
+        val += randf() / 255.0f;
         val *= 255.0f;
         if(val > 255.0f)
             val = 255.0f;

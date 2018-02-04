@@ -49,7 +49,7 @@ void Cubemap::deinit(){
     glDeleteTextures(1, &color_cubemap);
 }
 
-const Transform Vs[Cubemap::num_faces] = {
+const mat4 Vs[Cubemap::num_faces] = {
     glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
     glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
     glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
@@ -57,7 +57,7 @@ const Transform Vs[Cubemap::num_faces] = {
     glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
     glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
 };
-const Transform P = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);  
+const mat4 P = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);  
 
 void Cubemap::draw(const Camera& cam)
 {
@@ -68,9 +68,9 @@ void Cubemap::draw(const Camera& cam)
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
         GL_TEXTURE_CUBE_MAP_POSITIVE_X + current_face, color_cubemap, 0); DebugGL();
 
-    const Transform VP = P * glm::translate(Vs[current_face], -cam.getEye());
-    g_Renderables.defDraw(cam.getEye(), VP, DF_DIRECT_CUBEMAP, m_size, m_size, fbo);
-    g_gBuffer.draw(cam, DF_DIRECT_CUBEMAP, fbo);
+    const mat4 VP = P * glm::translate(Vs[current_face], -cam.getEye());
+    //g_Renderables.defDraw(cam.getEye(), VP, DF_DIRECT_CUBEMAP, m_size, m_size, fbo);
+    //g_gBuffer.draw(cam, DF_DIRECT_CUBEMAP, fbo);
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, color_cubemap); DebugGL();
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP); DebugGL();

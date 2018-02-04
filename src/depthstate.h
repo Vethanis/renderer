@@ -1,5 +1,7 @@
 #pragma once
 
+#include "myglheaders.h"
+
 void pushDepthFunc(int mode);
 void popDepthFunc();
 void pushDepthMask(int mode);
@@ -35,7 +37,7 @@ struct ColorMaskContext {
 };
 
 struct DrawModeContext {
-    DrawModeContext(int depthFunc, int depthMask, int colorMask){
+    DrawModeContext(int depthFunc = GL_LESS, int depthMask = GL_TRUE, int colorMask = GL_TRUE){
         pushDepthFunc(depthFunc);
         pushDepthMask(depthMask);
         pushColorMask(colorMask);

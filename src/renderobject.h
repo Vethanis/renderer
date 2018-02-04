@@ -1,13 +1,10 @@
 #pragma once 
 
 #include "twister.h"
-#include "hashstring.h"
 #include "glprogram.h"
-#include "transform.h"
-#include "mesh.h"
 #include "directional_light.h"
-#include "transform.h"
 #include "rasterfield.h"
+#include "linmath.h"
 
 // ------------------------------------------------------------------------
 
@@ -56,8 +53,8 @@ struct RenderResource
 struct Renderables 
 {
     TwArray<RenderResource, 64> resources;
+    GLProgram fwdProg;
     GLProgram zProg;
-    GLProgram defProg;
 
     DirectionalLight m_light;
 
@@ -65,11 +62,13 @@ struct Renderables
     void deinit();
     void bindSun(GLProgram& prog, int channel = TX_SUN_CHANNEL){ m_light.bind(prog, channel); }
     void shadowPass(const Camera& cam);
-    void depthPass(const glm::vec3& eye, const Transform& VP);
-    void defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height, u32 target = 0);
+    void depthPass(const vec3& eye, const mat4& VP);
+    void fwdPass(const vec3& eye, const mat4& VP, u32 dflag);
     u16 request(){ return resources.request(); }
     void release(u16 handle){ resources.remove(handle); }
     RenderResource& operator[](u16 i){ return resources[i]; }
+    RenderResource* begin(){ return resources.begin(); }
+    RenderResource* end(){ return resources.end(); }
 };
 
 extern Renderables g_Renderables;

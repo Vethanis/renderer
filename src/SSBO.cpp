@@ -16,7 +16,7 @@ void SSBO::deinit(){
 void SSBO::upload(const void* ptr, unsigned bytes){
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
     DebugGL();
-    glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, ptr, GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, ptr, GL_STATIC_COPY);
     DebugGL();
 }
 void SSBO::download(void* dest, unsigned bytes){

@@ -66,6 +66,7 @@ void main()
         }
     }
 
+    // replace this with newtons
     vec3 A = pt - rd * df_pitch;
     vec3 B = pt + rd * df_pitch;
     for(int i = 0; i < 8; ++i)
@@ -91,8 +92,11 @@ void main()
     vec4 scrPt = MVP * vec4(pt.xyz, 1.0);
     scrPt /= scrPt.w;
     gl_FragDepth = scrPt.z;
+    
+
 
     gPosition.xyz = pt.xyz;
+    gPosition.xyz = Position.xyz;
     gNormal.xyz = get_normal(pt);
     gAlbedo.rgb = get_color(pt);
     

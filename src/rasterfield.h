@@ -5,7 +5,8 @@
 #include "linmath.h"
 #include "sdf.h"
 
-#define RF_CAP 8
+#define RF_CAP 64
+#define RASTER_FIELD_BINDING 9
 
 struct GLProgram;
 
@@ -16,11 +17,13 @@ struct RasterField
     vec3 m_scale;
     RasterField()
     {
-        u32* p = (u32*)m_field;
+        m_translation = vec3(0.0f);
+        m_scale = vec3(1.0f);
+        float* p = &m_field[0][0][0];
         const u32 count = RF_CAP * RF_CAP * RF_CAP;
-        for(u32 i = 0u; i < count; ++i)
+        for(u32 i = 0; i < count; ++i)
         {
-            p[i] = 0u;
+            p[i] = 0.0f;
         }
     }
     void updateColumn(const SDFList& sdfs, const u32 column);

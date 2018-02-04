@@ -50,15 +50,15 @@ void GBuffer::draw(const Camera& cam, u32 dflag, u32 target)
     static const int eye_loc = prog.getUniformLocation("eye");
     static const int draw_flag_loc = prog.getUniformLocation("draw_flags");
 
-    const Transform VP = cam.getVP();
-    const Transform IVP = glm::inverse(VP);
+    const mat4 VP = cam.getVP();
+    const mat4 IVP = glm::inverse(VP);
     const glm::vec3 eye = cam.getEye();
 
     // WRITE pass -----------------------------------------------------------------------------
     {
         m_framebuffer.bind();
         Framebuffer::clear();
-        g_Renderables.defDraw(eye, VP, dflag, width, height);
+        //g_Renderables.defDraw(eye, VP, dflag, width, height);
     }
 
     // LIGHTING pass ---------------------------------------------------------------------------

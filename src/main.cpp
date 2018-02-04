@@ -16,21 +16,19 @@
 
 void setupScene()
 {
-    InitRasterFields();
     u16 handle = g_Renderables.request();
     RenderResource& res = g_Renderables[handle];
     SDFList list;
     SDF& sdf = list.grow();
     sdf.scale = vec3(0.5f);
+    sdf.translation = vec3(0.5f);
     sdf.material.setColor(vec3(1.0f, 0.0f, 0.0f));
     res.updateField(list);
 }
 
 void DrawScene(const Camera& cam, u32 dflag)
 {
-    g_Renderables.shadowPass(cam);
-    g_gBuffer.drawCubemap(cam);
-    g_gBuffer.draw(cam, dflag);
+    g_Renderables.fwdPass(cam.getEye(), cam.getVP(), dflag);
 }
 
 void FpsStats()
@@ -42,12 +40,12 @@ void FpsStats()
     }
 }
 
-s32 main(s32 argc, char* argv[])
+s32 main(s32 argc, const char** argv)
 {
     srand((u32)time(0));
 
-    s32 WIDTH = s32(1920.0f * 1.75f);
-    s32 HEIGHT = s32(1080.0f * 1.75f);
+    s32 WIDTH = 1280;
+    s32 HEIGHT = 720;
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -63,10 +61,9 @@ s32 main(s32 argc, char* argv[])
     Input input(window.getWindow());
 
     g_Renderables.init();
-    g_gBuffer.init(WIDTH, HEIGHT);
+
     input.poll();
     u32 flag = DF_INDIRECT;
-    ProfilerInit();
 
     setupScene();
 
@@ -157,7 +154,7 @@ s32 main(s32 argc, char* argv[])
                 case GLFW_KEY_O: flag = DF_VIS_AO; break;
                 case GLFW_KEY_F12:
                 {
-                    g_gBuffer.screenshot();
+                    //g_gBuffer.screenshot();
                 }
                 break;
             }
@@ -170,8 +167,6 @@ s32 main(s32 argc, char* argv[])
     }
     
     g_Renderables.deinit();
-    g_gBuffer.deinit();
-    ProfilerDeinit();
 
     return 0;
 }

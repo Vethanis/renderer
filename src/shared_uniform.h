@@ -1,8 +1,6 @@
-#version 450 core
+#pragma once
 
-layout(location = 0) in vec3 position;
-
-out vec3 Position;
+#include "linmath.h"
 
 #define SHARED_UNIFORMS_BINDING 13
 
@@ -21,13 +19,8 @@ struct SharedUniforms
     ivec4 sampler_states; // x -> env_cm; y -> sunDepth;
 };
 
-layout(std430, binding = SHARED_UNIFORMS_BINDING) buffer SU_BUFFER
-{
-    SharedUniforms SU;
-};
+extern SharedUniforms g_sharedUniforms;
 
-void main() 
-{
-    gl_Position = SU.MVP * vec4(position.xyz, 1.0);
-    Position.xyz = vec3(SU.M * vec4(position.xyz, 1.0));
-}
+void InitializeSharedUniforms();
+void NotifySharedUniformsUpdated();
+void ShutdownSharedUniforms();

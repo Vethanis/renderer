@@ -4,6 +4,7 @@
 #include "myglheaders.h"
 #include "mesh.h"
 #include "debugmacro.h"
+#include "shared_uniform.h"
 
 template<typename T>
 struct mesh_layout
@@ -87,6 +88,8 @@ void Mesh::draw()const
         return;
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); DebugGL();
+
+    NotifySharedUniformsUpdated();
 
     glBindVertexArray(vao); DebugGL();;
     glDrawArrays(GL_TRIANGLES, 0, num_indices);
