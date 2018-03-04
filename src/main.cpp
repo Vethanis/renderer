@@ -12,24 +12,23 @@
 #include "assetstore.h"
 #include "worldgen.h"
 #include "randf.h"
+#include <ctime>
 
-void SceneSetup()
+unsigned scene_mesh_id = 5;
+void SceneSetup(vec3 pt, float radius)
 {
-    HashString albedo("basic_albedo.png");
-    HashString material("basic_material.png");
-    HashString mesh("test mesh");
+    const HashString albedo("basic_albedo.png");
+    const HashString material("basic_material.png");
+
+    HashString mesh = scene_mesh_id++;
     g_SdfStore.insert(mesh, {});
     SDFDefinition* pDef = g_SdfStore[mesh];
     SDFList& list = pDef->m_sdfs;
-    pDef->m_sdfDepth = 6;
-    for(int i = 0; i < 100; ++i)
-    {
-        SDF* pSdf = &list.grow();
-        //pSdf->type = SDF_BOX;
-        pSdf->translation.x += randf() * 10.0f;
-        pSdf->translation.y += randf() * 10.0f;
-        pSdf->translation.z += -10.0f + randf() * 10.0f;
-    }
+    pDef->m_sdfDepth = 5;
+
+    SDF* pSdf = &list.grow();
+    pSdf->translation = pt;
+    pSdf->scale = vec3(radius);
     
     g_Renderables.create(mesh, albedo, material);
 }
@@ -50,6 +49,8 @@ void FpsStats()
 
 int main(int argc, char* argv[])
 {
+    g_randSeed = time(NULL);
+
     int WIDTH = 1600;
     int HEIGHT = 900;
 
@@ -73,7 +74,7 @@ int main(int argc, char* argv[])
 
     ProfilerInit();
 
-    SceneSetup();
+    SceneSetup(camera.getAxis() + camera.getEye(), 1.0f);
 
     while(window.open())
     {
@@ -163,6 +164,17 @@ int main(int argc, char* argv[])
                     g_gBuffer.screenshot();
                 }
                 break;
+            }
+        }
+
+        for(const int* pKey = input.downBegin(); pKey != input.downEnd(); ++pKey)
+        {
+            switch(*pKey)
+            {
+                case GLFW_KEY_F1:
+                {
+                    SceneSetup(camera.getAxis() * 3.0f + camera.getEye(), 1.0f);
+                }
             }
         }
 
