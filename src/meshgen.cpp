@@ -176,48 +176,11 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
         ib[i] = mesh.indices[i];
     }
 
-    std::atomic<unsigned> curVert;
-    curVert = 0;
-
-    auto DoVert = [&]()
+    for(unsigned i = 0; i < mesh.nvertices; ++i)
     {
-        while(true)
-        {
-            const unsigned i = curVert++;
-            if(i >= mesh.nvertices)
-                break;
-
-            const qh_vertex_t& vert = mesh.vertices[i];
-            vec3 pt(vert.x, vert.y, vert.z);
-            vec3 N = SDFNorm(sdfs, pt);
-
-            vec2 uv;
-            {
-                const vec3 d = glm::abs(N);
-                const float a = glm::max(glm::max(d.x, d.y), d.z);
-                if(a == d.x)
-                    uv = vec2(pt.z, pt.y);
-                else if(a == d.y)
-                    uv = vec2(pt.x, pt.z);
-                else
-                    uv = vec2(pt.x, pt.y);
-            }
-
-            vb[i] = {
-                vec4(pt.x, pt.y, pt.z, uv.x),
-                vec4(N.x, N.y, N.z, uv.y)
-            };
-        }
-    };
-
-    for(std::thread& t : threads)
-    {
-        t = std::thread(DoVert);
-    }
-    
-    for(std::thread& t : threads)
-    {
-        t.join();
+        vb[i].position.x = mesh.vertices[i].x;
+        vb[i].position.y = mesh.vertices[i].y;
+        vb[i].position.z = mesh.vertices[i].z;
     }
 
     qh_free_mesh(mesh);

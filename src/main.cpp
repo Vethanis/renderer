@@ -29,6 +29,7 @@ void SceneSetup(vec3 pt, float radius)
     SDF* pSdf = &list.grow();
     pSdf->translation = pt;
     pSdf->scale = vec3(radius);
+    pDef->m_deleteOnUse = true;
     
     g_Renderables.create(mesh, albedo, material);
 }

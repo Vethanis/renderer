@@ -188,11 +188,9 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     
     for(auto& res : resources){
         const Transform& M = res.m_transform;
-        const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
         fwdProg.setUniform("MVP", VP * M);
         fwdProg.setUniform("M", M);
-        fwdProg.setUniform("IM", IM);
 
         res.bind(fwdProg, materialparam_ubo);
         res.draw();
@@ -214,11 +212,9 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
 
     for(auto& res : resources){
         const Transform& M = res.m_transform;
-        const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
         defProg.setUniform("MVP", VP * M);
         defProg.setUniform("M", M);
-        defProg.setUniform("IM", IM);
         defProg.setUniform("velocity", res.m_prevVelocity);
         defProg.setUniform("uv_scale", res.m_uv_scale);
         defProg.setUniform("uv_offset", res.m_uv_offset);

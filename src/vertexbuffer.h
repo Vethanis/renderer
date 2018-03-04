@@ -5,8 +5,7 @@
 
 struct Vertex 
 {
-    vec4 position;     // w = uv.x
-    vec4 normal;       // w = uv.y
+    vec4 position;
 };
 
 typedef Vector<Vertex> VertexBuffer;

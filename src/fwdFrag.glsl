@@ -2,7 +2,6 @@
 
 out vec4 outColor;
 
-in vec3 MacroNormal;
 in vec3 P;
 
 // ------------------------------------------------------------------------
@@ -157,6 +156,7 @@ vec3 normalFromHeight(float h){
     const vec3 dpdx = dFdx(P);
     const vec3 dpdy = dFdy(P);
 
+    const vec3 MacroNormal = normalize(cross(dpdx, dpdy));
     const vec3 r1 = cross(dpdy, MacroNormal);
     const vec3 r2 = cross(MacroNormal, dpdx);
 
@@ -169,6 +169,10 @@ vec3 normalFromHeight(float h){
 
 material getMaterial(){
     material mat;
+
+    const vec3 dpdx = dFdx(P);
+    const vec3 dpdy = dFdy(P);
+    const vec3 MacroNormal = normalize(cross(dpdx, dpdy));
 
     vec2 uv;
     {

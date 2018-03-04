@@ -7,7 +7,6 @@ layout (location = 3) out vec4 gVelocity; // rgb: velocity, a: depth
 
 // ------------------------------------------------------------------------
 
-in vec3 MacroNormal;
 in vec3 P;
 
 // ------------------------------------------------------------------------
@@ -62,6 +61,7 @@ vec3 normalFromHeight(float h)
     const vec3 dpdx = dFdx(P);
     const vec3 dpdy = dFdy(P);
 
+    const vec3 MacroNormal = normalize(cross(dpdx, dpdy));
     const vec3 r1 = cross(dpdy, MacroNormal);
     const vec3 r2 = cross(MacroNormal, dpdx);
 
@@ -185,6 +185,9 @@ void main(){
         ^ uint(gl_FragCoord.x * 39163.0) 
         ^ uint(gl_FragCoord.y * 64601.0);
 
+    const vec3 dpdx = dFdx(P);
+    const vec3 dpdy = dFdy(P);
+    const vec3 MacroNormal = normalize(cross(dpdx, dpdy));
     const vec3 tanV = transpose(GetBasis(MacroNormal)) * normalize(eye - P);
 
     vec2 uv;

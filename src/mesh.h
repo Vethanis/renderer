@@ -47,6 +47,10 @@ inline void GeometryStoreElement::OnLoad(unsigned name)
     SDFDefinition* pDef = g_SdfStore[name];
     assert(pDef);
     CreateMesh(m_geometry, pDef->m_sdfs, pDef->m_sdfDepth);
+    if(pDef->m_deleteOnUse)
+    {
+        g_SdfStore.remove(name);
+    }
     Mesh* pMesh = g_MeshStore[name];
     pMesh->upload(m_geometry);
 };
