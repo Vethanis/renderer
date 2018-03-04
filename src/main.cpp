@@ -52,10 +52,10 @@ void FpsStats()
 
 int main(int argc, char* argv[])
 {
-    g_randSeed = time(NULL);
+    g_randSeed = (unsigned)time(NULL);
 
-    int WIDTH = 1920 * 1.5f;
-    int HEIGHT = 1080 * 1.5f;
+    int WIDTH = int(1920.0f * 1.5f);
+    int HEIGHT = int(1080.0f * 1.5f);
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
