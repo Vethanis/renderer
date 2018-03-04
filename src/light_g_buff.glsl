@@ -308,8 +308,7 @@ vec3 indirect_lighting(inout uint s){
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
 
-    light *= (1.0 - HeightOcclusion(mat_position(mat), mat_normal(mat), s) * 0.95);
-
+    light *= (1.0 - HeightOcclusion(mat_position(mat), mat_normal(mat), s));
     light *= (1.0 - AmbientOcclusion(mat_position(mat), mat_normal(mat), s));
 
     return light;

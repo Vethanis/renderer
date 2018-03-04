@@ -17,10 +17,11 @@ void GLProgram::deinit(){
 }
 
 int GLProgram::addShader(const char* path, int type){
-    char* src = load_file(path);
-    unsigned handle = createShader(src, type);
+    Vector<char> src;
+    load_file(path, src);
+    assert(src.count());
+    unsigned handle = createShader(src.begin(), type);
     glAttachShader(m_id, handle);  DebugGL();;
-    release_file(src);
     return handle;
 }
 

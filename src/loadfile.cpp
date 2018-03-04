@@ -3,30 +3,21 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "stdio.h"
-#include "string.h"
-#include "assert.h"
+#include <cassert>
 
-char* load_file(const char* path){
+void load_file(const char* path, Vector<char>& contents)
+{
+    contents.clear();
     FILE* f = fopen(path, "rb");
-    if(!f){
-        printf("Could not open file: %s\n", path);
-        assert(false);
-    }
+    if(!f)
+        return;
+    
     fseek(f, 0, SEEK_END);
-    const size_t sz = size_t(ftell(f));
-    char* out = new char[sz + 1];
+    const int sz = ftell(f);
+    contents.resize(sz + 1);
     rewind(f);
-    size_t blocksz = 1, shifts = 0;
-    while((blocksz & sz) == 0){
-        blocksz = blocksz << 1;
-        shifts++;
-    }
-    fread(out, blocksz, sz >> shifts, f);
+    assert(fread(contents.begin(), sz, 1, f) == 1);
     fclose(f);
-    out[sz] = 0;
-    return out;
+    contents[sz] = 0;
 }
 
-void release_file(const char* p){
-    delete[] p;
-}
