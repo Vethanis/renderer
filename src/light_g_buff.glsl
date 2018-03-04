@@ -19,6 +19,7 @@
 #define DF_VIS_SUN_SHADOW_DEPTH 14
 #define DF_VIS_VELOCITY     15
 #define DF_VIS_SHADOW_BUFFER 16
+#define DF_VIS_AMBIENT_OCCLUSION 17
 
 #define ODF_DEFAULT         0
 #define ODF_SKY             1
@@ -45,6 +46,7 @@ uniform sampler2D prevColor;
 uniform samplerCube env_cm;
 uniform sampler2D sunDepth;
 
+uniform mat4 MVP;
 uniform mat4 IVP;
 uniform mat4 prevVP;
 uniform mat4 sunMatrix;
@@ -88,8 +90,12 @@ vec3 env_cubemap(vec3 dir){
     return texture(env_cm, dir).rgb;
 }
 
-float getDepth(vec2 uv){
+float getHeight(vec2 uv){
     return texture(albedoSampler, uv).w;
+}
+
+float getDepth(vec2 uv){
+    return texture(velocitySampler, uv).w;
 }
 
 // ------------------------------------------------------------------------
@@ -159,7 +165,7 @@ vec3 toWorld(float x, float y, float z){
 float HeightOcclusion(vec3 N, inout uint s){
     const int samples = 4;
     const float bias = 0.1;
-    const float base = getDepth(fragUv);
+    const float base = getHeight(fragUv);
     if(base == 0.0)
         return 0.0;
         
@@ -169,11 +175,34 @@ float HeightOcclusion(vec3 N, inout uint s){
     for(int i = 0; i < samples; ++i)
     {
         const vec2 offset = radius * vec2(randBi(s), randBi(s));
-        const float p = getDepth(fragUv + offset);
+        const float p = getHeight(fragUv + offset);
         occlusion += p + bias < base ? 1.0 : 0.0;
         radius *= 1.333;
     }
     return occlusion / float(samples);
+}
+
+float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
+{
+    const float radius = 0.15;
+    const int samples = 4;
+    float occlusion = 0.0;
+    for(int i = 0; i < samples; ++i)
+    {
+        const vec3 dir = normalize(N + (vec3(rand(s), rand(s), rand(s)) * 2.0 - 1.0));
+        const vec3 samplePoint = P + radius * dir;
+        vec4 screenPoint = MVP * vec4(samplePoint.xyz, 1.0);
+        screenPoint /= screenPoint.w;
+        screenPoint.xyz = screenPoint.xyz * 0.5 + 0.5;
+        const float depth = getDepth(screenPoint.xy);
+
+        float rangeCheck = smoothstep(0.0, 1.0, radius * 0.1 / abs(screenPoint.z - depth));
+
+        occlusion += depth < screenPoint.z ? rangeCheck : 0.0;
+    }
+
+    float ao = occlusion / float(samples);
+    return ao;
 }
 
 // ------------------------------------------------------------------------
@@ -276,6 +305,9 @@ vec3 indirect_lighting(inout uint s){
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
 
     light *= (1.0 - HeightOcclusion(mat_normal(mat), s) * 0.95);
+
+    float ao = AmbientOcclusion(mat_position(mat), mat_normal(mat), s);
+    light *= (1.0 - ao);
 
     return light;
 }
@@ -432,6 +464,13 @@ vec3 visualizeShadowBuffer()
     return vec3(depth);
 }
 
+
+vec3 visualizeAmbientOcclusion(inout uint s)
+{
+    const material mat = getMaterial();
+    return vec3(1.0 - AmbientOcclusion(mat_position(mat), mat_normal(mat), s));
+}
+
 // -----------------------------------------------------------------------
 
 void main(){
@@ -499,6 +538,9 @@ void main(){
                 break;
             case DF_VIS_VELOCITY:
                 outColor.xyz = texture(velocitySampler, fragUv).xyz;
+                return;
+            case DF_VIS_AMBIENT_OCCLUSION:
+                outColor.xyz = visualizeAmbientOcclusion(s);
                 return;
         }
     }

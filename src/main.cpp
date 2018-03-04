@@ -22,14 +22,16 @@ void SceneSetup(vec3 pt, float radius)
 
     HashString mesh = scene_mesh_id++;
     g_SdfStore.insert(mesh, {});
-    SDFDefinition* pDef = g_SdfStore[mesh];
-    SDFList& list = pDef->m_sdfs;
-    pDef->m_sdfDepth = 5;
 
-    SDF* pSdf = &list.grow();
-    pSdf->translation = pt;
-    pSdf->scale = vec3(radius);
+    SDFDefinition* pDef = g_SdfStore[mesh];
     pDef->m_deleteOnUse = true;
+    pDef->m_sdfDepth = 3;
+
+    SDFList& list = pDef->m_sdfs;
+
+    SDF& sdf = list.grow();
+    sdf.translation = pt;
+    sdf.scale = vec3(radius);
     
     g_Renderables.create(mesh, albedo, material);
 }
@@ -52,8 +54,8 @@ int main(int argc, char* argv[])
 {
     g_randSeed = time(NULL);
 
-    int WIDTH = 1600;
-    int HEIGHT = 900;
+    int WIDTH = 1920 * 1.5f;
+    int HEIGHT = 1080 * 1.5f;
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -160,6 +162,7 @@ int main(int argc, char* argv[])
                 break;
                 case GLFW_KEY_KP_0: flag = DF_VIS_SHADOW_BUFFER; break;
                 case GLFW_KEY_V: flag = DF_VIS_SUN_SHADOW_DEPTH; break;
+                case GLFW_KEY_O: flag = DF_VIS_AMBIENT_OCCLUSION; break;
                 case GLFW_KEY_F12:
                 {
                     g_gBuffer.screenshot();

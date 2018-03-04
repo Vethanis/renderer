@@ -99,6 +99,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
         prog.setUniform(eye_loc, eye);
         prog.setUniformInt(draw_flag_loc, dflag);
         prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
+        prog.setUniform("MVP", VP);
         prog.setUniform("IVP", IVP);
         prog.setUniform("prevVP", cam.getPrevVP());
         prog.setUniform("sunNearFar", glm::vec2(
