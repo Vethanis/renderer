@@ -10,12 +10,19 @@
 #include "framecounter.h"
 #include "profiler.h"
 #include "assetstore.h"
+#include "worldgen.h"
 
 void SceneSetup()
 {
     HashString albedo("basic_albedo.png");
     HashString material("basic_material.png");
-    const unsigned mesh = 42;
+    HashString mesh("test mesh");
+    g_SdfStore.insert(mesh, {});
+    SDFDefinition* pDef = g_SdfStore[mesh];
+    SDFList& list = pDef->m_sdfs;
+    pDef->m_sdfDepth = 5;
+    SDF& sdf = list.grow();
+    //sdf.type = SDF_BOX;
     g_Renderables.create(mesh, albedo, material);
 }
 

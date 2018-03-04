@@ -1,15 +1,12 @@
 #pragma once
 
 #include "sdf.h"
+#include "store.h"
 
-struct WorldTile
+struct SDFDefinition
 {
     SDFList m_sdfs;
-    unsigned m_sdfDepth;
-
-    WorldTile(unsigned name);
-    WorldTile()
-    {
-        m_sdfDepth = 0;
-    }
+    unsigned m_sdfDepth = 0;
 };
+
+extern Store<SDFDefinition, 1024> g_SdfStore;

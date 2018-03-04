@@ -1,7 +1,6 @@
 #pragma once 
 
 #include <cassert>
-#include "hash.h"
 
 template<typename T, const unsigned cap>
 class Store
@@ -108,9 +107,6 @@ public:
             ++dist;
         }
     }
-    void insert(const char* name, const T& val){
-        insert(fnv(name), val);
-    }
     T* get(unsigned key){
         unsigned loc = index_of(key);
         if(loc == invalid_val){
@@ -118,14 +114,8 @@ public:
         }
         return data + loc;
     }
-    T* get(const char* name){
-        return get(fnv(name));
-    }
     T* operator[](unsigned key){
         return get(key);
-    }
-    T* operator[](const char* name){
-        return get(fnv(name));
     }
     void remove(unsigned key){
         unsigned loc = index_of(key);
@@ -149,9 +139,6 @@ public:
                 trueLoc = mask(names[nextLoc]);
             }
         }
-    }
-    void remove(const char* name){
-        return remove(fnv(name));
     }
     bool full(){ return cap == count; }
     void clear()

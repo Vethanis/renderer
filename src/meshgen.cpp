@@ -27,6 +27,8 @@ vec3 vecMax(vec3 a, vec3 b)
 
 void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
 {
+    const float cornerRatio = glm::sqrt(3.0f);
+
     struct Task
     {
         glm::vec3 center;
@@ -81,7 +83,7 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
             vec3 pt = task.center;
             {
                 const vec3 N = SDFNorm(sdfs, task.indices, pt);
-                const float e = 0.0001f;
+                const float e = 0.001f;
                 float dis = SDFDis(sdfs, task.indices, pt);
                 while(glm::abs(dis) > e)
                 {

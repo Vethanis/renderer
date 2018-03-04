@@ -1,6 +1,8 @@
 #include "framebuffer.h"
 #include "myglheaders.h"
 #include "lodepng.h"
+#include "randf.h"
+#include "linmath.h"
 
 const GLenum attach_ids[Framebuffer::max_attachments] = { 
     GL_COLOR_ATTACHMENT0 + 0,
@@ -65,45 +67,46 @@ void Framebuffer::bind()
 
 void Framebuffer::saveToFile(const char* filename, int attachment)
 {
-    const int num_components = 4;
-    const int num_elems = m_width * m_height * num_components;
-    const int row_width = m_width * num_components;
-    float* texels = new float[num_elems];
+    const int num_elems = m_width * m_height * 4;
+    vec4* texels = new vec4[m_width * m_height];
     unsigned char* image = new unsigned char[num_elems];
 
     glTextureBarrier(); DebugGL();
     glMemoryBarrier(GL_ALL_BARRIER_BITS); DebugGL();
     glBindTexture(GL_TEXTURE_2D, m_attachments[attachment]); DebugGL();
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, texels); DebugGL();
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (float*)texels); DebugGL();
 
     for(int y = 0; y < m_height >> 1; ++y)
     {
         const int y0 = y;
         const int y1 = m_height - y - 1;
-        float* rowA = texels + row_width * y0;
-        float* rowB = texels + row_width * y1;
-        for(int x = 0; x < m_width * num_components; ++x)
+        vec4* rowA = texels + m_width * y0;
+        vec4* rowB = texels + m_width * y1;
+        for(int x = 0; x < m_width; ++x)
         {
-            float& A = rowA[x];
-            float& B = rowB[x];
-            float tmp = A;
+            vec4& A = rowA[x];
+            vec4& B = rowB[x];
+            vec4 tmp = A;
             A = B;
             B = tmp;
         }
     }
 
-    for(int i = 0; i < num_elems; ++i)
+    for(int i = 0; i < m_width * m_height; ++i)
     {
-        float val = texels[i] * 2.0f;
+        vec4 val = texels[i];
+        val += vec4(randf(), randf(), randf(), 1.0f) * 0.001f;
         val = val / (1.0f + val);
-        val = powf(val, 1.0f / 2.2f);
+        val.x = powf(val.x, 1.0f / 2.2f);
+        val.y = powf(val.y, 1.0f / 2.2f);
+        val.z = powf(val.z, 1.0f / 2.2f);
         val *= 255.0f;
-        if(val > 255.0f)
-            val = 255.0f;
-        if(val < 0.0f)
-            val = 0.0f;
+        val = glm::clamp(val, 0.0f, 255.0f);
 
-        image[i] = (unsigned char)val;
+        image[i * 4 + 0] = (unsigned char)val.x;
+        image[i * 4 + 1] = (unsigned char)val.y;
+        image[i * 4 + 2] = (unsigned char)val.z;
+        image[i * 4 + 3] = 255;
     }
 
     unsigned error = lodepng_encode32_file(filename, image, m_width, m_height);

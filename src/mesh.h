@@ -44,8 +44,9 @@ extern AssetStore<MeshStoreElement, Mesh, 512> g_MeshStore;
 
 inline void GeometryStoreElement::OnLoad(unsigned name)
 {
-    WorldTile tile(name);
-    CreateMesh(m_geometry, tile.m_sdfs, tile.m_sdfDepth);
+    SDFDefinition* pDef = g_SdfStore[name];
+    assert(pDef);
+    CreateMesh(m_geometry, pDef->m_sdfs, pDef->m_sdfDepth);
     Mesh* pMesh = g_MeshStore[name];
     pMesh->upload(m_geometry);
 };

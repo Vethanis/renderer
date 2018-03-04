@@ -1,5 +1,6 @@
 #include "hashstring.h"
 #include "namestore.h"
+#include "hash.h"
 
 HashString::HashString(const char* str){
     m_hash = fnv(str);
