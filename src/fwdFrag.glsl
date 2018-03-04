@@ -4,7 +4,6 @@ out vec4 outColor;
 
 in vec3 MacroNormal;
 in vec3 P;
-in vec2 UV;
 
 // ------------------------------------------------------------------------
 
@@ -171,8 +170,20 @@ vec3 normalFromHeight(float h){
 material getMaterial(){
     material mat;
 
-    const vec4 albedo = texture(albedoSampler, UV).rgba;
-    const vec4 hmr = texture(materialSampler, UV).rgba;
+    vec2 uv;
+    {
+        const vec3 d = abs(MacroNormal);
+        const float a = max(max(d.x, d.y), d.z);
+        if(a == d.x)
+            uv = vec2(P.z, P.y);
+        else if(a == d.y)
+            uv = vec2(P.x, P.z);
+        else
+            uv = vec2(P.x, P.y);
+    }
+
+    const vec4 albedo = texture(albedoSampler, uv).rgba;
+    const vec4 hmr = texture(materialSampler, uv).rgba;
 
     mat.normal = normalFromHeight(hmr.x);
     mat.albedo = albedo.rgb;

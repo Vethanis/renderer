@@ -28,9 +28,9 @@ void main()
     vec3 lighting = texture(curColor, fragUv).rgb;
     lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
 
-    lighting.rgb.x += 0.0005 * randBi(s);
-    lighting.rgb.y += 0.0005 * randBi(s);
-    lighting.rgb.z += 0.0005 * randBi(s);
+    lighting.rgb.x += 0.001 * randBi(s);
+    lighting.rgb.y += 0.001 * randBi(s);
+    lighting.rgb.z += 0.001 * randBi(s);
 
     outColor = vec4(lighting.rgb, 1.0);
 }

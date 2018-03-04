@@ -11,6 +11,7 @@
 #include "profiler.h"
 #include "assetstore.h"
 #include "worldgen.h"
+#include "randf.h"
 
 void SceneSetup()
 {
@@ -20,9 +21,16 @@ void SceneSetup()
     g_SdfStore.insert(mesh, {});
     SDFDefinition* pDef = g_SdfStore[mesh];
     SDFList& list = pDef->m_sdfs;
-    pDef->m_sdfDepth = 5;
-    SDF& sdf = list.grow();
-    //sdf.type = SDF_BOX;
+    pDef->m_sdfDepth = 6;
+    for(int i = 0; i < 100; ++i)
+    {
+        SDF* pSdf = &list.grow();
+        //pSdf->type = SDF_BOX;
+        pSdf->translation.x += randf() * 10.0f;
+        pSdf->translation.y += randf() * 10.0f;
+        pSdf->translation.z += randf() * 10.0f;
+    }
+    
     g_Renderables.create(mesh, albedo, material);
 }
 
@@ -66,6 +74,9 @@ int main(int argc, char* argv[])
     ProfilerInit();
 
     SceneSetup();
+
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    glPointSize(25.0f);
 
     while(window.open())
     {

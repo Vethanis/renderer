@@ -9,7 +9,6 @@ layout (location = 3) out vec4 gVelocity; // rgb: velocity, a: depth
 
 in vec3 MacroNormal;
 in vec3 P;
-in vec2 UV;
 
 // ------------------------------------------------------------------------
 
@@ -188,7 +187,19 @@ void main(){
 
     const vec3 tanV = transpose(GetBasis(MacroNormal)) * normalize(eye - P);
 
-    vec2 newUv = ParallaxMapping(UV * uv_scale + uv_offset, tanV);
+    vec2 uv;
+    {
+        const vec3 d = abs(MacroNormal);
+        const float a = max(max(d.x, d.y), d.z);
+        if(a == d.x)
+            uv = vec2(P.z, P.y);
+        else if(a == d.y)
+            uv = vec2(P.x, P.z);
+        else
+            uv = vec2(P.x, P.y);
+    }
+
+    vec2 newUv = ParallaxMapping(uv * uv_scale + uv_offset, tanV);
     const material mat = getMaterial(newUv);
 
     gPosition = vec4(P.xyz, mat.roughness);
