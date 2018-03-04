@@ -184,9 +184,9 @@ float HeightOcclusion(vec3 N, inout uint s){
 
 float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
 {
-    const float radius = 0.15;
-    const int samples = 4;
+    const int samples = 8;
     float occlusion = 0.0;
+    float radius = 0.025;
     for(int i = 0; i < samples; ++i)
     {
         const vec3 dir = normalize(N + (vec3(rand(s), rand(s), rand(s)) * 2.0 - 1.0));
@@ -199,10 +199,10 @@ float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
         float rangeCheck = smoothstep(0.0, 1.0, radius * 0.1 / abs(screenPoint.z - depth));
 
         occlusion += depth < screenPoint.z ? rangeCheck : 0.0;
+        radius *= 2.0;
     }
 
-    float ao = occlusion / float(samples);
-    return ao;
+    return occlusion / float(samples);
 }
 
 // ------------------------------------------------------------------------
@@ -306,8 +306,7 @@ vec3 indirect_lighting(inout uint s){
 
     light *= (1.0 - HeightOcclusion(mat_normal(mat), s) * 0.95);
 
-    float ao = AmbientOcclusion(mat_position(mat), mat_normal(mat), s);
-    light *= (1.0 - ao);
+    light *= (1.0 - AmbientOcclusion(mat_position(mat), mat_normal(mat), s));
 
     return light;
 }
