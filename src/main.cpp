@@ -17,8 +17,13 @@
 unsigned scene_mesh_id = 5;
 void SceneSetup(vec3 pt, float radius)
 {
-    const HashString albedo("basic_albedo.png");
-    const HashString material("basic_material.png");
+    HashString albedo("basic_albedo.png");
+    HashString material("basic_material.png");
+    if(scene_mesh_id & 1)
+    {
+        albedo = HashString("wood_floor_albedo.png");
+        material = HashString("wood_floor_material.png");
+    }
 
     HashString mesh = scene_mesh_id++;
     g_SdfStore.insert(mesh, {});
