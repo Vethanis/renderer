@@ -68,17 +68,20 @@ void Mesh::deinit(){
     DebugGL();
 }
 
-void Mesh::upload(const mesh_interchange::Model& vb){
+void Mesh::upload(const Geometry& geom){
     glBindVertexArray(vao); DebugGL();
 
+    const VertexBuffer& vb = geom.m_vb;
+    const IndexBuffer& ib = geom.m_ib;
+
     glBindBuffer(GL_ARRAY_BUFFER, vbo); DebugGL();
-    glBufferData(GL_ARRAY_BUFFER, vb.vertices.bytes(), 
-        vb.vertices.begin(), GL_STATIC_DRAW); DebugGL();
+    glBufferData(GL_ARRAY_BUFFER, vb.bytes(), 
+        vb.begin(), GL_STATIC_DRAW); DebugGL();
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo); DebugGL();
-    num_indices = vb.indices.count();
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, vb.indices.bytes(), 
-        vb.indices.begin(), GL_STATIC_DRAW); DebugGL();
+    num_indices = ib.count();
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, ib.bytes(), 
+        ib.begin(), GL_STATIC_DRAW); DebugGL();
 }
 
 void Mesh::draw(){
@@ -89,37 +92,8 @@ void Mesh::draw(){
     glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0); DebugGL();
 }
 
-void load_model(mesh_interchange::Model* model, unsigned name)
-{
-    const char* filename = HashString(name).str();
-    assert(filename);
-    FILE* pFile = fopen(filename, "rb");
-
-    if(pFile)
-    {
-        model->load(pFile);
-        fclose(pFile);
-    }
-    else
-    {
-        char buff[256] = {0};
-    
-        sprintf(buff, "%s", filename);
-        char* extptr = strstr(buff, ".mesh");
-        assert(extptr);
-        sprintf(extptr, "%s", ".fbx");
-
-        model->parse(buff);
-        
-        pFile = fopen(filename, "wb");
-        assert(pFile);
-        model->serialize(pFile);
-        fclose(pFile);
-    }
-}
-
-AssetStore<true, mesh_interchange::Model, 256> g_ModelStore(load_model, [](mesh_interchange::Model* m){ m->clear(); });
-MeshStore g_MeshStore;
+AssetStore<GeometryStoreElement, Geometry, 2048> g_GeometryStore;
+AssetStore<MeshStoreElement, Mesh, 512> g_MeshStore;
 
 HashString::operator Mesh*() const{
     return g_MeshStore[m_hash];

@@ -1,13 +1,19 @@
 #pragma once
 
-#include "glm/glm.hpp"
+#include "linmath.h"
 #include "array.h"
-#include "ints.h"
 
-struct Vertex {
-    glm::vec4 position;     // w = uv.x
-    glm::vec4 normal;       // w = uv.y
+struct Vertex 
+{
+    vec4 position;     // w = uv.x
+    vec4 normal;       // w = uv.y
 };
 
 typedef Vector<Vertex> VertexBuffer;
-typedef Vector<u32> IndexBuffer;
+typedef Vector<unsigned> IndexBuffer;
+
+struct Geometry
+{
+    VertexBuffer m_vb;
+    IndexBuffer m_ib;
+};

@@ -69,11 +69,13 @@ public:
     const T& operator[](C idx) const
     {
         const C pos = m_twists[idx];
+        assert(pos < t_capacity);
         return m_data[pos];
     }
     T& operator[](C idx)
     {
         const C pos = m_twists[idx];
+        assert(pos < t_capacity);
         return m_data[pos];
     }
     C find(const T& item) const
@@ -101,8 +103,17 @@ public:
         m_twists[pos] = pos;
         return pos;
     }
+    C create()
+    {
+        assert(!full());
+        const C pos = m_tail;
+        ++m_tail;
+        m_twists[pos] = pos;
+        return pos;
+    }
     void remove(C idx)
     {
+        assert(idx < t_capacity);
         assert(count());
         const C pos = m_twists[idx];
         const C tail = m_tail - 1;

@@ -3,11 +3,10 @@
 #include "myglheaders.h"
 #include "glm/glm.hpp"
 #include "debugmacro.h"
-#include "store.h"
-#include "assetloader.h"
+#include "assetstore.h"
 
 struct Texture{
-    unsigned handle;
+    unsigned handle = 0;
 
     struct parameter{
         const void* ptr;
@@ -94,47 +93,56 @@ struct Image
     unsigned id;
     int width, height;
     bool mip;
-    Image() : image(nullptr), width(0), height(0), mip(true){}
+    Image() : image(nullptr), id(0), width(0), height(0), mip(true){}
     bool operator==(const Image& other)const{
         return id == other.id;
     }
+    void load(unsigned name);
+    void free();
 };
 
-void load_image(Image* img, unsigned name);
-
-extern AssetStore<false, Image, 256> g_ImageStore;
-
-struct TextureStore
+struct TextureStoreElement
 {
-    Store<Texture, 32> m_store;
-
-    Texture* get(unsigned name){
-        Texture* m = m_store[name];
-        if(m){return m;}
-
-        if(g_ImageStore.m_mutex.try_lock())
-        {
-            Image* img = g_ImageStore[name];
-            if(img)
-            {
-                if(m_store.full())
-                {
-                    m = m_store.reuse_near(name);
-                    m->upload4uc(img->width, img->height, img->mip, img->image);
-                }
-                else
-                {
-                    m_store.insert(name, {});
-                    m = m_store[name];
-                    m->init4uc(img->width, img->height, img->mip, img->image);
-                }
-            }
-            g_ImageStore.m_mutex.unlock();
-        }
-
-        return m;
-    }
-    Texture* operator[](unsigned name){ return get(name); }
+    Texture m_texture;
+    int m_refs = 0;
+    void AddRef(){ m_refs++;}
+    void RemoveRef(){ m_refs--;}
+    int RefCount()const{ return m_refs; }
+    void OnLoad(unsigned name);
+    void OnRelease(unsigned name);
+    Texture* GetItem(){ return &m_texture; }
 };
 
-extern TextureStore g_TextureStore;
+struct ImageStoreElement
+{
+    Image m_image;
+    int m_refs = 0;
+    void AddRef(){ m_refs++;}
+    void RemoveRef(){ m_refs--;}
+    int RefCount()const{ return m_refs; }
+    void OnLoad(unsigned name);
+    void OnRelease(unsigned name){ m_image.free();}
+    Image* GetItem(){ return &m_image; }
+};
+
+extern AssetStore<TextureStoreElement, Texture, 32> g_TextureStore;
+extern AssetStore<ImageStoreElement, Image, 128> g_ImageStore;
+
+inline void TextureStoreElement::OnLoad(unsigned name)
+{
+    g_ImageStore.request(name);
+}
+
+inline void TextureStoreElement::OnRelease(unsigned name)
+{ 
+    m_texture.deinit();
+    g_ImageStore.release(name);
+}
+
+inline void ImageStoreElement::OnLoad(unsigned name)
+{ 
+    m_image.load(name);
+    Texture* pTexture = g_TextureStore[name];
+    assert(pTexture);
+    pTexture->init4uc(m_image.width, m_image.height, m_image.mip, m_image.image);
+}

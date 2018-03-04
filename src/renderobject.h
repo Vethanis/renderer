@@ -65,17 +65,17 @@ struct MaterialParams
 
 struct RenderResource 
 {
-    TextureChannels texture_channels;
+    Transform m_transform;
     MaterialParams material_params;
-    HashString mesh;
-    u16 transform;
     glm::vec3 m_velocity;
     glm::vec3 m_prevVelocity;
     glm::vec2 m_uv_scale;
     glm::vec2 m_uv_offset;
+    TextureChannels texture_channels;
+    HashString m_mesh;
 
     bool operator==(const RenderResource& other)const{ return false; };
-    void init();
+    void init(HashString mesh, HashString albedo, HashString material, const Transform& transform);
     void deinit();
     void bind(GLProgram& prog, UBO& material_ubo);
     void draw();
@@ -102,13 +102,10 @@ struct Renderables
     void prePass(const Transform& VP);
     void fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
     void defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, s32 width, s32 height);
-    u16 grow();
     void release(u16 handle);
     RenderResource& operator[](u16 i){ return resources[i]; }
     u16 create(HashString mesh, HashString albedo, 
-        HashString material, const Transform& xform = Transform(), 
-        float roughness = 0.0f, float metalness = 0.0f, 
-        unsigned flags = 0);
+        HashString material, const Transform& xform = Transform());
 };
 
 extern Renderables g_Renderables;

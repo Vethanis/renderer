@@ -1,12 +1,19 @@
 #pragma once
 
-#include <random>
+extern unsigned g_randSeed;
 
-float randf(void){
-    constexpr float inv = 1.0f / float(RAND_MAX);
-    return rand() * inv;
+inline unsigned rand(unsigned& s = g_randSeed){
+    unsigned f = s;
+    f = (f ^ 61) ^ (f >> 16);
+    f *= 9;
+    f = f ^ (f >> 4);
+    f *= 0x27d4eb2d;
+    f = f ^ (f >> 15);
+    s = f;
+    return f;
 }
 
-float randf(float range){
-    return randf() * range - (range * 0.5f);
+inline float randf(unsigned& s = g_randSeed){
+    constexpr float inv = 1.0f / float(0xffffffff);
+    return float(rand(s)) * inv;
 }

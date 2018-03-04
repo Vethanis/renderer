@@ -8,19 +8,23 @@
 
 #include "stb_image.h"
 
-void load_image(Image* image, unsigned name){
+void Image::load(unsigned name){
+    id = name;
     HashString hstr(name);
     const char* filename = hstr.str();
     assert(filename);
     int channels = 0;
-    image->image = stbi_load(filename, &image->width, &image->height, &channels, 4);
-    assert(image->image);
-
-    printf("[image] loaded %s\n", filename);
+    image = stbi_load(filename, &width, &height, &channels, 4);
+    assert(image);
 }
 
-AssetStore<false, Image, 256> g_ImageStore(load_image, [](Image* m){ free(m->image); });
-TextureStore g_TextureStore;
+void Image::free()
+{
+    stbi_image_free(image);
+}
+
+AssetStore<TextureStoreElement, Texture, 32> g_TextureStore;
+AssetStore<ImageStoreElement, Image, 128> g_ImageStore;
 
 HashString::operator Image*() const{
     return g_ImageStore[m_hash];

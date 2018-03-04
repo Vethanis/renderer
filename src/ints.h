@@ -2,10 +2,10 @@
 
 #include <type_traits>
 
-typedef char s8;
-typedef short s16;
-typedef int s32;
-typedef long long s64;
+typedef signed char s8;
+typedef signed short s16;
+typedef signed int s32;
+typedef signed long long s64;
 
 typedef unsigned char u8;
 typedef unsigned short u16;

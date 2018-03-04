@@ -9,9 +9,15 @@
 #include "timer.h"
 #include "framecounter.h"
 #include "profiler.h"
+#include "assetstore.h"
 
-#include <random>
-#include <ctime>
+void SceneSetup()
+{
+    HashString albedo("basic_albedo.png");
+    HashString material("basic_material.png");
+    const unsigned mesh = 42;
+    g_Renderables.create(mesh, albedo, material);
+}
 
 void FpsStats()
 {
@@ -29,8 +35,6 @@ void FpsStats()
 
 int main(int argc, char* argv[])
 {
-    srand((unsigned)time(0));
-
     int WIDTH = int(1920.0f * 1.75f);
     int HEIGHT = int(1080.0f * 1.75f);
 
@@ -49,57 +53,17 @@ int main(int argc, char* argv[])
 
     g_Renderables.init();
     g_gBuffer.init(WIDTH, HEIGHT);
-
-    u16 suzanne;
-    {
-        const HashString mesh("ball.mesh");
-        const TextureChannels channels[] = {
-            {"flat_red_albedo.png", "flat_red_material.png"},
-            {"basic_albedo.png", "basic_material.png"}
-        };
-
-        for(int i = 0; i < 2; ++i){
-            for(float x = 0.0f; x < 10.0f; x += 1.0f){
-                for(float y = 0.0f; y < 10.0f; y += 1.0f){
-                    glm::vec3 pos = glm::vec3(x + 10.0f * float(i), y, 0.0f);
-
-                    g_Renderables.create(mesh, channels[i].albedo, channels[i].material, 
-                        glm::translate({}, pos) * glm::scale({}, glm::vec3(0.5f)),
-                        x / 10.0f, y / 10.0f);
-                }
-            }
-        }
-        
-        suzanne = g_Renderables.create("suzanne.mesh", channels[0].albedo, channels[0].material,
-            glm::translate({}, glm::vec3(5.0f, 0.0f, 5.0f)));
-        g_Renderables.create("suzanne.mesh", channels[1].albedo, channels[1].material,
-                glm::translate({}, glm::vec3(10.0f, -2.1f, 5.0f)));
-        u16 plane = g_Renderables.create("cube.mesh", "wood_floor_albedo.png", "wood_floor_material.png", 
-            glm::scale(glm::translate({}, glm::vec3(5.0f, -3.0f, 0.0f)), glm::vec3(16.0f, 0.1f, 16.0f)));
-        RenderResource& pRes = g_Renderables[plane];
-        pRes.m_uv_scale *= 16.0f;
-    }
-
     input.poll();
     u32 flag = DF_INDIRECT;
 
     ProfilerInit();
 
+    SceneSetup();
+
     while(window.open())
     {
         ProfilerEvent("Main Loop");
         input.poll(camera);
-
-        RenderResource& res = g_Renderables[suzanne];
-        {
-            Transform& xform = g_TransformStore[res.transform];
-            float phase = (float)timeElapsed() * 2.0f;
-            float x = glm::sin(phase);
-            float y = glm::cos(phase);
-            glm::vec3 dv = glm::vec3(x, y, 0.0f) * 0.02f;
-            xform = glm::translate(xform, dv);
-            res.setVelocity(dv);
-        }
 
         for(int key : input)
         {
@@ -179,62 +143,6 @@ int main(int argc, char* argv[])
                 break;
                 case GLFW_KEY_KP_0: flag = DF_VIS_SHADOW_BUFFER; break;
                 case GLFW_KEY_V: flag = DF_VIS_SUN_SHADOW_DEPTH; break;
-                case GLFW_KEY_F1:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.roughness_offset;
-                    x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
-                }
-                break;
-                case GLFW_KEY_F2:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.roughness_offset;
-                    x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
-                }
-                break;
-                case GLFW_KEY_F3:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.metalness_offset;
-                    x = glm::clamp(x + 0.01f, 0.0f, 1.0f);
-                }
-                break;
-                case GLFW_KEY_F4:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.metalness_offset;
-                    x = glm::clamp(x - 0.01f, 0.0f, 1.0f);
-                }
-                break;
-                case GLFW_KEY_F5:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.bumpiness;
-                    x = glm::clamp(x + 0.01f, 0.0f, 4.0f);
-                }
-                break;
-                case GLFW_KEY_F6:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.bumpiness;
-                    x = glm::clamp(x - 0.01f, 0.0f, 4.0f);
-                }
-                break;
-                case GLFW_KEY_F7:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.index_of_refraction;
-                    x = glm::clamp(x + 0.01f, 0.001f, 100.0f);
-                }
-                break;
-                case GLFW_KEY_F8:
-                {
-                    RenderResource& pRenderable = g_Renderables[suzanne];
-                    float& x = pRenderable.material_params.index_of_refraction;
-                    x = glm::clamp(x - 0.01f, 0.001f, 100.0f);
-                }
-                break;
                 case GLFW_KEY_F12:
                 {
                     g_gBuffer.screenshot();
@@ -243,6 +151,7 @@ int main(int argc, char* argv[])
             }
         }
 
+        UpdateAssetStores();
         g_gBuffer.draw(camera, flag);
 
         window.swap();

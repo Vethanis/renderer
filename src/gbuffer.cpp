@@ -56,7 +56,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     const float jitter_magnitude = 0.0001f;
     Transform VP = cam.getVP();
     Transform IVP = glm::inverse(VP);
-    glm::vec3 jitter = randf(jitter_magnitude) * getRight(VP) + randf(jitter_magnitude) * getUp(VP);
+    glm::vec3 jitter = randf() * jitter_magnitude * getRight(VP) + randf() * jitter_magnitude * getUp(VP);
     glm::vec3 eye = cam.getEye();
     eye += jitter;
     VP[3][0] += jitter.x;
@@ -95,7 +95,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
         prog.bindCubemap(5, cmap.color_cubemap, "env_cm");
         
         g_Renderables.bindSun(g_Renderables.m_light, prog, 10);
-        prog.setUniformInt(seed_loc, rand());
+        prog.setUniformInt(seed_loc, rand(g_randSeed));
         prog.setUniform(eye_loc, eye);
         prog.setUniformInt(draw_flag_loc, dflag);
         prog.setUniform("render_resolution", glm::vec2(float(width), float(height)));
@@ -120,7 +120,7 @@ void GBuffer::draw(const Camera& cam, u32 dflag)
     
         postProg.bind();
         postProg.bindTexture(0, curBuf.m_attachments[0], "curColor");
-        postProg.setUniformInt("seed", rand());
+        postProg.setUniformInt("seed", rand(g_randSeed));
     
         glTextureBarrier(); DebugGL();
         GLScreen::draw();

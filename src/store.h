@@ -1,27 +1,18 @@
 #pragma once 
 
-#include <cstring>
 #include <cassert>
 #include "hash.h"
-#include <cstdio>
 
 template<typename T, const unsigned cap>
-struct Store{
+class Store
+{
     static constexpr unsigned invalid_val = 0xffffff;
-    static constexpr unsigned MSB = 1 << 31;
     
     T data[cap];
     unsigned names[cap];
     unsigned count;
     unsigned capacity;
 
-    unsigned getKey(int idx){ return names[idx]; }
-    T& getValue(int idx){ return data[idx]; }
-    unsigned getCapacity(){ return capacity; }
-    bool validSlot(int idx){ return names[idx] != 0 && names[idx] != MSB; }
-    bool is_deleted(unsigned key){
-        return key == MSB;
-    }
     unsigned mask(unsigned key){
         return key & (cap - 1);
     }
@@ -32,49 +23,39 @@ struct Store{
         unsigned pos = mask(key);
         unsigned dist = 0;
         while(true){
-            if(names[pos] == 0){
-                return invalid_val;
-            }
-            else if(dist > probe_distance(pos, names[pos])){
-                return invalid_val;
-            }
-            else if(names[pos] == key){
+            if(names[pos] == key){
                 return pos;
+            }
+            else if(names[pos] == 0 || dist > probe_distance(pos, names[pos])){
+                return invalid_val;
             }
             pos = mask(pos + 1);
             ++dist;
         }
         return invalid_val;
     }
-    unsigned first_evictable(unsigned key){
-        unsigned dist = 0;
-        while(true){
-            unsigned pos = mask(key + dist);
-            unsigned existing_dist = probe_distance(pos, names[pos]);
-            if(existing_dist < dist){
-                return pos;
-            }
-            ++dist;
-        }
-        return invalid_val;
-    }
+public:
     Store(){
-        memset(names, 0, sizeof(unsigned) * cap);
         count = 0;
         capacity = cap;
+        for(unsigned i = 0; i < capacity; ++i)
+        {
+            names[i] = 0;
+        }
     }
 
-    struct iterator{
+    class iterator
+    {
         Store* m_pStore;
         unsigned m_idx;
-
         void iterate(){
             for(; m_idx < m_pStore->capacity; ++m_idx){
                 unsigned key = m_pStore->names[m_idx];
-                if(key && key != MSB)
+                if(key)
                     break;
             }
         }
+    public:
         iterator(Store* pStore, unsigned idx = 0) : m_pStore(pStore), m_idx(idx){
             iterate();
         }
@@ -109,13 +90,6 @@ struct Store{
 
             unsigned existing_dist = probe_distance(pos, names[pos]);
             if(existing_dist < dist){
-                if(is_deleted(names[pos])){
-                    names[pos] = key;
-                    data[pos] = val;
-                    count++;
-                    return;
-                }
-
                 {
                     const unsigned tname = key;
                     key = names[pos];
@@ -153,58 +127,33 @@ struct Store{
     T* operator[](const char* name){
         return get(fnv(name));
     }
-    T* remove(unsigned key){
+    void remove(unsigned key){
         unsigned loc = index_of(key);
-        if(loc != invalid_val){
-            names[loc] = MSB;
+        if(loc != invalid_val)
+        {
             count--;
-            return data + loc;
+            names[loc] = 0;
+            data[loc] = T();
+
+            unsigned nextLoc = mask(loc + 1);
+            unsigned trueLoc = mask(names[nextLoc]);
+            while(names[nextLoc] && trueLoc < nextLoc)
+            {
+                names[loc] = names[nextLoc];
+                names[nextLoc] = 0;
+                data[loc] = data[nextLoc];
+                data[nextLoc] = T();
+
+                loc = nextLoc;
+                nextLoc = mask(loc + 1);
+                trueLoc = mask(names[nextLoc]);
+            }
         }
-        return nullptr;
     }
-    T* remove(const char* name){
+    void remove(const char* name){
         return remove(fnv(name));
     }
-    bool exists(unsigned key){
-        unsigned loc = index_of(key);
-        return loc != invalid_key;
-    }
-    bool exists(const char* name){
-        return exists(fnv(name));
-    }
-    unsigned empty_slots(){
-        return cap - count;
-    }
     bool full(){ return cap == count; }
-    T* remove_near(unsigned name){
-        assert(full());
-        unsigned loc = first_evictable(name);
-        names[loc] = MSB;
-        count--;
-        return data + loc;
-    }
-    T* remove_near(const char* name){
-        return remove_near(fnv(name));
-    }
-    T* reuse_near(unsigned name){
-        assert(full());
-        unsigned loc = first_evictable(name);
-        names[loc] = name;
-        return data + loc;
-    }
-    T* reuse_near(const char* name){
-        return reuse_near(fnv(name));
-    }
-    unsigned grow(){
-        assert(full() == false);
-        static unsigned key = 1;
-        while(get(key)){
-            key = ((key + 1) & 0x7fffffff);
-            key = key ? key : 1;
-        }
-        insert(key, {});
-        return key;
-    }
     void clear()
     {
         for(unsigned i = 0; i < count; ++i)
@@ -217,22 +166,3 @@ struct Store{
         }
     }
 };
-
-inline void store_test(){
-    constexpr unsigned c = 2048;
-    Store<int, c> store;
-    for(int i = 1; i <= c; i++){
-        store.insert(i * 64, i * 64);
-    }
-    for(int i = 1; i <= c; i++){
-        int* pi = store[i * 64];
-        assert(pi);
-        if(!(*pi == i * 64))__debugbreak();
-    }
-    for(int i = 1; i <= c; i++){
-        int* pi = store.remove(i * 64);
-        assert(pi);
-        assert(*pi == i * 64);
-    }
-    puts("Done with store_test");
-}

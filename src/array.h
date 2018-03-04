@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cassert>
-#include <cstdio>
 #include "hash.h"
 
 template<typename T, int _capacity>
@@ -113,10 +112,6 @@ struct Array{
     bool operator==(const Array& other)const{
         return hash() == other.hash();
     }
-    void serialize(FILE* pFile){
-        fwrite(&_tail, sizeof(u32), 1, pFile);
-        fwrite(_data, sizeof(T), _tail, pFile);
-    }
 };
 
 template<typename T>
@@ -136,11 +131,11 @@ struct Vector{
     T* end(){ return _data + _tail; }
     const T* end()const{ return _data + _tail; }
     T& back(){ 
-        assert(_tail > 0);
+        assert(count() > 0);
         return _data[_tail - 1]; 
     }
     const T& back()const{ 
-        assert(_tail > 0);
+        assert(count() > 0);
         return _data[_tail - 1];
     }
     T& operator[](int idx){
@@ -149,49 +144,65 @@ struct Vector{
     const T& operator[](int idx)const{
         return _data[idx];
     }
-
-    void resize(const int new_cap){
-        if(!new_cap){
+    void reserve(const int new_cap)
+    {
+        const int new_tail = new_cap < _tail ? new_cap : _tail;
+        if(!new_cap)
+        {
             delete[] _data;
             _data = nullptr;
         }
-        else if(new_cap > _capacity){
+        else
+        {
             T* new_data = new T[new_cap];
-            
-            if(_data){
-                for(int i = 0; i < _tail; ++i){
-                    new_data[i] = _data[i];
-                }
-                delete[] _data;
-                _data = new_data;
+            for(int i = 0; i < new_tail; ++i)
+            {
+                new_data[i] = _data[i];
             }
-            else{
-                _data = new_data;
-            }
+            delete[] _data;
+            _data = new_data;
         }
         _capacity = new_cap;
-        _tail = _tail < _capacity ? _tail : _capacity;
+        _tail = new_tail;
     }
-
+    void resize(const int new_size)
+    {
+        if(new_size != _capacity)
+        {
+            reserve(new_size);
+        }
+        _tail = new_size;
+    }
     T& append(){
         assert(_tail < _capacity);
-        return _data[_tail++];
+        ++_tail;
+        return back();
     }
-    T& grow(int step = 16){
+    T& grow(){
         if(_tail >= _capacity){
-            resize(_tail + step);
+            reserve(_tail ? _tail * 2 : 16);
         }
-        return _data[_tail++];
+        ++_tail;
+        return back();
     }
     T& pop(){
-        assert(_tail > 0);
-        return _data[_tail--];
+        assert(count() > 0);
+        T& item = back();
+        --_tail;
+        return item;
     }
     void clear(){ _tail = 0; }
+    void reset()
+    {
+        delete[] _data;
+        _data = nullptr;
+        _capacity = 0;
+        _tail = 0;
+    }
     void remove(int idx){
         assert(idx <= _tail);
-        --tail;
-        _data[idx] = _data[tail];
+        _data[idx] = back();
+        --_tail;
     }
     int find(const T& t){
         for(int i = 0; i < _tail; ++i){
@@ -239,87 +250,88 @@ struct Vector{
     Vector() : _data(nullptr), _tail(0), _capacity(0){
     }
     Vector(int cap){
+        _data = nullptr;
         if(cap > 0){
             _data = new T[cap];
-        }
-        else{
-            _data = nullptr;
         }
         _capacity = cap;
         _tail = 0;
     }
-    ~Vector(){
-        if(_data){
-            delete[] _data;
-            _data = nullptr;
+    Vector(const Vector& other)
+    {
+        _data = nullptr;
+        _tail = other.count();
+        _capacity = other.capacity();
+        if(_capacity)
+        {
+            _data = new T[_capacity];
+            for(int i = 0; i < _tail; ++i)
+            {
+                _data[i] = other[i];
+            }
         }
+    }
+    Vector(Vector&& other)
+    {
+        _tail = other.count();
+        _capacity = other.capacity();
+        _data = other._data;
+        other._data = nullptr;
+        other._tail = 0;
+        other._capacity = 0;
+    }
+    ~Vector(){
+        delete[] _data;
     }
     void copy(const Vector& other){
-        if(_data){
-            delete[] _data;
-            _data = nullptr;
-        }
-        _tail = other._tail;
-        _capacity = _tail;
-        if(_tail){
-            _data = new T[_tail];
-            memcpy(_data, other._data, sizeof(T) * _tail);
+        delete[] _data;
+        _data = nullptr;
+        _tail = other.count();
+        _capacity = other.capacity();
+        if(_capacity){
+            _data = new T[_capacity];
+            for(int i = 0; i < _tail; ++i)
+            {
+                _data[i] = other[i];
+            }
         }
     }
-    void swap(Vector& other){
-        std::swap(_data, other._data);
-        std::swap(_capacity, other._capacity);
-        std::swap(_tail, other._tail);
+    void assume(Vector& other)
+    {
+        reset();
+        _tail = other.count();
+        _capacity = other.capacity();
+        _data = other._data;
+        other._data = nullptr;
+        other._tail = 0;
+        other._capacity = 0;
     }
     Vector& operator=(const Vector& other){
-        copy(other);
+        delete[] _data;
+        _data = nullptr;
+        _tail = other.count();
+        _capacity = other.capacity();
+        if(_capacity)
+        {
+            _data = new T[_capacity];
+            for(int i = 0; i < _tail; ++i)
+            {
+                _data[i] = other[i];
+            }
+        }
+        return *this;
+    }
+    Vector& operator=(Vector&& other) noexcept {
+        reset();
+        _tail = other.count();
+        _capacity = other.capacity();
+        _data = other._data;
+        other._data = nullptr;
+        other._tail = 0;
+        other._capacity = 0;
         return *this;
     }
     bool operator==(const Vector& other)const{
         return hash() == other.hash();
-    }
-    void serialize(FILE* pFile){
-        fwrite(&_tail, sizeof(s32), 1, pFile);
-        if(_tail){
-            fwrite(_data, sizeof(T), _tail, pFile);
-        }
-    }
-    // does NOT work on nested vectors
-    void serialize_composite(FILE* pFile){
-        fwrite(&_tail, sizeof(s32), 1, pFile);
-        for(s32 i = 0; i < _tail; ++i){
-            _data[i].serialize(pFile);
-        }
-    }
-    void load(FILE* pFile){
-        if(_data){
-            delete[] _data;
-            _data = nullptr;
-        }
-        s32 count = 0;
-        fread(&count, sizeof(s32), 1, pFile);
-        _tail = count;
-        _capacity = count;
-        if(count){
-            _data = new T[count];
-            fread(_data, sizeof(T), count, pFile);
-        }
-    }
-    // does NOT work on nested vectors
-    void load_composite(FILE* pFile){
-        if(_data){
-            delete[] _data;
-            _data = nullptr;
-        }
-        s32 count = 0;
-        fread(&count, sizeof(s32), 1, pFile);
-        _tail = count;
-        _capacity = count;
-        if(count){
-            _data = new T[count];
-            for(s32 i = 0; i < _tail; ++i){
-                _data[i].load(pFile);
-            }
-        }
     }
 };

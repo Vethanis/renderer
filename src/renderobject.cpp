@@ -3,7 +3,6 @@
 #include "texture.h"
 #include "glscreen.h"
 #include "depthstate.h"
-#include <random>
 #include "profiler.h"
 
 Renderables g_Renderables;
@@ -13,26 +12,29 @@ void TextureChannels::bind(GLProgram& prog, int channel)
     ProfilerEvent("TextureChannels::bind");
 
     Texture* t = albedo;
-    if(t)
-    {
-        prog.bindTexture(TX_ALBEDO_CHANNEL, t->handle, "albedoSampler");
-    }
+    prog.bindTexture(TX_ALBEDO_CHANNEL, t ? t->handle : 0, "albedoSampler");
     t = material;
-    if(t)
-    {
-        prog.bindTexture(TX_MATERIAL_CHANNEL, t->handle, "materialSampler");
-    }
+    prog.bindTexture(TX_MATERIAL_CHANNEL, t ? t->handle : 0, "materialSampler");
 }
 
-void RenderResource::init()
+void RenderResource::init(HashString mesh, HashString albedo, HashString material, const Transform& transform)
 {
-    transform = g_TransformStore.insert({});
+    m_mesh = mesh;
+    texture_channels.albedo = albedo;
+    texture_channels.material = material;
+    m_transform = transform;
     m_uv_scale = glm::vec2(1.0f);
+
+    g_MeshStore.request(m_mesh);
+    g_TextureStore.request(texture_channels.albedo);
+    g_TextureStore.request(material);
 }
 
 void RenderResource::deinit()
 {
-    g_TransformStore.remove(transform);
+    g_MeshStore.release(m_mesh);
+    g_TextureStore.release(texture_channels.albedo);
+    g_TextureStore.release(texture_channels.material);
 }
 
 void RenderResource::bind(GLProgram& prog, UBO& material_ubo)
@@ -47,16 +49,14 @@ void RenderResource::draw()
 {
     ProfilerEvent("RenderResource::draw");
     
-    Mesh* m = mesh;
-    if(m){
+    Mesh* m = g_MeshStore[m_mesh];
+    if(m)
         m->draw();
-    }
 }
 
 void RenderResource::setTransform(const Transform& xform)
 {
-    Transform& rXform = g_TransformStore[transform];
-    rXform = xform;
+    m_transform = xform;
 }
 
 void RenderResource::setVelocity(const glm::vec3& dv)
@@ -165,7 +165,7 @@ void Renderables::prePass(const Transform& VP)
 
     zProg.bind();
     for(auto& res : resources){
-        Transform& M = g_TransformStore[res.transform];
+        const Transform& M = res.m_transform;
         zProg.setUniform("MVP", VP * M);
         res.draw();
     }
@@ -187,7 +187,7 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     fwdProg.setUniformInt("draw_flags", dflag);
     
     for(auto& res : resources){
-        Transform& M = g_TransformStore[res.transform];
+        const Transform& M = res.m_transform;
         const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
         fwdProg.setUniform("MVP", VP * M);
@@ -213,7 +213,7 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     defProg.setUniformInt("draw_flags", dflag);
 
     for(auto& res : resources){
-        Transform& M = g_TransformStore[res.transform];
+        const Transform& M = res.m_transform;
         const glm::mat3 IM = glm::inverse(glm::transpose(glm::mat3(M)));
 
         defProg.setUniform("MVP", VP * M);
@@ -228,13 +228,6 @@ void Renderables::defDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
     }
 }
 
-u16 Renderables::grow()
-{
-    u16 handle = resources.insert({});
-    resources[handle].init();
-    return handle;
-}
-
 void Renderables::release(u16 handle)
 {
     resources[handle].deinit();
@@ -242,21 +235,13 @@ void Renderables::release(u16 handle)
 }
 
 u16 Renderables::create(HashString mesh, HashString albedo, 
-    HashString material, const Transform& xform, 
-    float roughness, float metalness, 
-    unsigned flags)
+    HashString material, const Transform& xform)
 {
     ProfilerEvent("Renderables::create");
 
-    u16 handle = resources.insert({});
+    u16 handle = resources.create();
     RenderResource& res = resources[handle];
-    res.init();
-    res.mesh = mesh;
-    res.texture_channels.albedo = albedo;
-    res.texture_channels.material = material;
-    res.material_params.roughness_offset = roughness;
-    res.material_params.metalness_offset = metalness;
-    res.setTransform(xform);
+    res.init(mesh, albedo, material, xform);
 
     return handle;
 }
