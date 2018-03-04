@@ -28,7 +28,7 @@ void SceneSetup()
         //pSdf->type = SDF_BOX;
         pSdf->translation.x += randf() * 10.0f;
         pSdf->translation.y += randf() * 10.0f;
-        pSdf->translation.z += randf() * 10.0f;
+        pSdf->translation.z += -10.0f + randf() * 10.0f;
     }
     
     g_Renderables.create(mesh, albedo, material);
@@ -50,8 +50,8 @@ void FpsStats()
 
 int main(int argc, char* argv[])
 {
-    int WIDTH = int(1920.0f * 1.75f);
-    int HEIGHT = int(1080.0f * 1.75f);
+    int WIDTH = 1600;
+    int HEIGHT = 900;
 
     if(argc >= 3){
         WIDTH = atoi(argv[1]);
@@ -74,9 +74,6 @@ int main(int argc, char* argv[])
     ProfilerInit();
 
     SceneSetup();
-
-    glEnable(GL_PROGRAM_POINT_SIZE);
-    glPointSize(25.0f);
 
     while(window.open())
     {
