@@ -19,7 +19,6 @@ uniform vec3 sunColor;
 uniform vec3 eye;
 uniform float sunIntensity;
 uniform int seed;
-uniform int draw_flags;
 
 // ------------------------------------------------------------------------
 
@@ -83,10 +82,6 @@ float randBi(inout uint s){
     return rand(s) * 2.0 - 1.0;
 }
 
-float stratRand(float i, float inv_samples, inout uint s){
-    return i * inv_samples + rand(s) * inv_samples;
-}
-
 // #9 in http://www-labs.iro.umontreal.ca/~mignotte/IFT2425/Documents/EfficientApproximationArctgFunction.pdf
 float fasterAtan(float x){
     return 3.141592 * 0.25 * x 
@@ -104,7 +99,7 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 }
 
 float sunShadowing(vec3 p, inout uint s){
-    const int samples = 8;
+    const int samples = 4;
     const float inv_samples = 1.0 / float(samples);
     const float bias = 0.001;
 
@@ -134,12 +129,6 @@ vec3 toCartesian(vec3 T, vec3 B, vec3 N, float phi, float theta){
     return normalize(T * cos(phi) * ts + B * sin(phi) * ts + N * sqrt(1.0 - theta));
 }
 
-vec3 cosHemi(vec3 T, vec3 B, vec3 N, vec2 X){
-    const float r1 = 3.141592 * 2.0 * X[0];
-    const float r2 = X[1];
-    return toCartesian(T, B, N, r1, r2);
-}
-
 // https://agraphicsguy.wordpress.com/2015/11/01/sampling-microfacet-brdf/
 // returns a microfacet normal. reflect across it to get a good light vector
 vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, const vec3 N){
@@ -147,22 +136,6 @@ vec3 GGXPDF(const float roughness, const vec2 X, const vec3 T, const vec3 B, con
     const float theta = fasterAtan(alpha * sqrt(X[0] / (1.0 - X[0])));
     const float phi = 2.0 * 3.141592 * X[1];
     return toCartesian(T, B, N, phi, theta);
-}
-
-vec3 normalFromHeight(float h){
-    const float dhdx = dFdx(h);
-    const float dhdy = dFdy(h);
-
-    const vec3 dpdx = dFdx(P);
-    const vec3 dpdy = dFdy(P);
-
-    const vec3 MacroNormal = normalize(cross(dpdx, dpdy));
-    const vec3 r1 = cross(dpdy, MacroNormal);
-    const vec3 r2 = cross(MacroNormal, dpdx);
-
-    const vec3 g = (r1 * dhdx + r2 * dhdy) / dot(dpdx, r1);
-
-    return normalize(MacroNormal + g * 0.0015 * material_params.bumpiness);
 }
 
 // -------------------------------------------------------------------------------------------
@@ -189,7 +162,7 @@ material getMaterial(){
     const vec4 albedo = texture(albedoSampler, uv).rgba;
     const vec4 hmr = texture(materialSampler, uv).rgba;
 
-    mat.normal = normalFromHeight(hmr.x);
+    mat.normal = MacroNormal;
     mat.albedo = albedo.rgb;
 
     mat.metalness = hmr.y * 
@@ -290,14 +263,9 @@ void main()
 
     vec3 lighting = direct_lighting(s);
 
-    lighting.rgb.x += 0.0001 * randBi(s);
-    lighting.rgb.y += 0.0001 * randBi(s);
-    lighting.rgb.z += 0.0001 * randBi(s);
-
-    if(draw_flags != DF_DIRECT_CUBEMAP){
-        lighting.rgb = lighting.rgb / (lighting.rgb + vec3(1.0));
-        lighting.rgb = pow(lighting.rgb, vec3(1.0 / 2.2));
-    }
+    lighting.rgb.x += 0.001 * randBi(s);
+    lighting.rgb.y += 0.001 * randBi(s);
+    lighting.rgb.z += 0.001 * randBi(s);
 
     outColor = vec4(lighting.rgb, 1.0);
 }

@@ -162,29 +162,33 @@ vec3 toWorld(float x, float y, float z){
     return vec3(t/t.w);
 }
 
-float HeightOcclusion(vec3 N, inout uint s){
+float HeightOcclusion(vec3 P, vec3 N, inout uint s){
     const int samples = 4;
-    const float bias = 0.1;
     const float base = getHeight(fragUv);
     if(base == 0.0)
         return 0.0;
         
-    float radius = 0.005;
+    vec3 T, B;
+    findBasis(N, T, B);
 
     float occlusion = 0.0;
+    float radius = 0.0025;
     for(int i = 0; i < samples; ++i)
     {
-        const vec2 offset = radius * vec2(randBi(s), randBi(s));
-        const float p = getHeight(fragUv + offset);
-        occlusion += p + bias < base ? 1.0 : 0.0;
-        radius *= 1.333;
+        const vec3 pt = P + randBi(s) * radius * T + randBi(s) * radius * B;
+        vec4 pt4 = MVP * vec4(pt.xyz, 1.0);
+        pt4 /= pt4.w;
+        pt4 = pt4 * 0.5 + 0.5;
+        const float p = getHeight(pt4.xy);
+        occlusion += p < base ? 1.0 : 0.0;
+        radius *= 2.0;
     }
     return occlusion / float(samples);
 }
 
 float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
 {
-    const int samples = 8;
+    const int samples = 4;
     float occlusion = 0.0;
     float radius = 0.025;
     for(int i = 0; i < samples; ++i)
@@ -196,7 +200,7 @@ float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
         screenPoint.xyz = screenPoint.xyz * 0.5 + 0.5;
         const float depth = getDepth(screenPoint.xy);
 
-        float rangeCheck = smoothstep(0.0, 1.0, radius * 0.1 / abs(screenPoint.z - depth));
+        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(screenPoint.z - depth));
 
         occlusion += depth < screenPoint.z ? rangeCheck : 0.0;
         radius *= 2.0;
@@ -304,7 +308,7 @@ vec3 indirect_lighting(inout uint s){
     
     light += sunShadowing(mat_position(mat), s) * pbr_lighting(V, sunDirection, mat, sunColor * sunIntensity);
 
-    light *= (1.0 - HeightOcclusion(mat_normal(mat), s) * 0.95);
+    light *= (1.0 - HeightOcclusion(mat_position(mat), mat_normal(mat), s) * 0.95);
 
     light *= (1.0 - AmbientOcclusion(mat_position(mat), mat_normal(mat), s));
 
@@ -467,7 +471,9 @@ vec3 visualizeShadowBuffer()
 vec3 visualizeAmbientOcclusion(inout uint s)
 {
     const material mat = getMaterial();
-    return vec3(1.0 - AmbientOcclusion(mat_position(mat), mat_normal(mat), s));
+    float ao = AmbientOcclusion(mat_position(mat), mat_normal(mat), s);
+    ao += HeightOcclusion(mat_position(mat), mat_normal(mat), s);
+    return vec3(1.0 - ao);
 }
 
 // -----------------------------------------------------------------------

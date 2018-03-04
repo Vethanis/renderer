@@ -184,7 +184,6 @@ void Renderables::fwdDraw(const glm::vec3& eye, const Transform& VP, u32 dflag, 
 
     fwdProg.setUniform("eye", eye);
     fwdProg.setUniformInt("seed", rand());
-    fwdProg.setUniformInt("draw_flags", dflag);
     
     for(auto& res : resources){
         const Transform& M = res.m_transform;
