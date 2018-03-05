@@ -30,13 +30,18 @@ void SceneSetup(vec3 pt, float radius)
 
     SDFDefinition* pDef = g_SdfStore[mesh];
     pDef->m_deleteOnUse = true;
-    pDef->m_sdfDepth = 3;
+    pDef->m_sdfDepth = 5;
 
     SDFList& list = pDef->m_sdfs;
 
     SDF& sdf = list.grow();
     sdf.translation = pt;
     sdf.scale = vec3(radius);
+
+    if(rand(g_randSeed) & 1)
+    {
+        sdf.type=SDF_BOX;
+    }
     
     g_Renderables.create(mesh, albedo, material);
 }

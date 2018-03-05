@@ -1,8 +1,8 @@
 #include "meshgen.h"
 
 #include "sdf.h"
-#include "quickhull.h"
 #include "vertexbuffer.h"
+#include "isosurface.h"
 #include <thread>
 #include <mutex>
 #include <atomic>
@@ -43,7 +43,9 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
             depth = other.depth;
         }
     };
-    Vector<qh_vertex> vertices;
+    VertexBuffer& vertices = output.m_vb;
+    vertices.clear();
+    output.m_ib.clear();
     Vector<Task> tasks;
     std::mutex taskMutex;
     std::mutex vertMutex;
@@ -82,26 +84,34 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
 
         if(task.depth == maxDepth)
         {
-            vec3 pt = task.center;
+            GRIDCELL g;
+            const float radius = task.radius;
+            g.p[0] = task.center + vec3(-radius);
+            g.p[1] = task.center + vec3(radius, -radius, -radius);
+            g.p[2] = task.center + vec3(radius, -radius, radius);
+            g.p[3] = task.center + vec3(-radius, -radius, radius);
+            g.p[4] = task.center + vec3(-radius, radius, -radius);
+            g.p[5] = task.center + vec3(radius, radius, -radius);
+            g.p[6] = task.center + vec3(radius, radius, radius);
+            g.p[7] = task.center + vec3(-radius, radius, radius);
+            
+            for(unsigned i = 0; i < 8; ++i)
             {
-                const vec3 N = SDFNorm(sdfs, task.indices, pt);
-                const float e = 0.001f;
-                float dis = SDFDis(sdfs, task.indices, pt);
-                while(glm::abs(dis) > e)
-                {
-                    pt -= N * dis;
-                    dis = SDFDis(sdfs, task.indices, pt);
-                }
+                g.val[i] = SDFDis(sdfs, task.indices, g.p[i]);
             }
 
-            qh_vertex_t vert;
-            vert.x = pt.x;
-            vert.y = pt.y;
-            vert.z = pt.z;
+            Vector<vec3> localVerts;
+            PolygoniseCell(g, 0.0f, localVerts);
             
-            vertMutex.lock();
-            vertices.grow() = vert;
-            vertMutex.unlock();
+            if(localVerts.count())
+            {
+                vertMutex.lock();
+                for(const vec3& v : localVerts)
+                {
+                    vertices.grow() = { vec4(v.x, v.y, v.z, 1.0f) };
+                }
+                vertMutex.unlock();
+            }
         }
         else
         {
@@ -164,24 +174,10 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
     {
         t.join();
     }
-    
-    const qh_mesh_t mesh = qh_quickhull3d(vertices.begin(), vertices.count());
 
-    VertexBuffer& vb = output.m_vb;
-    IndexBuffer& ib = output.m_ib;
-    vb.resize(mesh.nvertices);
-    ib.resize(mesh.nindices);
-    for(unsigned i = 0; i < mesh.nindices; ++i)
+    output.m_ib.reserve(vertices.count());
+    for(int i = 0; i < vertices.count(); ++i)
     {
-        ib[i] = mesh.indices[i];
+        output.m_ib.append() = i;
     }
-
-    for(unsigned i = 0; i < mesh.nvertices; ++i)
-    {
-        vb[i].position.x = mesh.vertices[i].x;
-        vb[i].position.y = mesh.vertices[i].y;
-        vb[i].position.z = mesh.vertices[i].z;
-    }
-
-    qh_free_mesh(mesh);
 }

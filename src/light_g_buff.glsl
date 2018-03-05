@@ -190,12 +190,10 @@ float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
 {
     const int samples = 4;
     float occlusion = 0.0;
-    float radius = 0.025;
+    float radius = 0.05;
     for(int i = 0; i < samples; ++i)
     {
-        const vec3 dir = normalize(N + (vec3(rand(s), rand(s), rand(s)) * 2.0 - 1.0));
-        const vec3 samplePoint = P + radius * dir;
-        vec4 screenPoint = MVP * vec4(samplePoint.xyz, 1.0);
+        vec4 screenPoint = MVP * vec4(P + radius * (N + vec3(rand(s), rand(s), rand(s)) * 2.0 - 1.0), 1.0);
         screenPoint /= screenPoint.w;
         screenPoint.xyz = screenPoint.xyz * 0.5 + 0.5;
         const float depth = getDepth(screenPoint.xy);
@@ -203,7 +201,7 @@ float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(screenPoint.z - depth));
 
         occlusion += depth < screenPoint.z ? rangeCheck : 0.0;
-        radius *= 2.0;
+        radius *= 3.3333;
     }
 
     return occlusion / float(samples);
@@ -471,7 +469,7 @@ vec3 visualizeAmbientOcclusion(inout uint s)
 {
     const material mat = getMaterial();
     float ao = AmbientOcclusion(mat_position(mat), mat_normal(mat), s);
-    ao += HeightOcclusion(mat_position(mat), mat_normal(mat), s);
+    //ao += HeightOcclusion(mat_position(mat), mat_normal(mat), s);
     return vec3(1.0 - ao);
 }
 
