@@ -30,18 +30,22 @@ void SceneSetup(vec3 pt, float radius)
 
     SDFDefinition* pDef = g_SdfStore[mesh];
     pDef->m_deleteOnUse = true;
-    pDef->m_sdfDepth = 5;
+    pDef->m_sdfDepth = 7;
 
     SDFList& list = pDef->m_sdfs;
 
-    SDF& sdf = list.grow();
-    sdf.translation = pt;
-    sdf.scale = vec3(radius);
-
-    if(rand(g_randSeed) & 1)
+    for(int i = 0; i < 1000; ++i)
     {
-        sdf.type=SDF_BOX;
+        SDF& sdf = list.grow();
+        sdf.translation = pt;
+        sdf.translation += vec3(randf(), randf(), randf()) * 6.0f - 3.0f;
+        sdf.scale = vec3(randf(), randf(), randf()) * 2.0f;
+        if(rand(g_randSeed) & 1)
+        {
+            sdf.type=SDF_BOX;
+        }
     }
+
     
     g_Renderables.create(mesh, albedo, material);
 }
@@ -87,7 +91,7 @@ int main(int argc, char* argv[])
 
     ProfilerInit();
 
-    SceneSetup(camera.getAxis() + camera.getEye(), 1.0f);
+    SceneSetup(camera.getAxis() * 10.0f + camera.getEye(), 1.0f);
 
     while(window.open())
     {
@@ -187,7 +191,7 @@ int main(int argc, char* argv[])
             {
                 case GLFW_KEY_F1:
                 {
-                    SceneSetup(camera.getAxis() * 3.0f + camera.getEye(), 1.0f);
+                    SceneSetup(camera.getAxis() * 10.0f + camera.getEye(), 1.0f);
                 }
             }
         }

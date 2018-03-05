@@ -158,7 +158,7 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
         }
     };
 
-    const int num_threads = 8;
+    const int num_threads = 16;
     while(tasks.count() < num_threads)
     {
         DoTask();
