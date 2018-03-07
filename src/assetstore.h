@@ -23,10 +23,9 @@ extern Array<AssetStoreUpdateFn, 64> g_AssetStoreUpdates;
 
 inline void UpdateAssetStores()
 {
-    int num_placements = 0;
     for(AssetStoreUpdateFn& fn : g_AssetStoreUpdates)
     {
-        num_placements += fn.Call();
+        fn.Call();
     }
 }
 
@@ -112,7 +111,6 @@ public:
     {
         _ThisType* pInstance = static_cast<_ThisType*>(instance);
 
-        int num_placements = 0;
         while(!pInstance->m_store.full() && !pInstance->m_placements.empty())
         {
             Placement p = pInstance->m_placements.pop();
@@ -127,10 +125,10 @@ public:
                 p.m_item.AddRef();
                 pInstance->m_store.insert(p.m_name, p.m_item);
             }
-            ++num_placements;
+            return 1;
         }
 
-        return num_placements;
+        return 0;
     }
     U* operator[](unsigned name){ return get(name); }
 };

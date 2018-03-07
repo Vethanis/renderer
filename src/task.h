@@ -20,7 +20,7 @@ struct Task
 
 struct TaskManager
 {
-    CircularQueue<Task, 1024> m_tasks;
+    CircularQueue<Task, 256> m_tasks;
     std::thread m_threads[4];
 
     volatile bool m_running;
@@ -67,9 +67,11 @@ struct TaskManager
         };
         void* p = task.m_data;
         T* pT = (T*)p;
-        *pT = T();
+        new (pT) T();
         *pT = data;
         assert(!m_tasks.full());
         m_tasks.push(task);
     }
 };
+
+extern TaskManager g_TaskManager;
