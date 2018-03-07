@@ -23,7 +23,8 @@ struct GeometryStoreElement
     void RemoveRef(){ m_refs--; }
     int RefCount() const { return m_refs; }
     Geometry* GetItem(){ return &m_geometry; }
-    void OnLoad(unsigned name);
+    void OnLoadSync(unsigned name);
+    void OnLoadAsync(unsigned name);
     void OnRelease(unsigned name);
 };
 
@@ -35,14 +36,15 @@ struct MeshStoreElement
     void RemoveRef(){ m_refs--; }
     int RefCount() const { return m_refs; }
     Mesh* GetItem(){ return &m_mesh; }
-    void OnLoad(unsigned name);
+    void OnLoadSync(unsigned name);
+    void OnLoadAsync(unsigned){}
     void OnRelease(unsigned name);
 };
 
 extern AssetStore<GeometryStoreElement, Geometry, 2048> g_GeometryStore;
 extern AssetStore<MeshStoreElement, Mesh, 512> g_MeshStore;
 
-inline void GeometryStoreElement::OnLoad(unsigned name)
+inline void GeometryStoreElement::OnLoadAsync(unsigned name)
 {
     SDFDefinition* pDef = g_SdfStore[name];
     assert(pDef);
@@ -51,16 +53,20 @@ inline void GeometryStoreElement::OnLoad(unsigned name)
     {
         g_SdfStore.remove(name);
     }
+};
+
+inline void GeometryStoreElement::OnLoadSync(unsigned name)
+{
     Mesh* pMesh = g_MeshStore[name];
     pMesh->upload(m_geometry);
-};
+}
 
 inline void GeometryStoreElement::OnRelease(unsigned name)
 {
 
 }
 
-inline void MeshStoreElement::OnLoad(unsigned name)
+inline void MeshStoreElement::OnLoadSync(unsigned name)
 { 
     m_mesh.init();
     g_GeometryStore.request(name);

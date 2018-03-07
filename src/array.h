@@ -17,6 +17,11 @@ struct Array{
         assert(_tail > 0);
         return _data[_tail--];
     }
+    void popfast()
+    {
+        assert(count() > 0);
+        --_tail;
+    }
     T* begin(){
         return _data;
     }
@@ -190,6 +195,11 @@ struct Vector{
         T& item = back();
         --_tail;
         return item;
+    }
+    void popfast()
+    {
+        assert(count() > 0);
+        --_tail;
     }
     void clear(){ _tail = 0; }
     void reset()

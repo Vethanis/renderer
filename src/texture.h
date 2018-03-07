@@ -108,7 +108,8 @@ struct TextureStoreElement
     void AddRef(){ m_refs++;}
     void RemoveRef(){ m_refs--;}
     int RefCount()const{ return m_refs; }
-    void OnLoad(unsigned name);
+    void OnLoadSync(unsigned name);
+    void OnLoadAsync(unsigned){}
     void OnRelease(unsigned name);
     Texture* GetItem(){ return &m_texture; }
 };
@@ -120,7 +121,8 @@ struct ImageStoreElement
     void AddRef(){ m_refs++;}
     void RemoveRef(){ m_refs--;}
     int RefCount()const{ return m_refs; }
-    void OnLoad(unsigned name);
+    void OnLoadSync(unsigned name);
+    void OnLoadAsync(unsigned name);
     void OnRelease(unsigned name){ m_image.free();}
     Image* GetItem(){ return &m_image; }
 };
@@ -128,7 +130,7 @@ struct ImageStoreElement
 extern AssetStore<TextureStoreElement, Texture, 32> g_TextureStore;
 extern AssetStore<ImageStoreElement, Image, 128> g_ImageStore;
 
-inline void TextureStoreElement::OnLoad(unsigned name)
+inline void TextureStoreElement::OnLoadSync(unsigned name)
 {
     g_ImageStore.request(name);
 }
@@ -139,9 +141,13 @@ inline void TextureStoreElement::OnRelease(unsigned name)
     g_ImageStore.release(name);
 }
 
-inline void ImageStoreElement::OnLoad(unsigned name)
+inline void ImageStoreElement::OnLoadAsync(unsigned name)
 { 
     m_image.load(name);
+}
+
+inline void ImageStoreElement::OnLoadSync(unsigned name)
+{ 
     Texture* pTexture = g_TextureStore[name];
     assert(pTexture);
     pTexture->init4uc(m_image.width, m_image.height, m_image.mip, m_image.image);

@@ -63,8 +63,8 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
             hi = vecMax(hi, sdfs[i].max());
         }
 
-        hi += 0.01f;
-        lo -= 0.01f;
+        hi += 0.1f;
+        lo -= 0.1f;
         rootTask.center = 0.5f * lo + 0.5f * hi;
         rootTask.radius = glm::distance(lo, hi) * 0.5f;
     }
@@ -128,13 +128,14 @@ void CreateMesh(Geometry& output, const SDFList& sdfs, unsigned maxDepth)
 
                 for(unsigned j : task.indices)
                 {
-                    if(sdfs[j].distance(child.center) < child.radius * cornerRatio)
+                    if(sdfs[j].distance(child.center) < child.radius * cornerRatio + sdfs[j].smoothness)
                     {
                         child.indices.grow() = j;
                     }
                 }
 
-                if(child.indices.count() && glm::abs(SDFDis(sdfs, child.indices, child.center)) < child.radius * cornerRatio)
+                if(child.indices.count() && 
+                    glm::abs(SDFDis(sdfs, child.indices, child.center)) < child.radius * cornerRatio)
                 {
                     taskMutex.lock();
                     tasks.grow().assume(child);

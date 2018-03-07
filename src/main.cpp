@@ -13,41 +13,65 @@
 #include "worldgen.h"
 #include "randf.h"
 #include <ctime>
+#include "texture.h"
 
 unsigned scene_mesh_id = 5;
-void SceneSetup(vec3 pt, float radius)
+u16 curRenderable;
+bool hasRenderable = false;
+bool hasRequestedAllTextures = false;
+void SceneSetup(vec3 pt, float radius, int matId, bool makeNew)
 {
     HashString albedo("basic_albedo.png");
     HashString material("basic_material.png");
-    if(scene_mesh_id & 1)
+    HashString albedo2("wood_floor_albedo.png");
+    HashString material2("wood_floor_material.png");
+    if(matId & 1)
     {
-        albedo = HashString("wood_floor_albedo.png");
-        material = HashString("wood_floor_material.png");
+        albedo = albedo2;
+        material = material2;
+    }
+    if(!hasRequestedAllTextures)
+    {
+        g_TextureStore.request(albedo);
+        g_TextureStore.request(albedo2);
+        g_TextureStore.request(material);
+        g_TextureStore.request(material2);
     }
 
-    HashString mesh = scene_mesh_id++;
-    g_SdfStore.insert(mesh, {});
-
-    SDFDefinition* pDef = g_SdfStore[mesh];
-    pDef->m_deleteOnUse = true;
-    pDef->m_sdfDepth = 7;
-
-    SDFList& list = pDef->m_sdfs;
-
-    for(int i = 0; i < 1000; ++i)
+    HashString mesh = scene_mesh_id;
+    if(makeNew)
     {
-        SDF& sdf = list.grow();
-        sdf.translation = pt;
-        sdf.translation += vec3(randf(), randf(), randf()) * 6.0f - 3.0f;
-        sdf.scale = vec3(randf(), randf(), randf()) * 2.0f;
-        if(rand(g_randSeed) & 1)
+        g_SdfStore.remove(scene_mesh_id);
+        ++scene_mesh_id;
+        mesh = scene_mesh_id;
+        g_SdfStore.insert(mesh, {});
+    }
+    else
+    {
+        if(hasRenderable)
         {
-            sdf.type=SDF_BOX;
+            g_Renderables.release(curRenderable);
+            hasRenderable = false;
         }
     }
 
-    
-    g_Renderables.create(mesh, albedo, material);
+    SDFDefinition* pDef = g_SdfStore[mesh];
+    if(!pDef)
+    {
+        g_SdfStore.insert(mesh, {});
+        pDef = g_SdfStore[mesh];
+    }
+    pDef->m_sdfDepth = 7;
+
+    SDFList& list = pDef->m_sdfs;
+    SDF& sdf = list.grow();
+    sdf.translation = pt;
+    sdf.scale = vec3(radius);
+    sdf.blend_type = SDF_S_UNION;
+    sdf.smoothness = radius * 0.5f;
+
+    curRenderable = g_Renderables.create(mesh, albedo, material);
+    hasRenderable = true;
 }
 
 void FpsStats()
@@ -91,7 +115,9 @@ int main(int argc, char* argv[])
 
     ProfilerInit();
 
-    SceneSetup(camera.getAxis() * 10.0f + camera.getEye(), 1.0f);
+    int curMat = 0;
+    float radius = 1.0f;
+    SceneSetup(camera.getAxis() * 5.0f + camera.getEye(), radius, curMat, false);
 
     while(window.open())
     {
@@ -102,14 +128,14 @@ int main(int argc, char* argv[])
         {
             switch(key)
             {
-                case GLFW_KEY_KP_ADD:
+                case GLFW_KEY_UP:
                 {
-
+                    radius *= 1.01f;
                 }
                 break;
-                case GLFW_KEY_KP_SUBTRACT:
+                case GLFW_KEY_DOWN:
                 {
-                    
+                    radius *= 0.99f;
                 }
                 break;
                 case GLFW_KEY_E:
@@ -190,9 +216,17 @@ int main(int argc, char* argv[])
             switch(*pKey)
             {
                 case GLFW_KEY_F1:
-                {
-                    SceneSetup(camera.getAxis() * 10.0f + camera.getEye(), 1.0f);
-                }
+                    SceneSetup(camera.getAxis() * 5.0f + camera.getEye(), radius, curMat, false);
+                break;
+                case GLFW_KEY_F2:
+                    SceneSetup(camera.getAxis() * 5.0f + camera.getEye(), radius, curMat, true);
+                break;
+                case GLFW_KEY_F3:
+                    curMat++;
+                    break;
+                case GLFW_KEY_F4:
+                    curMat--;
+                    break;
             }
         }
 

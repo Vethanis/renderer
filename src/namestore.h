@@ -11,14 +11,16 @@ struct NameStore
         {
             Capacity = 256,
         };
-        char m_text[Capacity] = {0};
-        TextBlock(){};
+        char m_text[Capacity];
+        TextBlock(){m_text[0] = 0;};
         TextBlock(const char* val)
         {
-            for(u32 i = 0; i < Capacity - 1 && val[i]; ++i)
+            u32 i = 0;
+            for(; i < Capacity - 1 && val[i]; ++i)
             {
                 m_text[i] = val[i];
             }
+            m_text[i] = 0;
         }
     };
 

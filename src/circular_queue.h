@@ -6,15 +6,11 @@
 
 template<typename T, u16 capacity>
 class CircularQueue{
-    T* data;
+    T data[capacity];
     std::atomic<u16> head, tail;
 public:
     CircularQueue() : head(0), tail(0){
         assert( ( (capacity-1) & capacity ) == 0);
-        data = new T[capacity];
-    }
-    ~CircularQueue(){
-        delete[] data;
     }
     inline bool empty(){
         return head == tail;
