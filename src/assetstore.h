@@ -91,17 +91,19 @@ public:
     }
     static void updateAsync(void* instance)
     {
-        _ThisType* pInstance = static_cast<_ThisType*>(instance);
-
-        while(pInstance->m_asyncRunning)
+        static_cast<_ThisType*>(instance)->MupdateAsync();
+    }
+    void MupdateAsync()
+    {
+        while(m_asyncRunning)
         {
-            while(!pInstance->m_requests.empty() && !pInstance->m_placements.full())
+            while(!m_requests.empty() && !m_placements.full())
             {
-                unsigned name = pInstance->m_requests.pop();
+                unsigned name = m_requests.pop();
                 Placement p;
                 p.m_name = name;
                 p.m_item.OnLoadAsync(name);
-                pInstance->m_placements.push(p);
+                m_placements.push(p);
             }
             using namespace std::chrono_literals;
             std::this_thread::sleep_for(30ms);
@@ -109,12 +111,14 @@ public:
     }
     static int update(void* instance)
     {
-        _ThisType* pInstance = static_cast<_ThisType*>(instance);
-
-        while(!pInstance->m_store.full() && !pInstance->m_placements.empty())
+        return static_cast<_ThisType*>(instance)->Mupdate();
+    }
+    int Mupdate()
+    {
+        while(!m_store.full() && !m_placements.empty())
         {
-            Placement p = pInstance->m_placements.pop();
-            T* item = pInstance->m_store[p.m_name];
+            Placement p = m_placements.pop();
+            T* item = m_store[p.m_name];
             if(item)
             {
                 item->AddRef();
@@ -123,11 +127,10 @@ public:
             {
                 p.m_item.OnLoadSync(p.m_name);
                 p.m_item.AddRef();
-                pInstance->m_store.insert(p.m_name, p.m_item);
+                m_store.insert(p.m_name, p.m_item);
             }
             return 1;
         }
-
         return 0;
     }
     U* operator[](unsigned name){ return get(name); }
