@@ -14,6 +14,7 @@
 #include "randf.h"
 #include <ctime>
 #include "texture.h"
+#include "task.h"
 
 unsigned scene_mesh_id = 5;
 u16 curRenderable;

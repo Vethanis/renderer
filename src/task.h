@@ -18,13 +18,12 @@ struct Task
     }
 };
 
-struct TaskManager
+class TaskManager
 {
     CircularQueue<Task, 256> m_tasks;
     std::thread m_threads[4];
-
     volatile bool m_running;
-
+public:
     TaskManager()
     {
         m_running = true;
@@ -55,14 +54,19 @@ struct TaskManager
         }
     }
     template<typename T>
-    void CreateTask(TaskFn fn, const T& data)
+    void CreateTask(const T& data)
     {
-        assert(sizeof(T) <= 64);
         Task task;
-        task.m_function = fn;
+        assert(sizeof(T) <= sizeof(task.m_data));
+        task.m_function = [](void* pVoid)
+        {
+            T* item = static_cast<T*>(pVoid);
+            T& rItem = *item;
+            rItem();
+        };
         task.m_destructor = [](void* pVoid)
         {
-            T* pItem = (T*)pVoid;
+            T* pItem = static_cast<T*>(pVoid);
             pItem->~T();
         };
         void* p = task.m_data;
