@@ -202,16 +202,15 @@ void main(){
             uv = vec2(P.x, P.y);
     }
 
-    vec2 newUv = ParallaxMapping(uv * uv_scale + uv_offset, tanV);
-    const material mat = getMaterial(newUv);
+    const material mat = getMaterial(uv);
 
     gPosition = vec4(P.xyz, mat.roughness);
-    gAlbedo = vec4(mat.albedo, getHeight(newUv));
+    gAlbedo = vec4(mat.albedo, getHeight(uv));
     gNormal = vec4(mat.normal, mat.metalness);
     gVelocity = vec4(velocity.xyz, gl_FragCoord.z);
 
     if(draw_flags == DF_UV)
     {
-        gAlbedo.xyz = vec3(fract(newUv).xy, 0.0);
+        gAlbedo.xyz = vec3(fract(uv).xy, 0.0);
     }
 }

@@ -31,7 +31,7 @@ void GBuffer::init(int w, int h){
     prog.setup(progFilenames, 2);
     postProg.setup(postFilenames, 2);
 
-    cmap.init(512);
+    cmap.init(256);
 }
 void GBuffer::deinit(){
     prog.deinit();

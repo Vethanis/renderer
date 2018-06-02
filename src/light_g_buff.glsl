@@ -83,7 +83,7 @@ material getMaterial(){
 
 vec3 environment_cubemap(vec3 dir, float roughness){
     float mip = textureQueryLod(env_cm, dir).x;
-    return textureLod(env_cm, dir, mip + roughness * 10.0).rgb;
+    return textureLod(env_cm, dir, mip + 2.0 + roughness * 10.0).rgb;
 }
 
 vec3 env_cubemap(vec3 dir){
@@ -133,7 +133,7 @@ void findBasis(vec3 N, out vec3 T, out vec3 B){
 // -------------------------------------------------------------------------------------------
 
 float sunShadowing(vec3 p, inout uint s){
-    const int samples = 8;
+    const int samples = 4;
     const float inv_samples = 1.0 / float(samples);
     const float bias = 0.001;
 
@@ -188,8 +188,8 @@ float HeightOcclusion(vec3 P, vec3 N, inout uint s){
 
 float AmbientOcclusion(vec3 P, vec3 N, inout uint s)
 {
-    const int samples = 8;
-    const float radius = 0.5;
+    const int samples = 4;
+    const float radius = 0.25;
     float occlusion = 0.0;
     for(int i = 0; i < samples; ++i)
     {
@@ -292,7 +292,7 @@ vec3 indirect_lighting(inout uint s)
         light += pbr_lighting(V, R, mat, environment_cubemap(R, mat_roughness(mat)));
     }
 
-    for(int i = 0; i < 8; ++i)
+    for(int i = 0; i < 4; ++i)
     {
         vec3 r = vec3(randBi(s), randBi(s), randBi(s));
         if(dot(r, mat_normal(mat)) < 0.0)
