@@ -17,66 +17,51 @@ struct Mesh
 
 struct GeometryStoreElement
 {
-    Geometry m_geometry;
-    int m_refs = 0;
-    void AddRef(){ m_refs++; }
-    void RemoveRef(){ m_refs--; }
-    int RefCount() const { return m_refs; }
-    Geometry* GetItem(){ return &m_geometry; }
-    void OnLoadSync(unsigned name);
-    void OnLoadAsync(unsigned name);
-    void OnRelease(unsigned name);
+    Geometry m_item;
+    s32 m_refs = 0;
 };
 
 struct MeshStoreElement
 {
-    Mesh m_mesh;
-    int m_refs = 0;
-    void AddRef(){ m_refs++; }
-    void RemoveRef(){ m_refs--; }
-    int RefCount() const { return m_refs; }
-    Mesh* GetItem(){ return &m_mesh; }
-    void OnLoadSync(unsigned name);
-    void OnLoadAsync(unsigned){}
-    void OnRelease(unsigned name);
+    Mesh m_item;
+    s32 m_refs = 0;
 };
 
 extern AssetStore<GeometryStoreElement, Geometry, 2048> g_GeometryStore;
 extern AssetStore<MeshStoreElement, Mesh, 512> g_MeshStore;
 
-inline void GeometryStoreElement::OnLoadAsync(unsigned name)
+template<>
+inline void OnLoadAsync(GeometryStoreElement* item, unsigned name)
 {
     SDFDefinition* pDef = g_SdfStore[name];
     assert(pDef);
-    CreateMesh(m_geometry, pDef->m_sdfs, pDef->m_sdfDepth);
+    CreateMesh(item->m_item, pDef->m_sdfs, pDef->m_sdfDepth);
     if(pDef->m_deleteOnUse)
     {
         g_SdfStore.remove(name);
     }
 };
 
-inline void GeometryStoreElement::OnLoadSync(unsigned name)
+template<>
+inline void OnLoadSync(GeometryStoreElement* item, u32 name)
 {
     Mesh* pMesh = g_MeshStore[name];
     if(pMesh)
     {
-        pMesh->upload(m_geometry);
+        pMesh->upload(item->m_item);
     }
 }
 
-inline void GeometryStoreElement::OnRelease(unsigned name)
-{
-
-}
-
-inline void MeshStoreElement::OnLoadSync(unsigned name)
+template<>
+inline void OnLoadSync(MeshStoreElement* item, u32 name)
 { 
-    m_mesh.init();
+    item->m_item.init();
     g_GeometryStore.request(name);
 };
 
-inline void MeshStoreElement::OnRelease(unsigned name)
+template<>
+inline void OnRelease(MeshStoreElement* item, u32 name)
 { 
-    m_mesh.deinit();
+    item->m_item.deinit();
     g_GeometryStore.release(name);
 }

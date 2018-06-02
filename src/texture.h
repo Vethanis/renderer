@@ -6,7 +6,7 @@
 #include "assetstore.h"
 
 struct Texture{
-    unsigned handle = 0;
+    u32 handle = 0;
 
     struct parameter{
         const void* ptr;
@@ -89,66 +89,57 @@ struct Texture{
 
 struct Image
 {
-    unsigned char* image;
-    unsigned id;
-    int width, height;
+    u8* image;
+    u32 id;
+    s32 width, height;
     bool mip;
     Image() : image(nullptr), id(0), width(0), height(0), mip(true){}
     bool operator==(const Image& other)const{
         return id == other.id;
     }
-    void load(unsigned name);
+    void load(u32 name);
     void free();
 };
 
 struct TextureStoreElement
 {
-    Texture m_texture;
-    int m_refs = 0;
-    void AddRef(){ m_refs++;}
-    void RemoveRef(){ m_refs--;}
-    int RefCount()const{ return m_refs; }
-    void OnLoadSync(unsigned name);
-    void OnLoadAsync(unsigned){}
-    void OnRelease(unsigned name);
-    Texture* GetItem(){ return &m_texture; }
+    Texture m_item;
+    s32 m_refs = 0;
 };
 
 struct ImageStoreElement
 {
-    Image m_image;
-    int m_refs = 0;
-    void AddRef(){ m_refs++;}
-    void RemoveRef(){ m_refs--;}
-    int RefCount()const{ return m_refs; }
-    void OnLoadSync(unsigned name);
-    void OnLoadAsync(unsigned name);
-    void OnRelease(unsigned name){ m_image.free();}
-    Image* GetItem(){ return &m_image; }
+    Image m_item;
+    s32 m_refs = 0;
 };
 
 extern AssetStore<TextureStoreElement, Texture, 32> g_TextureStore;
 extern AssetStore<ImageStoreElement, Image, 128> g_ImageStore;
 
-inline void TextureStoreElement::OnLoadSync(unsigned name)
+template<>
+inline void OnLoadSync(TextureStoreElement* item, u32 name)
 {
     g_ImageStore.request(name);
 }
 
-inline void TextureStoreElement::OnRelease(unsigned name)
+template<>
+inline void OnRelease(TextureStoreElement* item, u32 name)
 { 
-    m_texture.deinit();
+    item->m_item.deinit();
     g_ImageStore.release(name);
 }
 
-inline void ImageStoreElement::OnLoadAsync(unsigned name)
+template<>
+inline void OnLoadAsync(ImageStoreElement* item, u32 name)
 { 
-    m_image.load(name);
+    item->m_item.load(name);
 }
 
-inline void ImageStoreElement::OnLoadSync(unsigned name)
+template<>
+inline void OnLoadSync(ImageStoreElement* item, u32 name)
 { 
     Texture* pTexture = g_TextureStore[name];
     assert(pTexture);
-    pTexture->init4uc(m_image.width, m_image.height, m_image.mip, m_image.image);
+    Image& img = item->m_item;
+    pTexture->init4uc(img.width, img.height, img.mip, img.image);
 }

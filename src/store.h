@@ -1,26 +1,27 @@
 #pragma once 
 
+#include "ints.h"
 #include <cassert>
 
-template<typename T, const unsigned cap>
+template<typename T, const u32 cap>
 class Store
 {
-    static constexpr unsigned invalid_val = 0xffffff;
+    static constexpr u32 invalid_val = 0xffffff;
     
     T data[cap];
-    unsigned names[cap];
-    unsigned count;
-    unsigned capacity;
+    u32 names[cap];
+    u32 count;
+    u32 capacity;
 
-    unsigned mask(unsigned key){
+    u32 mask(u32 key){
         return key & (cap - 1);
     }
-    unsigned probe_distance(unsigned pos, unsigned key){
+    u32 probe_distance(u32 pos, u32 key){
         return mask(pos + cap - mask(key));
     }
-    unsigned index_of(unsigned key){
-        unsigned pos = mask(key);
-        unsigned dist = 0;
+    u32 index_of(u32 key){
+        u32 pos = mask(key);
+        u32 dist = 0;
         while(true){
             if(names[pos] == key){
                 return pos;
@@ -37,7 +38,7 @@ public:
     Store(){
         count = 0;
         capacity = cap;
-        for(unsigned i = 0; i < capacity; ++i)
+        for(u32 i = 0; i < capacity; ++i)
         {
             names[i] = 0;
         }
@@ -46,16 +47,16 @@ public:
     class iterator
     {
         Store* m_pStore;
-        unsigned m_idx;
+        u32 m_idx;
         void iterate(){
             for(; m_idx < m_pStore->capacity; ++m_idx){
-                unsigned key = m_pStore->names[m_idx];
+                u32 key = m_pStore->names[m_idx];
                 if(key)
                     break;
             }
         }
     public:
-        iterator(Store* pStore, unsigned idx = 0) : m_pStore(pStore), m_idx(idx){
+        iterator(Store* pStore, u32 idx = 0) : m_pStore(pStore), m_idx(idx){
             iterate();
         }
         bool operator != (const iterator& o)const{
@@ -74,10 +75,10 @@ public:
     iterator begin(){ return iterator(this); }
     iterator end(){ return iterator(this, capacity); }
 
-    void insert(unsigned key, const T& _val){
+    void insert(u32 key, const T& _val){
         assert(count < cap);
-        unsigned pos = mask(key);
-        unsigned dist = 0;
+        u32 pos = mask(key);
+        u32 dist = 0;
         T val = _val;
         while(true){
             if(names[pos] == 0){
@@ -87,10 +88,10 @@ public:
                 return;
             }
 
-            unsigned existing_dist = probe_distance(pos, names[pos]);
+            u32 existing_dist = probe_distance(pos, names[pos]);
             if(existing_dist < dist){
                 {
-                    const unsigned tname = key;
+                    const u32 tname = key;
                     key = names[pos];
                     names[pos] = tname;
                 }
@@ -107,27 +108,27 @@ public:
             ++dist;
         }
     }
-    T* get(unsigned key){
-        unsigned loc = index_of(key);
+    T* get(u32 key){
+        u32 loc = index_of(key);
         if(loc == invalid_val){
             return nullptr;
         }
         return data + loc;
     }
-    T* operator[](unsigned key){
+    T* operator[](u32 key){
         return get(key);
     }
-    void remove(unsigned key){
-        unsigned loc = index_of(key);
+    void remove(u32 key){
+        u32 loc = index_of(key);
         if(loc != invalid_val)
         {
             count--;
             names[loc] = 0;
             data[loc] = T();
 
-            unsigned nextLoc = mask(loc + 1);
-            unsigned trueLoc = mask(names[nextLoc]);
-            while(names[nextLoc] && trueLoc < nextLoc)
+            u32 nextLoc = mask(loc + 1);
+            u32 trueLoc = mask(names[nextLoc]);
+            while(names[nextLoc] && trueLoc != nextLoc)
             {
                 names[loc] = names[nextLoc];
                 names[nextLoc] = 0;
@@ -143,11 +144,11 @@ public:
     bool full(){ return cap == count; }
     void clear()
     {
-        for(unsigned i = 0; i < count; ++i)
+        for(u32 i = 0; i < count; ++i)
         {
             names[i] = 0;
         }
-        for(unsigned i = 0; i < count; ++i)
+        for(u32 i = 0; i < count; ++i)
         {
             data[i] = T();
         }
