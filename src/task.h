@@ -1,7 +1,8 @@
 #pragma once
 
-#include "circular_queue.h"
+#include "array.h"
 #include <thread>
+#include <mutex>
 #include <chrono>
 
 typedef void (*TaskFn)(void*);
@@ -20,8 +21,9 @@ struct Task
 
 class TaskManager
 {
-    CircularQueue<Task, 256> m_tasks;
+    Vector<Task> m_tasks;
     std::thread m_threads[4];
+    std::mutex m_lock;
     volatile bool m_running;
 public:
     TaskManager()
@@ -44,13 +46,24 @@ public:
     {
         while(m_running)
         {
-            while(!m_tasks.empty())
+            while(m_tasks.count())
             {
-                Task task = m_tasks.pop();
-                task.call();
+                Task task;
+                bool doTask = false;
+                m_lock.lock();
+                if(m_tasks.count())
+                {
+                    task = m_tasks.pop();
+                    doTask = true;
+                }
+                m_lock.unlock();
+                if(doTask)
+                {
+                    task.call();
+                }
             }
             using namespace std::chrono_literals;
-            std::this_thread::sleep_for(30ms);
+            std::this_thread::sleep_for(1ms);
         }
     }
     template<typename T>
@@ -73,8 +86,10 @@ public:
         T* pT = (T*)p;
         new (pT) T();
         *pT = data;
-        assert(!m_tasks.full());
-        m_tasks.push(task);
+        
+        m_lock.lock();
+        m_tasks.grow() = task;
+        m_lock.unlock();
     }
 };
 

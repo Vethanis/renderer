@@ -58,7 +58,10 @@ inline void GeometryStoreElement::OnLoadAsync(unsigned name)
 inline void GeometryStoreElement::OnLoadSync(unsigned name)
 {
     Mesh* pMesh = g_MeshStore[name];
-    pMesh->upload(m_geometry);
+    if(pMesh)
+    {
+        pMesh->upload(m_geometry);
+    }
 }
 
 inline void GeometryStoreElement::OnRelease(unsigned name)

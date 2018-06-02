@@ -2,346 +2,355 @@
 
 #include <cassert>
 #include "hash.h"
+#include "ints.h"
 
-template<typename T, int _capacity>
-struct Array{
-    T _data[_capacity];
-    int _tail;
-    Array() : _tail(0){
+template<typename T>
+class Slice
+{
+    const T* m_begin;
+    const T* m_end;
+public:
+    Slice() : m_begin(nullptr), m_end(nullptr) {};
+    Slice(const T* begin, const T* end) : m_begin(begin), m_end(end) {};
+    Slice(const T* begin, s32 count) : m_begin(begin), m_end(begin + count) {};
+    Slice(const T* item) : m_begin(item), m_end(item + 1) {};
+    Slice(const T& item) : m_begin(&item), m_end((&item) + 1) {};
+    const T* begin() const { return m_begin; }
+    const T* end() const { return m_end; }
+    size_t count() const { return size_t(m_end - m_begin); }
+    const T& operator[](s32 idx) const { return m_begin[idx]; }
+};
+
+template<typename T>
+static void QuickSort(T* x, s32 len)
+{
+    if(len <= 8)
+    {
+        for(s32 i = 0; i < len; ++i)
+        {
+            s32 c = i;
+            for(s32 j = i + 1; j < len; ++j)
+            {
+                if(x[j] < x[c])
+                {
+                    c = j;
+                }
+            }
+            T tmp = x[c];
+            x[c] = x[i];
+            x[i] = tmp;
+        }
+        return;
     }
-    T& grow(){
-        assert(_tail < _capacity);
-        return _data[_tail++];
+
+    s32 i, j;
+    {
+        const T& pivot = x[len / 2];
+        for(i = 0, j = len - 1; ; ++i, --j)
+        {
+            while(x[i] < pivot) ++i;
+            while(x[j] > pivot) --j;
+
+            if(i >= j) 
+                break;
+
+            T temp = x[i];
+            x[i] = x[j];
+            x[j] = temp;
+        }
     }
-    T& pop(){
-        assert(_tail > 0);
-        return _data[_tail--];
+
+    QuickSort(x, i);
+    QuickSort(x + i, len - i);
+}
+
+template<typename T, s32 t_capacity>
+class Array
+{
+    T m_data[t_capacity];
+    s32 m_tail;
+public:
+    Array() : m_tail(0) {}
+    T* begin() { return m_data; }
+    T* end() { return m_data + m_tail; }
+    const T* begin() const { return m_data; }
+    const T* end() const { return m_data + m_tail; }
+    T& operator[](s32 idx) { return m_data[idx]; }
+    const T& operator[](s32 idx) const { return m_data[idx]; }
+    s32 count() const { return m_tail; }
+    s32 capacity() const { return t_capacity; }
+    bool full() const { return count() >= capacity(); }
+    bool empty() const { return count() == 0; }
+    size_t bytes() const { return sizeof(T) * size_t(count()); }
+    u32 hash() const { return fnv(begin(), bytes()); }
+    Slice<T> toSlice() const { return { begin(), end() }; }
+    operator Slice<T>() const { return toSlice(); }
+    void clear() { m_tail = 0; }
+    void sort() { QuickSort(begin(), count()); }
+    T& back()
+    { 
+        assert(count() > 0);
+        return m_data[m_tail - 1]; 
+    }
+    const T& back() const
+    { 
+        assert(count() > 0);
+        return m_data[m_tail - 1];
+    }
+    T& grow()
+    {
+        assert(count() < t_capacity);
+        ++m_tail;
+        return back();
+    }
+    T& pop()
+    {
+        assert(count() > 0);
+        T& val = back();
+        --m_tail;
+        return val;
     }
     void popfast()
     {
         assert(count() > 0);
-        --_tail;
+        --m_tail;
     }
-    T* begin(){
-        return _data;
+    void resize(s32 count)
+    {
+        assert(count <= t_capacity);
+        m_tail = count;
     }
-    T* end(){
-        return _data + _tail;
-    }
-    const T* begin()const{
-        return _data;
-    }
-    const T* end()const{
-        return _data + _tail;
-    }
-    T& back(){ 
-        assert(_tail > 0);
-        return _data[_tail - 1]; 
-    }
-    const T& back()const{ 
-        assert(_tail > 0);
-        return _data[_tail - 1];
-    }
-    T& operator[](int idx){
-        return _data[idx];
-    }
-    const T& operator[](int idx)const{
-        return _data[idx];
-    }
-    bool full()const{
-        return _tail >= _capacity;
-    }
-    int count()const{
-        return _tail;
-    }
-    int capacity()const{
-        return _capacity;
-    }
-    int bytes()const{
-        return sizeof(T) * _tail;
-    }
-    unsigned hash()const{
-        return fnv(_data, bytes());
-    }
-    void resize(int count){
-        _tail = count;
-    }
-    void clear(){ _tail = 0; }
-    int find(const T& t){
-        for(int i = 0; i < _tail; ++i){
-            if(_data[i] == t)
+    s32 find(const T& t)
+    {
+        for(s32 i = 0; i < m_tail; ++i)
+        {
+            if(m_data[i] == t)
                 return i;
         }
         return -1;
     }
-    void uniquePush(const T& t){
-        if(find(t) == -1){
+    void uniquePush(const T& t)
+    {
+        if(find(t) == -1)
+        {
             grow() = t;
         }
     }
-    void remove(int idx){
-        --_tail;
-        _data[idx] = _data[_tail];
+    void remove(s32 idx)
+    {
+        --m_tail;
+        m_data[idx] = m_data[m_tail];
     }
-    void findRemove(const T& t){
-        int idx = find(t);
-        if(idx != -1){
+    void findRemove(const T& t)
+    {
+        s32 idx = find(t);
+        if(idx != -1)
+        {
             remove(idx);
         }
-    }
-    void sort(int a, int b){
-        if(a - b < 2)
-            return;
-
-        int i, j;
-        {
-            T& pivot = _data[(a + b) >> 1];
-            for(i = a, j = b - 1; ; ++i, --j){
-                while(_data[i] < pivot) ++i;
-                while(_data[j] > pivot) --j;
-    
-                if(i >= j) break;
-    
-                T temp = _data[i];
-                _data[i] = _data[j];
-                _data[j] = temp;
-            }
-        }
-
-        sort(a, i);
-        sort(i, b);
-    }
-    void sort(){
-        sort(0, _tail);
-    }
-    bool operator==(const Array& other)const{
-        return hash() == other.hash();
     }
 };
 
 template<typename T>
-struct Vector{
-    T* _data;
-    int _tail;
-    int _capacity;
-
-    int capacity()const{ return _capacity; }
-    int count()const{ return _tail; }
-    bool full()const{ return _tail >= _capacity; }
-    int bytes()const{ return sizeof(T) * _tail; }
-    int hash()const{ return fnv(_data, bytes()); }
-
-    T* begin(){ return _data; }
-    const T* begin()const{ return _data; }
-    T* end(){ return _data + _tail; }
-    const T* end()const{ return _data + _tail; }
-    T& back(){ 
+class Vector
+{
+    T* m_data;
+    s32 m_tail;
+    s32 m_capacity;
+public:
+    Vector() : m_data(nullptr), m_tail(0), m_capacity(0) {}
+    ~Vector() { delete[] m_data; }
+    s32 capacity() const { return m_capacity; }
+    s32 count() const { return m_tail; }
+    bool full() const { return count() >= capacity(); }
+    bool empty() const { return count() == 0; }
+    size_t bytes() const { return sizeof(T) * size_t(count()); }
+    T* begin() { return m_data; }
+    const T* begin() const { return m_data; }
+    T* end() { return m_data + m_tail; }
+    const T* end() const { return m_data + m_tail; }
+    T& operator[](s32 idx) { return m_data[idx]; }
+    const T& operator[](s32 idx) const { return m_data[idx]; }
+    u32 hash() const { return fnv(begin(), bytes()); }
+    Slice<T> toSlice() const { return { begin(), end() }; }
+    operator Slice<T>() const { return toSlice(); }
+    void clear(){ m_tail = 0; }
+    void sort() { QuickSort(begin(), count()); }
+    T& back()
+    { 
         assert(count() > 0);
-        return _data[_tail - 1]; 
+        return m_data[m_tail - 1]; 
     }
-    const T& back()const{ 
+    const T& back() const
+    { 
         assert(count() > 0);
-        return _data[_tail - 1];
+        return m_data[m_tail - 1];
     }
-    T& operator[](int idx){
-        return _data[idx];
-    }
-    const T& operator[](int idx)const{
-        return _data[idx];
-    }
-    void reserve(const int new_cap)
+    void reserve(const s32 new_cap)
     {
-        const int new_tail = new_cap < _tail ? new_cap : _tail;
+        const s32 new_tail = new_cap < m_tail ? new_cap : m_tail;
         if(!new_cap)
         {
-            delete[] _data;
-            _data = nullptr;
+            delete[] m_data;
+            m_data = nullptr;
         }
         else
         {
             T* new_data = new T[new_cap];
-            for(int i = 0; i < new_tail; ++i)
+            for(s32 i = 0; i < new_tail; ++i)
             {
-                new_data[i] = _data[i];
+                new_data[i] = m_data[i];
             }
-            delete[] _data;
-            _data = new_data;
+            delete[] m_data;
+            m_data = new_data;
         }
-        _capacity = new_cap;
-        _tail = new_tail;
+        m_capacity = new_cap;
+        m_tail = new_tail;
     }
-    void resize(const int new_size)
+    void resize(const s32 new_size)
     {
-        if(new_size != _capacity)
+        if(new_size > m_capacity)
         {
             reserve(new_size);
         }
-        _tail = new_size;
+        m_tail = new_size;
     }
-    T& append(){
-        assert(_tail < _capacity);
-        ++_tail;
+    T& append()
+    {
+        assert(m_tail < m_capacity);
+        ++m_tail;
         return back();
     }
-    T& grow(){
-        if(_tail >= _capacity){
-            reserve(_tail ? _tail * 2 : 16);
+    T& grow()
+    {
+        if(m_tail >= m_capacity)
+        {
+            reserve(m_tail ? m_tail * 2 : 16);
         }
-        ++_tail;
+        ++m_tail;
         return back();
     }
-    T& pop(){
+    T& pop()
+    {
         assert(count() > 0);
         T& item = back();
-        --_tail;
+        --m_tail;
         return item;
     }
     void popfast()
     {
         assert(count() > 0);
-        --_tail;
+        --m_tail;
     }
-    void clear(){ _tail = 0; }
     void reset()
     {
-        delete[] _data;
-        _data = nullptr;
-        _capacity = 0;
-        _tail = 0;
+        delete[] m_data;
+        m_data = nullptr;
+        m_capacity = 0;
+        m_tail = 0;
     }
-    void remove(int idx){
-        assert(idx <= _tail);
-        _data[idx] = back();
-        --_tail;
+    void remove(s32 idx)
+    {
+        assert(idx <= m_tail);
+        m_data[idx] = back();
+        --m_tail;
     }
-    int find(const T& t){
-        for(int i = 0; i < _tail; ++i){
-            if(_data[i] == t)
+    s32 find(const T& t)
+    {
+        for(s32 i = 0; i < m_tail; ++i)
+        {
+            if(m_data[i] == t)
                 return i;
         }
         return -1;
     }
-    void uniquePush(const T& t){
-        if(find(t) == -1){
+    void uniquePush(const T& t)
+    {
+        if(find(t) == -1)
+        {
             grow() = t;
         }
     }
-    void findRemove(const T& t){
-        int idx = find(t);
-        if(idx != -1){
+    void findRemove(const T& t)
+    {
+        s32 idx = find(t);
+        if(idx != -1)
+        {
             remove(idx);
         }
     }
-    void sort(int a, int b){
-        if(a - b < 2)
-            return;
-
-        int i, j;
-        {
-            T& pivot = _data[(a + b) >> 1];
-            for(i = a, j = b - 1; ; ++i, --j){
-                while(_data[i] < pivot) ++i;
-                while(_data[j] > pivot) --j;
-
-                if(i >= j) break;
-
-                T temp = _data[i];
-                _data[i] = _data[j];
-                _data[j] = temp;
-            }
-        }
-
-        sort(a, i);
-        sort(i, b);
-    }
-    void sort(){
-        sort(0, _tail);
-    }
-    Vector() : _data(nullptr), _tail(0), _capacity(0){
-    }
-    Vector(int cap){
-        _data = nullptr;
-        if(cap > 0){
-            _data = new T[cap];
-        }
-        _capacity = cap;
-        _tail = 0;
-    }
     Vector(const Vector& other)
     {
-        _data = nullptr;
-        _tail = other.count();
-        _capacity = other.capacity();
-        if(_capacity)
+        m_data = nullptr;
+        m_tail = other.count();
+        m_capacity = other.capacity();
+        if(m_capacity)
         {
-            _data = new T[_capacity];
-            for(int i = 0; i < _tail; ++i)
+            m_data = new T[m_capacity];
+            for(s32 i = 0; i < m_tail; ++i)
             {
-                _data[i] = other[i];
+                m_data[i] = other[i];
             }
         }
     }
     Vector(Vector&& other)
     {
-        _tail = other.count();
-        _capacity = other.capacity();
-        _data = other._data;
-        other._data = nullptr;
-        other._tail = 0;
-        other._capacity = 0;
+        m_tail = other.count();
+        m_capacity = other.capacity();
+        m_data = other.m_data;
+        other.m_data = nullptr;
+        other.m_tail = 0;
+        other.m_capacity = 0;
     }
-    ~Vector(){
-        delete[] _data;
-    }
-    void copy(const Vector& other){
-        delete[] _data;
-        _data = nullptr;
-        _tail = other.count();
-        _capacity = other.capacity();
-        if(_capacity){
-            _data = new T[_capacity];
-            for(int i = 0; i < _tail; ++i)
+    void copy(const Vector& other)
+    {
+        delete[] m_data;
+        m_data = nullptr;
+        m_tail = other.count();
+        m_capacity = other.capacity();
+        if(m_capacity){
+            m_data = new T[m_capacity];
+            for(s32 i = 0; i < m_tail; ++i)
             {
-                _data[i] = other[i];
+                m_data[i] = other[i];
             }
         }
     }
     void assume(Vector& other)
     {
         reset();
-        _tail = other.count();
-        _capacity = other.capacity();
-        _data = other._data;
-        other._data = nullptr;
-        other._tail = 0;
-        other._capacity = 0;
+        m_tail = other.count();
+        m_capacity = other.capacity();
+        m_data = other.m_data;
+        other.m_data = nullptr;
+        other.m_tail = 0;
+        other.m_capacity = 0;
     }
-    Vector& operator=(const Vector& other){
-        delete[] _data;
-        _data = nullptr;
-        _tail = other.count();
-        _capacity = other.capacity();
-        if(_capacity)
+    Vector& operator=(const Vector& other)
+    {
+        delete[] m_data;
+        m_data = nullptr;
+        m_tail = other.count();
+        m_capacity = other.capacity();
+        if(m_capacity)
         {
-            _data = new T[_capacity];
-            for(int i = 0; i < _tail; ++i)
+            m_data = new T[m_capacity];
+            for(s32 i = 0; i < m_tail; ++i)
             {
-                _data[i] = other[i];
+                m_data[i] = other[i];
             }
         }
         return *this;
     }
-    Vector& operator=(Vector&& other) noexcept {
+    Vector& operator=(Vector&& other) noexcept 
+    {
         reset();
-        _tail = other.count();
-        _capacity = other.capacity();
-        _data = other._data;
-        other._data = nullptr;
-        other._tail = 0;
-        other._capacity = 0;
+        m_tail = other.count();
+        m_capacity = other.capacity();
+        m_data = other.m_data;
+        other.m_data = nullptr;
+        other.m_tail = 0;
+        other.m_capacity = 0;
         return *this;
-    }
-    bool operator==(const Vector& other)const{
-        return hash() == other.hash();
     }
 };
